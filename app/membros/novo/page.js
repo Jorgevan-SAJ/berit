@@ -58,7 +58,7 @@ export default function NovoMembro() {
 
       <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Novo membro</h1>
-        <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 '1.5rem' }}>Preencha os dados do membro. Apenas o nome é obrigatório.</p>
+        <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 1.5rem' }}>Preencha os dados do membro. Apenas o nome é obrigatório.</p>
 
         {erro && (
           <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>
