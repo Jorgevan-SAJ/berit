@@ -26,12 +26,17 @@ export default function AreaPage() {
     )
   }
 
+  const card = {
+    background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', border: '1px solid #E4DED2',
+    boxShadow: '0 2px 12px rgba(31,58,95,0.06)', textDecoration: 'none', display: 'block',
+  }
+  const cardTitulo = { fontSize: 16, fontWeight: 600, color: '#1F3A5F', marginBottom: 6 }
+  const cardTexto = { fontSize: 13, color: '#8A8A8A', margin: 0 }
+
   return (
     <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
       <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em' }}>
-          Berit
-        </div>
+        <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em' }}>Berit</div>
         <button
           onClick={async () => { await supabase.auth.signOut(); window.location.href = '/login' }}
           style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}
@@ -47,21 +52,21 @@ export default function AreaPage() {
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-          <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', border: '1px solid #E4DED2', boxShadow: '0 2px 12px rgba(31,58,95,0.06)' }}>
-            <div style={{ fontSize: 16, fontWeight: 600, color: '#1F3A5F', marginBottom: 6 }}>Membros</div>
-            <div style={{ fontSize: 13, color: '#8A8A8A' }}>Cadastro e gestão do rol de membros. Disponível na Fase 2.</div>
+          <a href="/membros" style={card}>
+            <div style={cardTitulo}>Membros</div>
+            <p style={cardTexto}>Cadastro e gestão do rol de membros. Clique para acessar.</p>
+          </a>
+          <div style={card}>
+            <div style={cardTitulo}>Finanças</div>
+            <p style={cardTexto}>Entradas, saídas e relatório de dizimistas. Disponível na Fase 2.</p>
           </div>
-          <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', border: '1px solid #E4DED2', boxShadow: '0 2px 12px rgba(31,58,95,0.06)' }}>
-            <div style={{ fontSize: 16, fontWeight: 600, color: '#1F3A5F', marginBottom: 6 }}>Finanças</div>
-            <div style={{ fontSize: 13, color: '#8A8A8A' }}>Entradas, saídas e relatório de dizimistas. Disponível na Fase 2.</div>
+          <div style={card}>
+            <div style={cardTitulo}>Agenda</div>
+            <p style={cardTexto}>Programações e eventos da igreja. Disponível na Fase 2.</p>
           </div>
-          <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', border: '1px solid #E4DED2', boxShadow: '0 2px 12px rgba(31,58,95,0.06)' }}>
-            <div style={{ fontSize: 16, fontWeight: 600, color: '#1F3A5F', marginBottom: 6 }}>Agenda</div>
-            <div style={{ fontSize: 13, color: '#8A8A8A' }}>Programações e eventos da igreja. Disponível na Fase 2.</div>
-          </div>
-          <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', border: '1px solid #E4DED2', boxShadow: '0 2px 12px rgba(31,58,95,0.06)' }}>
-            <div style={{ fontSize: 16, fontWeight: 600, color: '#1F3A5F', marginBottom: 6 }}>Diretório Público</div>
-            <div style={{ fontSize: 13, color: '#8A8A8A' }}>Busca de igrejas perto de você. Disponível na Fase 3.</div>
+          <div style={card}>
+            <div style={cardTitulo}>Diretório Público</div>
+            <p style={cardTexto}>Busca de igrejas perto de você. Disponível na Fase 3.</p>
           </div>
         </div>
       </div>
