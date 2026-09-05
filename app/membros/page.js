@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import * as XLSX from 'xlsx'
 import { supabase } from '../../lib/supabase'
 
 function formatarCelular(valor) {
@@ -9,6 +10,13 @@ function formatarCelular(valor) {
   if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`
   if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
+}
+
+function formatarData(valor) {
+  if (!valor) return ''
+  const partes = valor.split('-')
+  if (partes.length !== 3) return valor
+  return `${partes[2]}/${partes[1]}/${partes[0]}`
 }
 
 const MOTIVOS = [
@@ -67,6 +75,23 @@ export default function MembrosPage() {
     }
   }
 
+  function exportar() {
+    const dados = filtrados.map((m) => ({
+      Nome: m.nome,
+      'E-mail': m.email || '',
+      Celular: formatarCelular(m.celular),
+      'Data de Nascimento': formatarData(m.data_nascimento),
+      'Data de Batismo': formatarData(m.data_batismo),
+      'Data de Recebimento': formatarData(m.data_recebimento),
+      Situacao: m.situacao,
+      Observações: m.observacoes || '',
+    }))
+    const ws = XLSX.utils.json_to_sheet(dados)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Membros')
+    XLSX.writeFile(wb, 'membros_berit.xlsx')
+  }
+
   const filtrados = membros.filter((m) =>
     (m.nome || '').toLowerCase().includes(busca.toLowerCase()) ||
     (m.email || '').toLowerCase().includes(busca.toLowerCase())
@@ -89,13 +114,16 @@ export default function MembrosPage() {
             <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Membros</h1>
             <p style={{ fontSize: 14, color: '#8A8A8A', margin: 0 }}>Cadastro e gestão do rol de membros da igreja.</p>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <a href="/membros/inativos" style={{ background: '#F5F0E6', color: '#1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
               Inativos
             </a>
             <a href="/membros/importar" style={{ background: '#FFFFFF', color: '#1F3A5F', border: '1px solid #1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
-            Importar dados
+              Importar dados
             </a>
+            <button onClick={exportar} style={{ background: '#FFFFFF', color: '#1F3A5F', border: '1px solid #1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+              Exportar
+            </button>
             <a href="/membros/novo" style={{ background: '#D9A441', color: '#1F3A5F', padding: '10px 18px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
               + Novo membro
             </a>
