@@ -3,17 +3,38 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
+function formatarCelular(valor) {
+  const d = (valor || '').replace(/\D/g, '').slice(0, 11)
+  if (d.length <= 2) return d
+  if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
+}
+
+const MOTIVOS = [
+  'Falecido',
+  'Abandono',
+  'Em disciplina',
+  'Transferido para outra igreja',
+  'Mudança de cidade',
+  'Outros',
+]
+
 export default function MembrosPage() {
   const [membros, setMembros] = useState([])
   const [busca, setBusca] = useState('')
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
+  const [inativando, setInativando] = useState(null)
+  const [motivo, setMotivo] = useState(MOTIVOS[0])
+  const [salvando, setSalvando] = useState(false)
 
   async function carregar() {
     setCarregando(true)
     const { data, error } = await supabase
       .from('membros')
       .select('*')
+      .eq('situacao', 'ativo')
       .order('nome')
     if (error) {
       setErro('Não foi possível carregar os membros.')
@@ -25,11 +46,22 @@ export default function MembrosPage() {
 
   useEffect(() => { carregar() }, [])
 
-  async function excluir(id, nome) {
-    if (!window.confirm(`Excluir o membro "${nome}"?`)) return
-    const { error } = await supabase.from('membros').delete().eq('id', id)
+  async function confirmarInativacao() {
+    if (!inativando) return
+    setSalvando(true)
+    const { error } = await supabase
+      .from('membros')
+      .update({
+        situacao: 'inativo',
+        motivo_inativacao: motivo,
+        data_inativacao: new Date().toISOString().slice(0, 10),
+      })
+      .eq('id', inativando.id)
+    setSalvando(false)
+    setInativando(null)
+    setMotivo(MOTIVOS[0])
     if (error) {
-      setErro('Não foi possível excluir o membro.')
+      setErro('Não foi possível inativar o membro. Tente novamente.')
     } else {
       carregar()
     }
@@ -57,9 +89,14 @@ export default function MembrosPage() {
             <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Membros</h1>
             <p style={{ fontSize: 14, color: '#8A8A8A', margin: 0 }}>Cadastro e gestão do rol de membros da igreja.</p>
           </div>
-          <a href="/membros/novo" style={{ background: '#D9A441', color: '#1F3A5F', padding: '10px 18px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
-            + Novo membro
-          </a>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <a href="/membros/inativos" style={{ background: '#F5F0E6', color: '#1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+              Inativos
+            </a>
+            <a href="/membros/novo" style={{ background: '#D9A441', color: '#1F3A5F', padding: '10px 18px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+              + Novo membro
+            </a>
+          </div>
         </div>
 
         <input
@@ -80,7 +117,7 @@ export default function MembrosPage() {
           <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '2rem' }}>Carregando membros...</div>
         ) : filtrados.length === 0 ? (
           <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '2rem', textAlign: 'center', border: '1px solid #E4DED2', fontSize: 14, color: '#8A8A8A' }}>
-            Nenhum membro encontrado. Clique em "+ Novo membro" para cadastrar o primeiro.
+            Nenhum membro ativo encontrado. Clique em "+ Novo membro" para cadastrar o primeiro.
           </div>
         ) : (
           <div style={{ background: '#FFFFFF', borderRadius: 12, border: '1px solid #E4DED2', overflow: 'hidden' }}>
@@ -99,16 +136,16 @@ export default function MembrosPage() {
                   <tr key={m.id} style={{ borderTop: '1px solid #F0EAE0' }}>
                     <td style={{ padding: '12px 16px', fontWeight: 600, color: '#2E2E2E' }}>{m.nome}</td>
                     <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{m.email || '—'}</td>
-                    <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{m.celular || '—'}</td>
+                    <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{formatarCelular(m.celular) || '—'}</td>
                     <td style={{ padding: '12px 16px' }}>
-                      <span style={{ background: m.situacao === 'ativo' ? '#EAF4EE' : '#F5F0E6', color: m.situacao === 'ativo' ? '#4C8C6E' : '#8A8A8A', padding: '4px 10px', borderRadius: 999, fontSize: 12 }}>
+                      <span style={{ background: '#EAF4EE', color: '#4C8C6E', padding: '4px 10px', borderRadius: 999, fontSize: 12 }}>
                         {m.situacao}
                       </span>
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <a href={`/membros/editar?id=${m.id}`} style={{ color: '#1F3A5F', marginRight: 12, fontSize: 13 }}>Editar</a>
-                      <button onClick={() => excluir(m.id, m.nome)} style={{ background: 'none', border: 'none', color: '#B71C1C', fontSize: 13, cursor: 'pointer' }}>
-                        Excluir
+                      <button onClick={() => setInativando(m)} style={{ background: 'none', border: 'none', color: '#B71C1C', fontSize: 13, cursor: 'pointer' }}>
+                        Inativar
                       </button>
                     </td>
                   </tr>
@@ -118,6 +155,41 @@ export default function MembrosPage() {
           </div>
         )}
       </div>
+
+      {inativando && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+          <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', maxWidth: 420, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#1F3A5F', marginBottom: 6 }}>Inativar membro</div>
+            <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 16px' }}>
+              Informe o motivo da saída de <strong>{inativando.nome}</strong>. O cadastro será preservado e movido para a pasta Inativos.
+            </p>
+            <select
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              style={{ width: '100%', padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, marginBottom: 16, boxSizing: 'border-box', fontFamily: 'inherit' }}
+            >
+              {MOTIVOS.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={confirmarInativacao}
+                disabled={salvando}
+                style={{ flex: 1, padding: '12px', background: '#B71C1C', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                {salvando ? 'Salvando...' : 'Confirmar inativação'}
+              </button>
+              <button
+                onClick={() => { setInativando(null); setMotivo(MOTIVOS[0]) }}
+                style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
