@@ -3,12 +3,22 @@
 import { useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 
+function formatarCelular(valor) {
+  const d = (valor || '').replace(/\D/g, '').slice(0, 11)
+  if (d.length <= 2) return d
+  if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
+}
+
 export default function NovoMembro() {
   const [form, setForm] = useState({
     nome: '',
     email: '',
     celular: '',
     data_nascimento: '',
+    data_batismo: '',
+    data_recebimento: '',
     situacao: 'ativo',
     observacoes: '',
   })
@@ -30,8 +40,10 @@ export default function NovoMembro() {
     const { error } = await supabase.from('membros').insert([{
       nome: form.nome.trim(),
       email: form.email.trim() || null,
-      celular: form.celular.trim() || null,
+      celular: form.celular.replace(/\D/g, '') || null,
       data_nascimento: form.data_nascimento || null,
+      data_batismo: form.data_batismo || null,
+      data_recebimento: form.data_recebimento || null,
       situacao: form.situacao,
       observacoes: form.observacoes.trim() || null,
     }])
@@ -72,17 +84,21 @@ export default function NovoMembro() {
           <input type="email" value={form.email} onChange={(e) => atualizar('email', e.target.value)} placeholder="email@exemplo.com" style={campo} />
 
           <label style={rotulo}>Celular</label>
-          <input type="text" value={form.celular} onChange={(e) => atualizar('celular', e.target.value)} placeholder="(00) 00000-0000" style={campo} />
+          <input type="text" value={form.celular} onChange={(e) => atualizar('celular', formatarCelular(e.target.value))} placeholder="(00) 00000-0000" style={campo} />
 
           <label style={rotulo}>Data de nascimento</label>
           <input type="date" value={form.data_nascimento} onChange={(e) => atualizar('data_nascimento', e.target.value)} style={campo} />
 
+          <label style={rotulo}>Data de batismo</label>
+          <input type="date" value={form.data_batismo} onChange={(e) => atualizar('data_batismo', e.target.value)} style={campo} />
+
+          <label style={rotulo}>Data de recebimento</label>
+          <input type="date" value={form.data_recebimento} onChange={(e) => atualizar('data_recebimento', e.target.value)} style={campo} />
+
           <label style={rotulo}>Situação</label>
           <select value={form.situacao} onChange={(e) => atualizar('situacao', e.target.value)} style={campo}>
             <option value="ativo">Ativo</option>
-            <option value="inativo">Inativo</option>
             <option value="visitante">Visitante</option>
-            <option value="transferido">Transferido</option>
           </select>
 
           <label style={rotulo}>Observações</label>
