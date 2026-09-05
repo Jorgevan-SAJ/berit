@@ -16,6 +16,7 @@ export default function NovoMembro() {
     nome: '',
     email: '',
     celular: '',
+    sexo: '',
     data_nascimento: '',
     data_batismo: '',
     data_recebimento: '',
@@ -41,6 +42,7 @@ export default function NovoMembro() {
       nome: form.nome.trim(),
       email: form.email.trim() || null,
       celular: form.celular.replace(/\D/g, '') || null,
+      sexo: form.sexo || null,
       data_nascimento: form.data_nascimento || null,
       data_batismo: form.data_batismo || null,
       data_recebimento: form.data_recebimento || null,
@@ -70,7 +72,7 @@ export default function NovoMembro() {
 
       <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Novo membro</h1>
-        <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 1.5rem' }}>Preencha os dados do membro. Apenas o nome é obrigatório.</p>
+        <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 1.5rem' }}>Preencha os dados. Apenas o nome é obrigatório.</p>
 
         {erro && (
           <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>
@@ -86,6 +88,13 @@ export default function NovoMembro() {
           <label style={rotulo}>Celular</label>
           <input type="text" value={form.celular} onChange={(e) => atualizar('celular', formatarCelular(e.target.value))} placeholder="(00) 00000-0000" style={campo} />
 
+          <label style={rotulo}>Sexo</label>
+          <select value={form.sexo} onChange={(e) => atualizar('sexo', e.target.value)} style={campo}>
+            <option value="">— Selecione —</option>
+            <option value="masculino">Masculino</option>
+            <option value="feminino">Feminino</option>
+          </select>
+
           <label style={rotulo}>Data de nascimento</label>
           <input type="date" value={form.data_nascimento} onChange={(e) => atualizar('data_nascimento', e.target.value)} style={campo} />
 
@@ -98,6 +107,7 @@ export default function NovoMembro() {
           <label style={rotulo}>Situação</label>
           <select value={form.situacao} onChange={(e) => atualizar('situacao', e.target.value)} style={campo}>
             <option value="ativo">Ativo</option>
+            <option value="congregado">Congregado</option>
             <option value="visitante">Visitante</option>
           </select>
 
