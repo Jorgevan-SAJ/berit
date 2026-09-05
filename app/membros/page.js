@@ -93,6 +93,9 @@ export default function MembrosPage() {
             <a href="/membros/inativos" style={{ background: '#F5F0E6', color: '#1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
               Inativos
             </a>
+            <a href="/membros/importar" style={{ background: '#FFFFFF', color: '#1F3A5F', border: '1px solid #1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+            Importar dados
+            </a>
             <a href="/membros/novo" style={{ background: '#D9A441', color: '#1F3A5F', padding: '10px 18px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
               + Novo membro
             </a>
