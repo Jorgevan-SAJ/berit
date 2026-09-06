@@ -1,5 +1,4 @@
 'use client'
-
 import { useEffect, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../../lib/supabase'
@@ -267,7 +266,14 @@ export default function MembrosPage() {
                   const cores = CORES_SITUACAO[m.situacao] || { bg: '#F5F0E6', cor: '#8A8A8A' }
                   return (
                     <tr key={m.id} style={{ borderTop: '1px solid #F0EAE0' }}>
-                      <td style={{ padding: '12px 16px', fontWeight: 600, color: '#2E2E2E' }}>{m.nome}</td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ fontWeight: 600, color: '#2E2E2E' }}>{m.nome}</div>
+                        {(!m.sexo || !m.data_nascimento) && (
+                          <span style={{ background: '#FDF3E3', color: '#B26A00', padding: '2px 8px', borderRadius: 999, fontSize: 11, display: 'inline-block', marginTop: 4 }}>
+                            Dados incompletos
+                          </span>
+                        )}
+                      </td>
                       <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{idade === null ? '—' : `${idade} anos`}</td>
                       <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{m.sexo === 'masculino' ? 'Masculino' : m.sexo === 'feminino' ? 'Feminino' : '—'}</td>
                       <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{m.email || '—'}</td>
