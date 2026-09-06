@@ -37,21 +37,31 @@ export default function NovoMembro() {
       setErro('O nome é obrigatório.')
       return
     }
+    if (!form.sexo) {
+      setErro('O sexo é obrigatório.')
+      return
+    }
+    if (!form.data_nascimento) {
+      setErro('A data de nascimento é obrigatória.')
+      return
+    }
     setCarregando(true)
-    const { error } = await supabase.from('membros').insert([{
-      nome: form.nome.trim(),
-      email: form.email.trim() || null,
-      celular: form.celular.replace(/\D/g, '') || null,
-      sexo: form.sexo || null,
-      data_nascimento: form.data_nascimento || null,
-      data_batismo: form.data_batismo || null,
-      data_recebimento: form.data_recebimento || null,
-      situacao: form.situacao,
-      observacoes: form.observacoes.trim() || null,
-    }])
+    const { error } = await supabase.from('membros').insert([
+      {
+        nome: form.nome.trim(),
+        email: form.email.trim() || null,
+        celular: form.celular.replace(/\D/g, '') || null,
+        sexo: form.sexo,
+        data_nascimento: form.data_nascimento,
+        data_batismo: form.data_batismo || null,
+        data_recebimento: form.data_recebimento || null,
+        situacao: form.situacao,
+        observacoes: form.observacoes.trim() || null,
+      },
+    ])
     setCarregando(false)
     if (error) {
-      setErro('Não foi possível salvar o membro. Tente novamente.')
+      setErro('Não foi possível cadastrar o membro. Tente novamente.')
     } else {
       window.location.href = '/membros'
     }
@@ -72,7 +82,7 @@ export default function NovoMembro() {
 
       <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Novo membro</h1>
-        <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 1.5rem' }}>Preencha os dados. Apenas o nome é obrigatório.</p>
+        <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 1.5rem' }}>Preencha os dados para cadastrar um novo membro.</p>
 
         {erro && (
           <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>
@@ -88,15 +98,15 @@ export default function NovoMembro() {
           <label style={rotulo}>Celular</label>
           <input type="text" value={form.celular} onChange={(e) => atualizar('celular', formatarCelular(e.target.value))} placeholder="(00) 00000-0000" style={campo} />
 
-          <label style={rotulo}>Sexo</label>
-          <select value={form.sexo} onChange={(e) => atualizar('sexo', e.target.value)} style={campo}>
+          <label style={rotulo}>Sexo *</label>
+          <select value={form.sexo} onChange={(e) => atualizar('sexo', e.target.value)} required style={campo}>
             <option value="">— Selecione —</option>
             <option value="masculino">Masculino</option>
             <option value="feminino">Feminino</option>
           </select>
 
-          <label style={rotulo}>Data de nascimento</label>
-          <input type="date" value={form.data_nascimento} onChange={(e) => atualizar('data_nascimento', e.target.value)} style={campo} />
+          <label style={rotulo}>Data de nascimento *</label>
+          <input type="date" value={form.data_nascimento} onChange={(e) => atualizar('data_nascimento', e.target.value)} required style={campo} />
 
           <label style={rotulo}>Data de batismo</label>
           <input type="date" value={form.data_batismo} onChange={(e) => atualizar('data_batismo', e.target.value)} style={campo} />
@@ -116,7 +126,7 @@ export default function NovoMembro() {
 
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: 4 }}>
             <button type="submit" disabled={carregando} style={{ flex: 1, padding: '12px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
-              {carregando ? 'Salvando...' : 'Salvar membro'}
+              {carregando ? 'Salvando...' : 'Cadastrar membro'}
             </button>
             <a href="/membros" style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}>
               Cancelar
