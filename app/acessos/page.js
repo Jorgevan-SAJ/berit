@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import { getPerfil } from '../../lib/perfil'
 
 const PERFIS_DISPONIVEIS = [
-  { valor: 'admin_master', rotulo: 'Admin Master' },
+  { valor: 'admin_master', rotulo: 'Administrador' },
   { valor: 'secretaria', rotulo: 'Secretaria' },
   { valor: 'tesouraria', rotulo: 'Tesouraria' },
 ]
