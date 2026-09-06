@@ -154,7 +154,7 @@ export default function AcessosPage() {
     )
   }
 
-  if (!perfilAtual || perfilAtual.perfil !== 'Administrador') {
+  if (!perfilAtual || perfilAtual.perfil !== 'admin_master') {
     return (
       <main style={estilo.main}>
         <header style={estilo.header}>
