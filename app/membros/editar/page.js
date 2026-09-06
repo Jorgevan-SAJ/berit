@@ -54,6 +54,14 @@ export default function EditarMembro() {
       setErro('O nome é obrigatório.')
       return
     }
+    if (!form.sexo) {
+      setErro('O sexo é obrigatório.')
+      return
+    }
+    if (!form.data_nascimento) {
+      setErro('A data de nascimento é obrigatória.')
+      return
+    }
     setCarregando(true)
     const params = new URLSearchParams(window.location.search)
     const id = params.get('id')
@@ -128,15 +136,15 @@ export default function EditarMembro() {
           <label style={rotulo}>Celular</label>
           <input type="text" value={form.celular} onChange={(e) => atualizar('celular', formatarCelular(e.target.value))} placeholder="(00) 00000-0000" style={campo} />
 
-          <label style={rotulo}>Sexo</label>
-          <select value={form.sexo} onChange={(e) => atualizar('sexo', e.target.value)} style={campo}>
+          <label style={rotulo}>Sexo *</label>
+          <select value={form.sexo} onChange={(e) => atualizar('sexo', e.target.value)} required style={campo}>
             <option value="">— Selecione —</option>
             <option value="masculino">Masculino</option>
             <option value="feminino">Feminino</option>
           </select>
 
-          <label style={rotulo}>Data de nascimento</label>
-          <input type="date" value={form.data_nascimento} onChange={(e) => atualizar('data_nascimento', e.target.value)} style={campo} />
+          <label style={rotulo}>Data de nascimento *</label>
+          <input type="date" value={form.data_nascimento} onChange={(e) => atualizar('data_nascimento', e.target.value)} required style={campo} />
 
           <label style={rotulo}>Data de batismo</label>
           <input type="date" value={form.data_batismo} onChange={(e) => atualizar('data_batismo', e.target.value)} style={campo} />
