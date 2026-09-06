@@ -79,13 +79,14 @@ export default function AreaPage() {
             <p style={cardTexto}>Busca de igrejas perto de você. Disponível na Fase 3.</p>
           </div>
         </div>
-      </div> <footer style={{ textAlign: 'center', padding: '1.5rem', fontSize: 12, color: '#8A8A8A' }}>
-  <a href="/recuperar-acesso" style={{ color: '#8A8A8A', textDecoration: 'underline' }}>
-    Recuperar acesso de administrador
-  </a>
-  <span style={{ margin: '0 8px' }}>·</span>
-  Berit — Gestão simples para igrejas
-</footer>
+      </div>
+      <footer style={{ textAlign: 'center', padding: '1.5rem', fontSize: 12, color: '#8A8A8A' }}>
+        <a href="/recuperar-acesso" style={{ color: '#8A8A8A', textDecoration: 'underline' }}>Recuperar acesso de administrador</a>
+        <span style={{ margin: '0 8px' }}>·</span>
+        <a href="mailto:beritinovacoes@gmail.com?subject=Contato%20Berit" style={{ color: '#8A8A8A', textDecoration: 'underline' }}>Fale conosco</a>
+        <span style={{ margin: '0 8px' }}>·</span>
+        Berit — Gestão simples para igrejas
+      </footer>
     </main>
   )
 }
