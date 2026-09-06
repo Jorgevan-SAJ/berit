@@ -19,8 +19,14 @@ export default function AcessosPage() {
   const [aviso, setAviso] = useState('')
   const [novo, setNovo] = useState({ email: '', senha: '', perfil: 'secretaria' })
   const [criando, setCriando] = useState(false)
+  const [meuId, setMeuId] = useState(null)
+  const [excluindo, setExcluindo] = useState(null)
+  const [salvando, setSalvando] = useState(false)
 
   useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setMeuId(data.user?.id || null)
+    })
     getPerfil().then((p) => {
       setPerfilAtual(p)
       setVerificando(false)
@@ -108,6 +114,22 @@ export default function AcessosPage() {
       setErro('Não foi possível enviar o e-mail de redefinição.')
     } else {
       setAviso(`E-mail de redefinição enviado para ${email}.`)
+    }
+  }
+
+  async function confirmarExclusao() {
+    if (!excluindo) return
+    setSalvando(true)
+    setErro('')
+    setAviso('')
+    const { error } = await supabase.rpc('excluir_usuario', { user_id: excluindo.id })
+    setSalvando(false)
+    if (error) {
+      setErro(error.message || 'Não foi possível excluir o usuário.')
+    } else {
+      setAviso(`Usuário ${excluindo.email} excluído definitivamente.`)
+      setExcluindo(null)
+      carregarUsuarios()
     }
   }
 
@@ -217,7 +239,14 @@ export default function AcessosPage() {
                 <tbody>
                   {usuarios.map((u) => (
                     <tr key={u.id} style={{ borderTop: '1px solid #F0EAE0' }}>
-                      <td style={{ padding: '12px 16px', fontWeight: 600, color: '#2E2E2E' }}>{u.email}</td>
+                      <td style={{ padding: '12px 16px', fontWeight: 600, color: '#2E2E2E' }}>
+                        {u.email}
+                        {u.id === meuId && (
+                          <span style={{ background: '#E8F0FA', color: '#1F3A5F', padding: '2px 8px', borderRadius: 999, fontSize: 11, marginLeft: 8 }}>
+                            Você
+                          </span>
+                        )}
+                      </td>
                       <td style={{ padding: '12px 16px' }}>
                         <select
                           value={u.perfil || ''}
@@ -239,9 +268,14 @@ export default function AcessosPage() {
                         <button onClick={() => alternarAtivo(u)} style={{ background: 'none', border: 'none', color: u.ativo === false ? '#4C8C6E' : '#B7791F', fontSize: 13, cursor: 'pointer', marginRight: 12 }}>
                           {u.ativo === false ? 'Reativar' : 'Inativar'}
                         </button>
-                        <button onClick={() => redefinirSenha(u.email)} style={{ background: 'none', border: 'none', color: '#1F3A5F', fontSize: 13, cursor: 'pointer' }}>
+                        <button onClick={() => redefinirSenha(u.email)} style={{ background: 'none', border: 'none', color: '#1F3A5F', fontSize: 13, cursor: 'pointer', marginRight: 12 }}>
                           Redefinir senha
                         </button>
+                        {u.id !== meuId && (
+                          <button onClick={() => setExcluindo(u)} style={{ background: 'none', border: 'none', color: '#B71C1C', fontSize: 13, cursor: 'pointer' }}>
+                            Excluir
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -251,6 +285,32 @@ export default function AcessosPage() {
           )}
         </div>
       </div>
+
+      {excluindo && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+          <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', maxWidth: 420, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#B71C1C', marginBottom: 6 }}>Excluir usuário definitivamente</div>
+            <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 16px' }}>
+              Você deseja excluir o acesso de <strong>{excluindo.email}</strong>? Esta ação <strong>não pode ser desfeita</strong> e o usuário perderá o acesso à plataforma permanentemente.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={confirmarExclusao}
+                disabled={salvando}
+                style={{ flex: 1, padding: '12px', background: '#B71C1C', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                {salvando ? 'Excluindo...' : 'Sim, excluir definitivamente'}
+              </button>
+              <button
+                onClick={() => setExcluindo(null)}
+                style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
