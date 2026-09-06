@@ -164,7 +164,7 @@ export default function AcessosPage() {
         <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem', textAlign: 'center' }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: '#1F3A5F', marginBottom: 8 }}>Acesso restrito</div>
           <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 16px' }}>
-            Esta área é exclusiva do perfil <strong>Admin Master</strong>.
+            Esta área é exclusiva do perfil <strong>Administrador</strong>.
           </p>
           <a href="/area" style={{ color: '#1F3A5F', fontSize: 14 }}>Voltar para o início</a>
         </div>
@@ -194,6 +194,9 @@ export default function AcessosPage() {
 
         <div style={{ ...estilo.card, marginBottom: '1.5rem' }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 8 }}>Novo usuário</div>
+          <div style={{ background: '#E8F0FA', color: '#1F3A5F', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
+            <strong>Dica de segurança:</strong> cadastre sempre pelo menos <strong>um segundo usuário com o perfil Administrador</strong>. Assim, se o administrador principal ficar impossibilitado de acessar (saída, falecimento ou outro motivo), a igreja mantém o controle da plataforma.
+          </div>
           <form onSubmit={criarUsuario} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0 1rem' }}>
             <div>
               <label style={estilo.rotulo}>E-mail</label>
@@ -253,7 +256,7 @@ export default function AcessosPage() {
                           onChange={(e) => mudarPerfil(u, e.target.value)}
                           style={{ padding: '8px 10px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 13, fontFamily: 'inherit' }}
                         >
-                          <option value="" disabled>— Sem perfil —</option>
+                          <option value="" disabled>Sem perfil</option>
                           {PERFIS_DISPONIVEIS.map((p) => (
                             <option key={p.valor} value={p.valor}>{p.rotulo}</option>
                           ))}
