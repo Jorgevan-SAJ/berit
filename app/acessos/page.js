@@ -10,6 +10,15 @@ const PERFIS_DISPONIVEIS = [
   { valor: 'tesouraria', rotulo: 'Tesouraria' },
 ]
 
+function gerarSenhaAleatoria() {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  let senha = ''
+  for (let i = 0; i < 20; i++) {
+    senha += chars[Math.floor(Math.random() * chars.length)]
+  }
+  return senha + '!B3r1t'
+}
+
 export default function AcessosPage() {
   const [perfilAtual, setPerfilAtual] = useState(null)
   const [verificando, setVerificando] = useState(true)
@@ -17,7 +26,7 @@ export default function AcessosPage() {
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
   const [aviso, setAviso] = useState('')
-  const [novo, setNovo] = useState({ email: '', senha: '', perfil: 'secretaria' })
+  const [novo, setNovo] = useState({ email: '', perfil: 'secretaria' })
   const [criando, setCriando] = useState(false)
   const [meuId, setMeuId] = useState(null)
   const [excluindo, setExcluindo] = useState(null)
@@ -54,14 +63,15 @@ export default function AcessosPage() {
     e.preventDefault()
     setErro('')
     setAviso('')
-    if (!novo.email.trim() || novo.senha.length < 6) {
-      setErro('Informe um e-mail válido e uma senha com pelo menos 6 caracteres.')
+    const email = novo.email.trim().toLowerCase()
+    if (!email) {
+      setErro('Informe um e-mail válido.')
       return
     }
     setCriando(true)
     const { data, error } = await supabase.auth.signUp({
-      email: novo.email.trim().toLowerCase(),
-      password: novo.senha,
+      email,
+      password: gerarSenhaAleatoria(),
     })
     if (error || !data.user) {
       setErro('Não foi possível criar o usuário. Verifique se o e-mail já está em uso.')
@@ -75,8 +85,8 @@ export default function AcessosPage() {
     if (erroPerfil) {
       setErro('Usuário criado, mas não foi possível atribuir o perfil. Tente novamente.')
     } else {
-      setAviso(`Usuário ${novo.email} criado com sucesso! Ele receberá um e-mail de confirmação.`)
-      setNovo({ email: '', senha: '', perfil: 'secretaria' })
+      setAviso(`Usuário ${email} criado com sucesso! Ele receberá um e-mail de confirmação e, depois de confirmar, poderá definir a própria senha pelo link "Esqueci minha senha" na tela de login.`)
+      setNovo({ email: '', perfil: 'secretaria' })
       carregarUsuarios()
     }
   }
@@ -195,16 +205,15 @@ export default function AcessosPage() {
         <div style={{ ...estilo.card, marginBottom: '1.5rem' }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 8 }}>Novo usuário</div>
           <div style={{ background: '#E8F0FA', color: '#1F3A5F', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
-            <strong>Dica de segurança:</strong> cadastre sempre pelo menos <strong>um segundo usuário com o perfil Administrador</strong>. Assim, se o administrador principal ficar impossibilitado de acessar (saída, falecimento ou outro motivo), a igreja mantém o controle da plataforma.
+            <strong>Como funciona o primeiro acesso:</strong> ao cadastrar um novo usuário, informe a ele que: (1) receberá um e-mail de confirmação de cadastro no e-mail indicado; (2) deve clicar no link desse e-mail para confirmar o endereço; (3) será direcionado para a área de acesso do app; (4) na tela de login, deve clicar em "Esqueci minha senha" para receber um e-mail e cadastrar a própria senha. O administrador não define nem vê a senha de nenhum usuário.
+          </div>
+          <div style={{ background: '#FDF3E3', color: '#B26A00', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
+            <strong>Dica de segurança:</strong> cadastre sempre pelo menos um segundo usuário com o perfil Administrador. Assim, se o administrador principal ficar impossibilitado de acessar (saída, falecimento ou outro motivo), a igreja mantém o controle da plataforma.
           </div>
           <form onSubmit={criarUsuario} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0 1rem' }}>
             <div>
               <label style={estilo.rotulo}>E-mail</label>
               <input type="email" value={novo.email} onChange={(e) => setNovo({ ...novo, email: e.target.value })} placeholder="email@exemplo.com" required style={estilo.campo} />
-            </div>
-            <div>
-              <label style={estilo.rotulo}>Senha inicial</label>
-              <input type="text" value={novo.senha} onChange={(e) => setNovo({ ...novo, senha: e.target.value })} placeholder="mínimo 6 caracteres" required style={estilo.campo} />
             </div>
             <div>
               <label style={estilo.rotulo}>Perfil</label>
