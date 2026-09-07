@@ -116,17 +116,6 @@ export default function AcessosPage() {
     }
   }
 
-  async function redefinirSenha(email) {
-    setErro('')
-    setAviso('')
-    const { error } = await supabase.auth.resetPasswordForEmail(email)
-    if (error) {
-      setErro('Não foi possível enviar o e-mail de redefinição.')
-    } else {
-      setAviso(`E-mail de redefinição enviado para ${email}.`)
-    }
-  }
-
   async function confirmarExclusao() {
     if (!excluindo) return
     setSalvando(true)
@@ -279,9 +268,6 @@ export default function AcessosPage() {
                       <td style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                         <button onClick={() => alternarAtivo(u)} style={{ background: 'none', border: 'none', color: u.ativo === false ? '#4C8C6E' : '#B7791F', fontSize: 13, cursor: 'pointer', marginRight: 12 }}>
                           {u.ativo === false ? 'Reativar' : 'Inativar'}
-                        </button>
-                        <button onClick={() => redefinirSenha(u.email)} style={{ background: 'none', border: 'none', color: '#1F3A5F', fontSize: 13, cursor: 'pointer', marginRight: 12 }}>
-                          Redefinir senha
                         </button>
                         {u.id !== meuId && (
                           <button onClick={() => setExcluindo(u)} style={{ background: 'none', border: 'none', color: '#B71C1C', fontSize: 13, cursor: 'pointer' }}>
