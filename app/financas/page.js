@@ -19,6 +19,7 @@ export default function FinancasPage() {
   const [verificando, setVerificando] = useState(true)
   const [lancamentos, setLancamentos] = useState([])
   const [categorias, setCategorias] = useState([])
+  const [membros, setMembros] = useState([])
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
   const [mes, setMes] = useState(() => {
@@ -42,15 +43,17 @@ export default function FinancasPage() {
 
   async function carregarDados() {
     setCarregando(true)
-    const [lanc, cat] = await Promise.all([
+    const [lanc, cat, mem] = await Promise.all([
       supabase.from('lancamentos').select('*').order('data_lancamento', { ascending: false }),
       supabase.from('categorias').select('*').order('nome'),
+      supabase.from('membros').select('id, nome').order('nome'),
     ])
-    if (lanc.error || cat.error) {
+    if (lanc.error || cat.error || mem.error) {
       setErro('Não foi possível carregar os dados financeiros.')
     } else {
       setLancamentos(lanc.data || [])
       setCategorias(cat.data || [])
+      setMembros(mem.data || [])
     }
     setCarregando(false)
   }
@@ -58,6 +61,11 @@ export default function FinancasPage() {
   const nomeCategoria = (id) => {
     const c = categorias.find((x) => x.id === id)
     return c ? c.nome : '—'
+  }
+
+  const nomeMembro = (id) => {
+    const m = membros.find((x) => x.id === id)
+    return m ? m.nome : ''
   }
 
   const filtrados = lancamentos.filter((l) => {
@@ -201,7 +209,9 @@ export default function FinancasPage() {
                 {filtrados.map((l) => (
                   <tr key={l.id} style={{ borderTop: '1px solid #F0EAE0' }}>
                     <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{formatarData(l.data_lancamento)}</td>
-                    <td style={{ padding: '12px 16px', fontWeight: 600, color: '#2E2E2E' }}>{l.descricao}</td>
+                    <td style={{ padding: '12px 16px', fontWeight: 600, color: '#2E2E2E' }}>
+                      {l.descricao || (l.tipo === 'entrada' && l.membro_id ? nomeMembro(l.membro_id) : '—')}
+                    </td>
                     <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{nomeCategoria(l.categoria_id)}</td>
                     <td style={{ padding: '12px 16px' }}>
                       <span style={{ background: l.tipo === 'entrada' ? '#EAF4EE' : '#FDECEC', color: l.tipo === 'entrada' ? '#4C8C6E' : '#B71C1C', padding: '4px 10px', borderRadius: 999, fontSize: 12 }}>
@@ -230,7 +240,7 @@ export default function FinancasPage() {
           <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', maxWidth: 420, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
             <div style={{ fontSize: 18, fontWeight: 700, color: '#B71C1C', marginBottom: 6 }}>Excluir lançamento</div>
             <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 16px' }}>
-              Você deseja excluir o lançamento <strong>{excluindo.descricao}</strong> de <strong>{formatarMoeda(excluindo.valor)}</strong>? Esta ação não pode ser desfeita.
+              Você deseja excluir o lançamento <strong>{excluindo.descricao || (excluindo.tipo === 'entrada' && excluindo.membro_id ? nomeMembro(excluindo.membro_id) : 'sem descrição')}</strong> de <strong>{formatarMoeda(excluindo.valor)}</strong>? Esta ação não pode ser desfeita.
             </p>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button
