@@ -142,9 +142,14 @@ export default function FinancasPage() {
             <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Finanças e Tesouraria</h1>
             <p style={{ fontSize: 14, color: '#8A8A8A', margin: 0 }}>Entradas, saídas e controle financeiro da igreja.</p>
           </div>
-          <a href="/financas/novo" style={{ background: '#D9A441', color: '#1F3A5F', padding: '10px 18px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
-            + Novo lançamento
-          </a>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <a href="/financas/relatorios" style={{ background: '#FFFFFF', color: '#1F3A5F', border: '1px solid #1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+              Relatórios
+            </a>
+            <a href="/financas/novo" style={{ background: '#D9A441', color: '#1F3A5F', padding: '10px 18px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+              + Novo lançamento
+            </a>
+          </div>
         </div>
 
         {erro && (
