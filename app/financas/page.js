@@ -1,0 +1,255 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { supabase } from '../../lib/supabase'
+import { getPerfil } from '../../lib/perfil'
+
+function formatarMoeda(valor) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0)
+}
+
+function formatarData(iso) {
+  if (!iso) return ''
+  const [a, m, d] = iso.split('-')
+  return `${d}/${m}/${a}`
+}
+
+export default function FinancasPage() {
+  const [perfilAtual, setPerfilAtual] = useState(null)
+  const [verificando, setVerificando] = useState(true)
+  const [lancamentos, setLancamentos] = useState([])
+  const [categorias, setCategorias] = useState([])
+  const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState('')
+  const [mes, setMes] = useState(() => {
+    const hoje = new Date()
+    return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`
+  })
+  const [tipo, setTipo] = useState('')
+  const [categoria, setCategoria] = useState('')
+  const [excluindo, setExcluindo] = useState(null)
+  const [salvando, setSalvando] = useState(false)
+
+  useEffect(() => {
+    getPerfil().then((p) => {
+      setPerfilAtual(p)
+      setVerificando(false)
+      if (p && (p.perfil === 'admin_master' || p.perfil === 'tesouraria')) {
+        carregarDados()
+      }
+    })
+  }, [])
+
+  async function carregarDados() {
+    setCarregando(true)
+    const [lanc, cat] = await Promise.all([
+      supabase.from('lancamentos').select('*').order('data_lancamento', { ascending: false }),
+      supabase.from('categorias').select('*').order('nome'),
+    ])
+    if (lanc.error || cat.error) {
+      setErro('Não foi possível carregar os dados financeiros.')
+    } else {
+      setLancamentos(lanc.data || [])
+      setCategorias(cat.data || [])
+    }
+    setCarregando(false)
+  }
+
+  const nomeCategoria = (id) => {
+    const c = categorias.find((x) => x.id === id)
+    return c ? c.nome : '—'
+  }
+
+  const filtrados = lancamentos.filter((l) => {
+    const mesOk = !mes || (l.data_lancamento || '').startsWith(mes)
+    const tipoOk = !tipo || l.tipo === tipo
+    const catOk = !categoria || l.categoria_id === categoria
+    return mesOk && tipoOk && catOk
+  })
+
+  const totalEntradas = filtrados.filter((l) => l.tipo === 'entrada').reduce((s, l) => s + Number(l.valor), 0)
+  const totalSaidas = filtrados.filter((l) => l.tipo === 'saida').reduce((s, l) => s + Number(l.valor), 0)
+  const saldo = totalEntradas - totalSaidas
+
+  async function confirmarExclusao() {
+    if (!excluindo) return
+    setSalvando(true)
+    const { error } = await supabase.from('lancamentos').delete().eq('id', excluindo.id)
+    setSalvando(false)
+    if (error) {
+      setErro('Não foi possível excluir o lançamento.')
+    } else {
+      setExcluindo(null)
+      carregarDados()
+    }
+  }
+
+  const estilo = {
+    main: { minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" },
+    header: { background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+    linkLogo: { fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF', textDecoration: 'none' },
+    botaoVoltar: { background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' },
+    card: { background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', border: '1px solid #E4DED2' },
+    campo: { padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', fontFamily: 'inherit', width: '100%' },
+  }
+
+  if (verificando) {
+    return (
+      <main style={estilo.main}>
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem', textAlign: 'center', fontSize: 14, color: '#8A8A8A' }}>
+          Verificando permissões...
+        </div>
+      </main>
+    )
+  }
+
+  if (!perfilAtual || (perfilAtual.perfil !== 'admin_master' && perfilAtual.perfil !== 'tesouraria')) {
+    return (
+      <main style={estilo.main}>
+        <header style={estilo.header}>
+          <a href="/area" style={estilo.linkLogo}>Berit</a>
+          <a href="/area" style={estilo.botaoVoltar}>Voltar</a>
+        </header>
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem', textAlign: 'center' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#1F3A5F', marginBottom: 8 }}>Acesso restrito</div>
+          <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 16px' }}>
+            Esta área é exclusiva dos perfis <strong>Administrador</strong> e <strong>Tesouraria</strong>.
+          </p>
+          <a href="/area" style={{ color: '#1F3A5F', fontSize: 14 }}>Voltar para o início</a>
+        </div>
+      </main>
+    )
+  }
+
+  return (
+    <main style={estilo.main}>
+      <header style={estilo.header}>
+        <a href="/area" style={estilo.linkLogo}>Berit</a>
+        <a href="/area" style={estilo.botaoVoltar}>Voltar</a>
+      </header>
+
+      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '2rem 1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+          <div>
+            <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Finanças e Tesouraria</h1>
+            <p style={{ fontSize: 14, color: '#8A8A8A', margin: 0 }}>Entradas, saídas e controle financeiro da igreja.</p>
+          </div>
+          <a href="/financas/novo" style={{ background: '#D9A441', color: '#1F3A5F', padding: '10px 18px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+            + Novo lançamento
+          </a>
+        </div>
+
+        {erro && (
+          <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+          <div style={{ ...estilo.card, borderLeft: '4px solid #1F3A5F' }}>
+            <div style={{ fontSize: 13, color: '#8A8A8A', marginBottom: 4 }}>Saldo do período</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: saldo >= 0 ? '#4C8C6E' : '#B71C1C' }}>{formatarMoeda(saldo)}</div>
+          </div>
+          <div style={{ ...estilo.card, borderLeft: '4px solid #4C8C6E' }}>
+            <div style={{ fontSize: 13, color: '#8A8A8A', marginBottom: 4 }}>Entradas</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: '#4C8C6E' }}>{formatarMoeda(totalEntradas)}</div>
+          </div>
+          <div style={{ ...estilo.card, borderLeft: '4px solid #B71C1C' }}>
+            <div style={{ fontSize: 13, color: '#8A8A8A', marginBottom: 4 }}>Saídas</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: '#B71C1C' }}>{formatarMoeda(totalSaidas)}</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
+          <div>
+            <input type="month" value={mes} onChange={(e) => setMes(e.target.value)} style={estilo.campo} />
+          </div>
+          <select value={tipo} onChange={(e) => { setTipo(e.target.value); setCategoria('') }} style={estilo.campo}>
+            <option value="">Todos os tipos</option>
+            <option value="entrada">Entradas</option>
+            <option value="saida">Saídas</option>
+          </select>
+          <select value={categoria} onChange={(e) => setCategoria(e.target.value)} style={estilo.campo}>
+            <option value="">Todas as categorias</option>
+            {categorias.filter((c) => !tipo || c.tipo === tipo).map((c) => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
+          <button onClick={() => setMes('')} style={{ padding: '10px 12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>
+            Todos os meses
+          </button>
+        </div>
+
+        {carregando ? (
+          <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '2rem' }}>Carregando...</div>
+        ) : filtrados.length === 0 ? (
+          <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '2rem', textAlign: 'center', border: '1px solid #E4DED2', fontSize: 14, color: '#8A8A8A' }}>
+            Nenhum lançamento encontrado com os filtros selecionados.
+          </div>
+        ) : (
+          <div style={{ background: '#FFFFFF', borderRadius: 12, border: '1px solid #E4DED2', overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 760 }}>
+              <thead>
+                <tr style={{ background: '#F5F0E6', color: '#1F3A5F', textAlign: 'left' }}>
+                  <th style={{ padding: '12px 16px' }}>Data</th>
+                  <th style={{ padding: '12px 16px' }}>Descrição</th>
+                  <th style={{ padding: '12px 16px' }}>Categoria</th>
+                  <th style={{ padding: '12px 16px' }}>Tipo</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'right' }}>Valor</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'right' }}>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtrados.map((l) => (
+                  <tr key={l.id} style={{ borderTop: '1px solid #F0EAE0' }}>
+                    <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{formatarData(l.data_lancamento)}</td>
+                    <td style={{ padding: '12px 16px', fontWeight: 600, color: '#2E2E2E' }}>{l.descricao}</td>
+                    <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{nomeCategoria(l.categoria_id)}</td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <span style={{ background: l.tipo === 'entrada' ? '#EAF4EE' : '#FDECEC', color: l.tipo === 'entrada' ? '#4C8C6E' : '#B71C1C', padding: '4px 10px', borderRadius: 999, fontSize: 12 }}>
+                        {l.tipo === 'entrada' ? 'Entrada' : 'Saída'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: l.tipo === 'entrada' ? '#4C8C6E' : '#B71C1C' }}>
+                      {formatarMoeda(l.valor)}
+                    </td>
+                    <td style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <a href={`/financas/editar?id=${l.id}`} style={{ color: '#1F3A5F', marginRight: 12, fontSize: 13 }}>Editar</a>
+                      <button onClick={() => setExcluindo(l)} style={{ background: 'none', border: 'none', color: '#B71C1C', fontSize: 13, cursor: 'pointer' }}>
+                        Excluir
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {excluindo && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+          <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', maxWidth: 420, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#B71C1C', marginBottom: 6 }}>Excluir lançamento</div>
+            <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 16px' }}>
+              Você deseja excluir o lançamento <strong>{excluindo.descricao}</strong> de <strong>{formatarMoeda(excluindo.valor)}</strong>? Esta ação não pode ser desfeita.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={confirmarExclusao}
+                disabled={salvando}
+                style={{ flex: 1, padding: '12px', background: '#B71C1C', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                {salvando ? 'Excluindo...' : 'Sim, excluir'}
+              </button>
+              <button
+                onClick={() => setExcluindo(null)}
+                style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
+  )
+}
