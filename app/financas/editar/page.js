@@ -62,6 +62,7 @@ export default function EditarFinancas() {
       ...form,
       tipo,
       categoria_id: iniciais.length > 0 ? iniciais[0].id : '',
+      membro_id: '',
     })
   }
 
@@ -69,10 +70,6 @@ export default function EditarFinancas() {
     e.preventDefault()
     setErro('')
     const valorNum = parseFloat(String(form.valor).replace(',', '.'))
-    if (!form.descricao.trim()) {
-      setErro('Informe a descrição do lançamento.')
-      return
-    }
     if (!valorNum || valorNum <= 0) {
       setErro('Informe um valor válido.')
       return
@@ -87,11 +84,11 @@ export default function EditarFinancas() {
     const { error } = await supabase.from('lancamentos').update({
       tipo: form.tipo,
       categoria_id: form.categoria_id,
-      descricao: form.descricao.trim(),
+      descricao: form.descricao.trim() || null,
       valor: valorNum,
       data_lancamento: form.data_lancamento,
       forma_pagamento: form.forma_pagamento || null,
-      membro_id: form.membro_id || null,
+      membro_id: form.tipo === 'entrada' ? form.membro_id || null : null,
       observacoes: form.observacoes.trim() || null,
     }).eq('id', id)
     setCarregando(false)
@@ -201,8 +198,12 @@ export default function EditarFinancas() {
             ))}
           </select>
 
-          <label style={rotulo}>Descrição *</label>
-          <input type="text" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} required style={campo} />
+          {form.tipo === 'saida' && (
+            <>
+              <label style={rotulo}>Descrição</label>
+              <input type="text" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} placeholder="ex.: Conta de luz" style={campo} />
+            </>
+          )}
 
           <label style={rotulo}>Valor (R$) *</label>
           <input type="text" inputMode="decimal" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} required style={campo} />
@@ -218,13 +219,17 @@ export default function EditarFinancas() {
             ))}
           </select>
 
-          <label style={rotulo}>Membro (para dízimos e ofertas)</label>
-          <select value={form.membro_id} onChange={(e) => setForm({ ...form, membro_id: e.target.value })} style={campo}>
-            <option value="">— Não vinculado —</option>
-            {membros.map((m) => (
-              <option key={m.id} value={m.id}>{m.nome}</option>
-            ))}
-          </select>
+          {form.tipo === 'entrada' && (
+            <>
+              <label style={rotulo}>Membro (para dízimos e ofertas)</label>
+              <select value={form.membro_id} onChange={(e) => setForm({ ...form, membro_id: e.target.value })} style={campo}>
+                <option value="">— Não vinculado —</option>
+                {membros.map((m) => (
+                  <option key={m.id} value={m.id}>{m.nome}</option>
+                ))}
+              </select>
+            </>
+          )}
 
           <label style={rotulo}>Observações</label>
           <textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} rows={3} style={campo} />
