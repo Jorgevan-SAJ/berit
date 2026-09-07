@@ -32,6 +32,14 @@ export default function AcessosPage() {
   const [excluindo, setExcluindo] = useState(null)
   const [salvando, setSalvando] = useState(false)
 
+  const [chaveDefinida, setChaveDefinida] = useState(false)
+  const [verificandoChave, setVerificandoChave] = useState(true)
+  const [mostrarFormChave, setMostrarFormChave] = useState(false)
+  const [fraseChave, setFraseChave] = useState('')
+  const [fraseConfirmacao, setFraseConfirmacao] = useState('')
+  const [salvandoChave, setSalvandoChave] = useState(false)
+  const [fraseExibida, setFraseExibida] = useState(null)
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setMeuId(data.user?.id || null)
@@ -41,6 +49,7 @@ export default function AcessosPage() {
       setVerificando(false)
       if (p && p.perfil === 'admin_master') {
         carregarUsuarios()
+        verificarChave()
       }
     })
   }, [])
@@ -57,6 +66,15 @@ export default function AcessosPage() {
       setUsuarios(data || [])
     }
     setCarregando(false)
+  }
+
+  async function verificarChave() {
+    setVerificandoChave(true)
+    const { data, error } = await supabase.rpc('chave_recuperacao_definida')
+    if (!error) {
+      setChaveDefinida(!!data)
+    }
+    setVerificandoChave(false)
   }
 
   async function criarUsuario(e) {
@@ -129,6 +147,32 @@ export default function AcessosPage() {
       setAviso(`Usuário ${excluindo.email} excluído definitivamente.`)
       setExcluindo(null)
       carregarUsuarios()
+    }
+  }
+
+  async function salvarChave(e) {
+    e.preventDefault()
+    setErro('')
+    setAviso('')
+    if (fraseChave.length < 8) {
+      setErro('A chave deve ter pelo menos 8 caracteres.')
+      return
+    }
+    if (fraseChave !== fraseConfirmacao) {
+      setErro('As duas digitações da chave não conferem.')
+      return
+    }
+    setSalvandoChave(true)
+    const { error } = await supabase.rpc('definir_chave_recuperacao', { frase: fraseChave })
+    setSalvandoChave(false)
+    if (error) {
+      setErro(error.message || 'Não foi possível salvar a chave.')
+    } else {
+      setFraseExibida(fraseChave)
+      setFraseChave('')
+      setFraseConfirmacao('')
+      setMostrarFormChave(false)
+      setChaveDefinida(true)
     }
   }
 
@@ -218,6 +262,61 @@ export default function AcessosPage() {
               </button>
             </div>
           </form>
+        </div>
+
+        <div style={{ ...estilo.card, marginBottom: '1.5rem' }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 8 }}>Chave de recuperação de administrador</div>
+          <p style={{ fontSize: 13, color: '#5A5A5A', margin: '0 0 12px', lineHeight: 1.5 }}>
+            Esta chave é o caminho de emergência para recuperar o acesso de administrador caso nenhum administrador ativo consiga entrar na plataforma (saída, falecimento ou outro motivo). Ela deve ser criada pela própria igreja e guardada em local seguro, fora do sistema, pois é exibida apenas uma única vez.
+          </p>
+          {verificandoChave ? (
+            <div style={{ fontSize: 13, color: '#8A8A8A' }}>Verificando...</div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: 12 }}>
+                <span style={{ background: chaveDefinida ? '#EAF4EE' : '#FDF3E3', color: chaveDefinida ? '#4C8C6E' : '#B26A00', padding: '4px 10px', borderRadius: 999, fontSize: 12 }}>
+                  {chaveDefinida ? 'Chave definida' : 'Chave não definida'}
+                </span>
+                <button
+                  onClick={() => setMostrarFormChave(!mostrarFormChave)}
+                  style={{ background: 'none', border: 'none', color: '#1F3A5F', fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  {mostrarFormChave ? 'Cancelar' : chaveDefinida ? 'Alterar chave' : 'Definir chave'}
+                </button>
+              </div>
+
+              {fraseExibida && (
+                <div style={{ background: '#FDF3E3', color: '#B26A00', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 12, lineHeight: 1.5, border: '1px solid #F0D9A8' }}>
+                  <strong>Guarde esta frase em local seguro!</strong> Ela é exibida apenas agora, pois o sistema não consegue mostrá-la novamente. Entregue-a à liderança da igreja (conselho ou diaconia).
+                  <span style={{ display: 'block', marginTop: 8, fontFamily: 'monospace', fontSize: 15, fontWeight: 700, color: '#8A5A00' }}>{fraseExibida}</span>
+                  <button
+                    onClick={() => setFraseExibida(null)}
+                    style={{ marginTop: 10, background: '#1F3A5F', color: '#FFFFFF', border: 'none', padding: '8px 14px', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}
+                  >
+                    Já anotei, fechar
+                  </button>
+                </div>
+              )}
+
+              {mostrarFormChave && (
+                <form onSubmit={salvarChave} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0 1rem' }}>
+                  <div>
+                    <label style={estilo.rotulo}>Frase secreta (mínimo 8 caracteres)</label>
+                    <input type="text" value={fraseChave} onChange={(e) => setFraseChave(e.target.value)} placeholder="ex.: Berit@Conselho2026" style={estilo.campo} />
+                  </div>
+                  <div>
+                    <label style={estilo.rotulo}>Repita a frase secreta</label>
+                    <input type="text" value={fraseConfirmacao} onChange={(e) => setFraseConfirmacao(e.target.value)} placeholder="Repita a mesma frase" style={estilo.campo} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                    <button type="submit" disabled={salvandoChave} style={estilo.botaoPrimario}>
+                      {salvandoChave ? 'Salvando...' : 'Salvar chave'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </>
+          )}
         </div>
 
         <div style={estilo.card}>
