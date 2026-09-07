@@ -37,6 +37,7 @@ export default function AreaPage() {
   const cardTexto = { fontSize: 13, color: '#8A8A8A', margin: 0 }
 
   const ehAdmin = perfil && perfil.perfil === 'admin_master'
+  const podeFinancas = perfil && (perfil.perfil === 'admin_master' || perfil.perfil === 'tesouraria')
 
   return (
     <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -60,16 +61,23 @@ export default function AreaPage() {
             <div style={cardTitulo}>Membros</div>
             <p style={cardTexto}>Cadastro e gestão do rol de membros. Clique para acessar.</p>
           </a>
+          {podeFinancas ? (
+            <a href="/financas" style={card}>
+              <div style={cardTitulo}>Finanças</div>
+              <p style={cardTexto}>Entradas, saídas e relatório de dizimistas. Clique para acessar.</p>
+            </a>
+          ) : (
+            <div style={card}>
+              <div style={cardTitulo}>Finanças</div>
+              <p style={cardTexto}>Acesso restrito ao perfil Tesouraria.</p>
+            </div>
+          )}
           {ehAdmin && (
             <a href="/acessos" style={card}>
               <div style={cardTitulo}>Perfis de Acesso</div>
               <p style={cardTexto}>Crie usuários e controle as permissões da plataforma.</p>
             </a>
           )}
-          <div style={card}>
-            <div style={cardTitulo}>Finanças</div>
-            <p style={cardTexto}>Entradas, saídas e relatório de dizimistas. Disponível na Fase 2.</p>
-          </div>
           <div style={card}>
             <div style={cardTitulo}>Agenda</div>
             <p style={cardTexto}>Programações e eventos da igreja. Disponível na Fase 2.</p>
