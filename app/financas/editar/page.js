@@ -15,6 +15,8 @@ export default function EditarFinancas() {
   const [naoEncontrado, setNaoEncontrado] = useState(false)
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
+  const [consolidado, setConsolidado] = useState(false)
+  const [salvo, setSalvo] = useState(false)
 
   useEffect(() => {
     getPerfil().then((p) => {
@@ -43,6 +45,7 @@ export default function EditarFinancas() {
     if (lanc.error || !lanc.data) {
       setNaoEncontrado(true)
     } else {
+      setConsolidado(!!lanc.data.consolidado)
       setForm({
         tipo: lanc.data.tipo,
         categoria_id: lanc.data.categoria_id || '',
@@ -81,6 +84,28 @@ export default function EditarFinancas() {
     setCarregando(true)
     const params = new URLSearchParams(window.location.search)
     const id = params.get('id')
+
+    if (consolidado) {
+      const { error } = await supabase.rpc('solicitar_alteracao', {
+        p_id: id,
+        p_tipo: form.tipo,
+        p_categoria_id: form.categoria_id,
+        p_descricao: form.descricao.trim() || null,
+        p_valor: valorNum,
+        p_data_lancamento: form.data_lancamento,
+        p_forma_pagamento: form.forma_pagamento || null,
+        p_membro_id: form.tipo === 'entrada' ? form.membro_id || null : null,
+        p_observacoes: form.observacoes.trim() || null,
+      })
+      setCarregando(false)
+      if (error) {
+        setErro(error.message || 'Não foi possível solicitar a alteração. Tente novamente.')
+      } else {
+        setSalvo(true)
+      }
+      return
+    }
+
     const { error } = await supabase.from('lancamentos').update({
       tipo: form.tipo,
       categoria_id: form.categoria_id,
@@ -93,7 +118,7 @@ export default function EditarFinancas() {
     }).eq('id', id)
     setCarregando(false)
     if (error) {
-      setErro('Não foi possível salvar o lançamento. Tente novamente.')
+      setErro(error.message || 'Não foi possível salvar o lançamento. Tente novamente.')
     } else {
       window.location.href = '/financas'
     }
@@ -137,6 +162,31 @@ export default function EditarFinancas() {
     )
   }
 
+  if (salvo) {
+    return (
+      <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
+        <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <a href="/area" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF', textDecoration: 'none' }}>Berit</a>
+          <a href="/financas" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}>Voltar</a>
+        </header>
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem', textAlign: 'center' }}>
+          <div style={{ background: '#EAF4EE', color: '#4C8C6E', padding: '18px', borderRadius: 12, fontSize: 14, lineHeight: 1.6 }}>
+            <strong style={{ display: 'block', marginBottom: 6, fontSize: 16 }}>Alteração aplicada!</strong>
+            Por se tratar de um lançamento <strong>consolidado</strong>, a mudança ficará <strong>aguardando a conferência do outro perfil financeiro</strong> na Central de Auditoria.
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: 16, flexWrap: 'wrap' }}>
+            <a href="/financas/auditoria" style={{ padding: '12px 20px', background: '#1F3A5F', color: '#FFFFFF', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+              Ir para a Central de Auditoria
+            </a>
+            <a href="/financas" style={{ padding: '12px 20px', background: '#F5F0E6', color: '#1F3A5F', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+              Voltar para Finanças
+            </a>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
   if (!form) {
     return (
       <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -157,6 +207,12 @@ export default function EditarFinancas() {
       <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Editar lançamento</h1>
         <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 1.5rem' }}>Atualize os dados e salve.</p>
+
+        {consolidado && (
+          <div style={{ background: '#FDF3E3', color: '#B26A00', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5, border: '1px solid #F0D9A8' }}>
+            <strong>Este lançamento está consolidado.</strong> Ao salvar, a alteração será aplicada e ficará <strong>aguardando a conferência do outro perfil financeiro</strong> na Central de Auditoria. Se a conferência for rejeitada, os valores originais serão restaurados.
+          </div>
+        )}
 
         {erro && (
           <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>
@@ -236,7 +292,7 @@ export default function EditarFinancas() {
 
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: 4 }}>
             <button type="submit" disabled={carregando} style={{ flex: 1, padding: '12px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
-              {carregando ? 'Salvando...' : 'Salvar alterações'}
+              {carregando ? 'Salvando...' : consolidado ? 'Salvar e solicitar conferência' : 'Salvar alterações'}
             </button>
             <a href="/financas" style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}>
               Cancelar
