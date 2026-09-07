@@ -85,7 +85,7 @@ export default function FinancasPage() {
     const { error } = await supabase.from('lancamentos').delete().eq('id', excluindo.id)
     setSalvando(false)
     if (error) {
-      setErro('Não foi possível excluir o lançamento.')
+      setErro('Não foi possível excluir o lançamento. Lançamentos consolidados não podem ser excluídos.')
     } else {
       setExcluindo(null)
       carregarDados()
@@ -146,6 +146,12 @@ export default function FinancasPage() {
             <a href="/financas/relatorios" style={{ background: '#FFFFFF', color: '#1F3A5F', border: '1px solid #1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
               Relatórios
             </a>
+            <a href="/financas/consolidar" style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+              Consolidar
+            </a>
+            <a href="/financas/auditoria" style={{ background: '#FFFFFF', color: '#1F3A5F', border: '1px solid #1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+              Auditoria
+            </a>
             <a href="/financas/novo" style={{ background: '#D9A441', color: '#1F3A5F', padding: '10px 18px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
               + Novo lançamento
             </a>
@@ -199,7 +205,7 @@ export default function FinancasPage() {
           </div>
         ) : (
           <div style={{ background: '#FFFFFF', borderRadius: 12, border: '1px solid #E4DED2', overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 760 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 820 }}>
               <thead>
                 <tr style={{ background: '#F5F0E6', color: '#1F3A5F', textAlign: 'left' }}>
                   <th style={{ padding: '12px 16px' }}>Data</th>
@@ -212,25 +218,43 @@ export default function FinancasPage() {
               </thead>
               <tbody>
                 {filtrados.map((l) => (
-                  <tr key={l.id} style={{ borderTop: '1px solid #F0EAE0' }}>
-                    <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{formatarData(l.data_lancamento)}</td>
-                    <td style={{ padding: '12px 16px', fontWeight: 600, color: '#2E2E2E' }}>
-                      {l.descricao || (l.tipo === 'entrada' && l.membro_id ? nomeMembro(l.membro_id) : '—')}
+                  <tr key={l.id} style={{ borderTop: '1px solid #F0EAE0', background: l.consolidado ? '#FFFDF7' : 'transparent' }}>
+                    <td style={{ padding: '12px 16px', color: '#5A5A5A', verticalAlign: 'top' }}>
+                      {formatarData(l.data_lancamento)}
+                      {l.consolidado && (
+                        <span style={{ display: 'block', background: '#FDF3E3', color: '#B26A00', padding: '2px 8px', borderRadius: 999, fontSize: 11, marginTop: 4, width: 'fit-content' }}>
+                          🔒 Consolidado
+                        </span>
+                      )}
                     </td>
-                    <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{nomeCategoria(l.categoria_id)}</td>
-                    <td style={{ padding: '12px 16px' }}>
+                    <td style={{ padding: '12px 16px', fontWeight: 600, color: '#2E2E2E', verticalAlign: 'top' }}>
+                      {l.descricao || (l.tipo === 'entrada' && l.membro_id ? nomeMembro(l.membro_id) : '—')}
+                      {l.nota_permanente && (
+                        <span style={{ display: 'block', marginTop: 4, fontSize: 11, fontWeight: 400, color: '#B26A00', whiteSpace: 'pre-line', lineHeight: 1.4 }}>
+                          {l.nota_permanente}
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: '12px 16px', color: '#5A5A5A', verticalAlign: 'top' }}>{nomeCategoria(l.categoria_id)}</td>
+                    <td style={{ padding: '12px 16px', verticalAlign: 'top' }}>
                       <span style={{ background: l.tipo === 'entrada' ? '#EAF4EE' : '#FDECEC', color: l.tipo === 'entrada' ? '#4C8C6E' : '#B71C1C', padding: '4px 10px', borderRadius: 999, fontSize: 12 }}>
                         {l.tipo === 'entrada' ? 'Entrada' : 'Saída'}
                       </span>
                     </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: l.tipo === 'entrada' ? '#4C8C6E' : '#B71C1C' }}>
+                    <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: l.tipo === 'entrada' ? '#4C8C6E' : '#B71C1C', verticalAlign: 'top' }}>
                       {formatarMoeda(l.valor)}
                     </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <a href={`/financas/editar?id=${l.id}`} style={{ color: '#1F3A5F', marginRight: 12, fontSize: 13 }}>Editar</a>
-                      <button onClick={() => setExcluindo(l)} style={{ background: 'none', border: 'none', color: '#B71C1C', fontSize: 13, cursor: 'pointer' }}>
-                        Excluir
-                      </button>
+                    <td style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap', verticalAlign: 'top' }}>
+                      <a href={`/financas/editar?id=${l.id}`} style={{ color: '#1F3A5F', marginRight: 12, fontSize: 13 }}>
+                        {l.consolidado ? 'Editar' : 'Editar'}
+                      </a>
+                      {l.consolidado ? (
+                        <span style={{ color: '#C9C2B6', fontSize: 13 }} title="Lançamento consolidado não pode ser excluído">Excluir</span>
+                      ) : (
+                        <button onClick={() => setExcluindo(l)} style={{ background: 'none', border: 'none', color: '#B71C1C', fontSize: 13, cursor: 'pointer' }}>
+                          Excluir
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
