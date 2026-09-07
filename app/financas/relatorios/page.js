@@ -1,11 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { supabase } from '../../../lib/supabase'
-import { getPerfil } from '../../../lib/perfil'
-import { formatarMoeda, formatarDataBR, gerarExcelRelatorio, gerarPDFRelatorio } from '../../../lib/relatorios'
-function hojeISO(),
-const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+> 'use client'
+>
+> import { useEffect, useState } from 'react'
+> import { supabase } from '../../../lib/supabase'
+> import { getPerfil } from '../../../lib/perfil'
+> import { formatarMoeda, formatarDataBR, gerarExcelRelatorio, gerarPDFRelatorio } from '../../../lib/relatorios'
+>
+> const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 {
   return new Date().toISOString().slice(0, 10)
 }
