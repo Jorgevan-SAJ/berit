@@ -29,6 +29,7 @@ export default function FinancasPage() {
   const [tipo, setTipo] = useState('')
   const [categoria, setCategoria] = useState('')
   const [excluindo, setExcluindo] = useState(null)
+  const [consultando, setConsultando] = useState(null)
   const [salvando, setSalvando] = useState(false)
 
   useEffect(() => {
@@ -245,9 +246,10 @@ export default function FinancasPage() {
                       {formatarMoeda(l.valor)}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap', verticalAlign: 'top' }}>
-                      <a href={`/financas/editar?id=${l.id}`} style={{ color: '#1F3A5F', marginRight: 12, fontSize: 13 }}>
-                        {l.consolidado ? 'Editar' : 'Editar'}
-                      </a>
+                      <button onClick={() => setConsultando(l)} style={{ background: 'none', border: 'none', color: '#1F3A5F', fontSize: 13, cursor: 'pointer', marginRight: 12 }}>
+                        Consultar
+                      </button>
+                      <a href={`/financas/editar?id=${l.id}`} style={{ color: '#1F3A5F', marginRight: 12, fontSize: 13 }}>Editar</a>
                       {l.consolidado ? (
                         <span style={{ color: '#C9C2B6', fontSize: 13 }} title="Lançamento consolidado não pode ser excluído">Excluir</span>
                       ) : (
@@ -263,6 +265,64 @@ export default function FinancasPage() {
           </div>
         )}
       </div>
+
+      {consultando && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+          <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', maxWidth: 520, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#1F3A5F' }}>Consulta do lançamento</div>
+              <button onClick={() => setConsultando(null)} style={{ background: 'none', border: 'none', fontSize: 20, color: '#8A8A8A', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <div style={{ display: 'grid', gap: '0.6rem', fontSize: 14 }}>
+              <div><strong style={{ color: '#1F3A5F' }}>Data:</strong> {formatarData(consultando.data_lancamento)}</div>
+              <div><strong style={{ color: '#1F3A5F' }}>Descrição:</strong> {consultando.descricao || '—'}</div>
+              <div><strong style={{ color: '#1F3A5F' }}>Categoria:</strong> {nomeCategoria(consultando.categoria_id)}</div>
+              <div>
+                <strong style={{ color: '#1F3A5F' }}>Tipo:</strong>{' '}
+                <span style={{ background: consultando.tipo === 'entrada' ? '#EAF4EE' : '#FDECEC', color: consultando.tipo === 'entrada' ? '#4C8C6E' : '#B71C1C', padding: '3px 8px', borderRadius: 999, fontSize: 12 }}>
+                  {consultando.tipo === 'entrada' ? 'Entrada' : 'Saída'}
+                </span>
+              </div>
+              <div><strong style={{ color: '#1F3A5F' }}>Valor:</strong> <strong>{formatarMoeda(consultando.valor)}</strong></div>
+              <div><strong style={{ color: '#1F3A5F' }}>Forma de pagamento:</strong> {consultando.forma_pagamento || '—'}</div>
+              <div>
+                <strong style={{ color: '#1F3A5F' }}>Membro:</strong>{' '}
+                {consultando.membro_id ? nomeMembro(consultando.membro_id) : '—'}
+              </div>
+              <div>
+                <strong style={{ color: '#1F3A5F' }}>Observações:</strong>{' '}
+                {consultando.observacoes ? (
+                  <span style={{ whiteSpace: 'pre-line', color: '#2E2E2E' }}>{consultando.observacoes}</span>
+                ) : '—'}
+              </div>
+              {consultando.consolidado && (
+                <div><strong style={{ color: '#B26A00' }}>Status:</strong> <span style={{ color: '#B26A00' }}>🔒 Consolidado</span></div>
+              )}
+              {consultando.nota_permanente && (
+                <div style={{ background: '#FDF3E3', color: '#B26A00', padding: '10px 12px', borderRadius: 8, fontSize: 12, whiteSpace: 'pre-line', lineHeight: 1.5 }}>
+                  <strong>Nota permanente:</strong> {consultando.nota_permanente}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: 20 }}>
+              <button
+                onClick={() => setConsultando(null)}
+                style={{ flex: 1, padding: '12px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Fechar
+              </button>
+              <a
+                href={`/financas/editar?id=${consultando.id}`}
+                style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}
+              >
+                Editar lançamento
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {excluindo && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
