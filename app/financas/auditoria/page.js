@@ -38,6 +38,7 @@ export default function AuditoriaPage() {
   const [historico, setHistorico] = useState([])
   const [categorias, setCategorias] = useState([])
   const [membros, setMembros] = useState([])
+  const [usuarios, setUsuarios] = useState([])
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
   const [aviso, setAviso] = useState('')
@@ -53,18 +54,25 @@ export default function AuditoriaPage() {
 
   async function carregarDados() {
     setCarregando(true)
-    const [pend, hist, cat, mem] = await Promise.all([
+    const [pend, hist, cat, mem, usr] = await Promise.all([
       supabase.from('solicitacoes_alteracao').select('*').eq('status', 'pendente').order('solicitado_em', { ascending: true }),
       supabase.from('solicitacoes_alteracao').select('*').in('status', ['aprovada', 'rejeitada']).order('analisado_em', { ascending: false }).limit(10),
       supabase.from('categorias').select('*').order('nome'),
       supabase.from('membros').select('id, nome').order('nome'),
+      supabase.from('v_usuarios').select('id, email').order('email'),
     ])
     setSolicitacoes(pend.data || [])
     setHistorico(hist.data || [])
     setCategorias(cat.data || [])
     setMembros(mem.data || [])
-    if (pend.error || hist.error || cat.error || mem.error) setErro('Não foi possível carregar as solicitações.')
+    setUsuarios(usr.data || [])
+    if (pend.error || hist.error || cat.error || mem.error || usr.error) setErro('Não foi possível carregar as solicitações.')
     setCarregando(false)
+  }
+
+  const emailUsuario = (id) => {
+    const u = usuarios.find((x) => x.id === id)
+    return u ? u.email : '—'
   }
 
   const nomeCategoria = (id) => {
@@ -156,7 +164,7 @@ export default function AuditoriaPage() {
         </p>
 
         <div style={{ background: '#E8F0FA', color: '#1F3A5F', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
-          Quando um lançamento consolidado é alterado, a mudança é aplicada na hora e fica <strong>aguardando a conferência do outro perfil financeiro</strong> (Administrador confere o que o Tesoureiro alterou, e vice-versa). <strong>Aprovando</strong>, o lançamento ganha a nota permanente "Esse lançamento foi alterado em dd/mm/aaaa". <strong>Rejeitando</strong>, os valores originais são restaurados automaticamente.
+          Quando um lançamento consolidado é alterado, a mudança é aplicada na hora e fica <strong>aguardando a conferência de outro usuário com perfil financeiro</strong> (Administrador confere o que o Tesoureiro alterou, e vice-versa). <strong>Ninguém pode conferir a própria alteração.</strong> Aprovando, o lançamento ganha a nota permanente "Esse lançamento foi alterado em dd/mm/aaaa". Rejeitando, os valores originais são restaurados.
         </div>
 
         {erro && (
@@ -184,7 +192,9 @@ export default function AuditoriaPage() {
                     <span style={{ background: '#FDF3E3', color: '#B26A00', padding: '4px 10px', borderRadius: 999, fontSize: 12, fontWeight: 600 }}>
                       Aguardando conferência
                     </span>
-                    <span style={{ fontSize: 12, color: '#8A8A8A' }}>Solicitada em {formatarDataHora(sol.solicitado_em)}</span>
+                    <span style={{ fontSize: 12, color: '#8A8A8A' }}>
+                      Solicitada por <strong style={{ color: '#2E2E2E' }}>{emailUsuario(sol.solicitado_por)}</strong> em {formatarDataHora(sol.solicitado_em)}
+                    </span>
                   </div>
 
                   {alterados.length === 0 ? (
@@ -238,12 +248,14 @@ export default function AuditoriaPage() {
             <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '1rem' }}>Nenhuma análise realizada ainda.</div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 640 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 760 }}>
                 <thead>
                   <tr style={{ background: '#F5F0E6', color: '#1F3A5F', textAlign: 'left' }}>
                     <th style={{ padding: '10px 12px' }}>Status</th>
                     <th style={{ padding: '10px 12px' }}>Descrição</th>
                     <th style={{ padding: '10px 12px', textAlign: 'right' }}>Valor</th>
+                    <th style={{ padding: '10px 12px' }}>Solicitada por</th>
+                    <th style={{ padding: '10px 12px' }}>Analisada por</th>
                     <th style={{ padding: '10px 12px' }}>Analisada em</th>
                   </tr>
                 </thead>
@@ -257,6 +269,8 @@ export default function AuditoriaPage() {
                       </td>
                       <td style={{ padding: '10px 12px', color: '#5A5A5A' }}>{(h.dados_novos || {}).descricao || 'Lançamento'}</td>
                       <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: '#2E2E2E' }}>{formatarMoeda((h.dados_novos || {}).valor)}</td>
+                      <td style={{ padding: '10px 12px', color: '#5A5A5A' }}>{emailUsuario(h.solicitado_por)}</td>
+                      <td style={{ padding: '10px 12px', color: '#5A5A5A' }}>{emailUsuario(h.analisado_por)}</td>
                       <td style={{ padding: '10px 12px', color: '#5A5A5A' }}>{formatarDataHora(h.analisado_em)}</td>
                     </tr>
                   ))}
