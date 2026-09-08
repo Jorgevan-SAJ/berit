@@ -153,6 +153,11 @@ export default function FinancasPage() {
             <a href="/financas/auditoria" style={{ background: '#FFFFFF', color: '#1F3A5F', border: '1px solid #1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
               Auditoria
             </a>
+            {perfilAtual && perfilAtual.perfil === 'tesouraria' && (
+              <a href="/financas/contribuicoes" style={{ background: '#FFFFFF', color: '#4C8C6E', border: '1px solid #4C8C6E', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+                Contribuições
+              </a>
+            )}
             <a href="/financas/novo" style={{ background: '#D9A441', color: '#1F3A5F', padding: '10px 18px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
               + Novo lançamento
             </a>
