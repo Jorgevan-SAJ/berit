@@ -14,6 +14,7 @@ const TIPOS = [
 ]
 
 const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+const DIAS_SEMANA_LABEL = ['Domingos', 'Segundas', 'Terças', 'Quartas', 'Quintas', 'Sextas', 'Sábados']
 
 function rotuloTipo(v) {
   const t = TIPOS.find((x) => x.v === v)
@@ -87,22 +88,39 @@ export default function AgendaPage() {
   const primeiro = new Date(ano, mesNum - 1, 1)
   const diasNoMes = new Date(ano, mesNum, 0).getDate()
   const offset = primeiro.getDay()
+  const hojeISO = new Date().toISOString().slice(0, 10)
 
-  const eventosDoMes = eventos.filter((e) => (e.data_inicio || '').startsWith(mes))
-  const filtrados = eventosDoMes.filter((e) => !filtroTipo || e.tipo === filtroTipo)
+  // Expiração automática: específicos com data passada saem; permanentes ficam sempre
+  const eventosAtivos = eventos.filter((e) => {
+    if (e.tipo_evento === 'permanente') {
+      return e.dia_semana !== null && e.dia_semana !== undefined
+    }
+    return (e.data_inicio || '') >= hojeISO
+  })
+
+  const especificosDoMes = eventosAtivos.filter((e) => e.tipo_evento !== 'permanente' && (e.data_inicio || '').startsWith(mes))
+  const permanentes = eventosAtivos.filter((e) => e.tipo_evento === 'permanente')
+  const filtrados = [...permanentes, ...especificosDoMes].filter((e) => !filtroTipo || e.tipo === filtroTipo)
 
   const eventosPorDia = {}
   filtrados.forEach((e) => {
-    const dia = Number(e.data_inicio.slice(8, 10))
-    if (!eventosPorDia[dia]) eventosPorDia[dia] = []
-    eventosPorDia[dia].push(e)
+    if (e.tipo_evento === 'permanente') {
+      for (let d = 1; d <= diasNoMes; d++) {
+        if (new Date(ano, mesNum - 1, d).getDay() === e.dia_semana) {
+          if (!eventosPorDia[d]) eventosPorDia[d] = []
+          eventosPorDia[d].push(e)
+        }
+      }
+    } else {
+      const dia = Number(e.data_inicio.slice(8, 10))
+      if (!eventosPorDia[dia]) eventosPorDia[dia] = []
+      eventosPorDia[dia].push(e)
+    }
   })
 
   const celulas = []
   for (let i = 0; i < offset; i++) celulas.push(null)
   for (let d = 1; d <= diasNoMes; d++) celulas.push(d)
-
-  const hojeISO = new Date().toISOString().slice(0, 10)
 
   function mudarMes(delta) {
     const d = new Date(ano, mesNum - 1 + delta, 1)
@@ -181,6 +199,10 @@ export default function AgendaPage() {
             </select>
           </div>
 
+          <div style={{ fontSize: 12, color: '#8A8A8A', marginBottom: 12, lineHeight: 1.5 }}>
+            💡 Eventos <strong>permanentes</strong> aparecem toda semana no mês e nunca expiram. Eventos <strong>específicos</strong> somem automaticamente após a data.
+          </div>
+
           {carregando ? (
             <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '2rem' }}>Carregando...</div>
           ) : (
@@ -236,13 +258,14 @@ export default function AgendaPage() {
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 760 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 780 }}>
                 <thead>
                   <tr style={{ background: '#F5F0E6', color: '#1F3A5F', textAlign: 'left' }}>
                     <th style={{ padding: '10px 12px' }}>Data</th>
                     <th style={{ padding: '10px 12px' }}>Hora</th>
                     <th style={{ padding: '10px 12px' }}>Evento</th>
                     <th style={{ padding: '10px 12px' }}>Tipo</th>
+                    <th style={{ padding: '10px 12px' }}>Recorrência</th>
                     <th style={{ padding: '10px 12px' }}>Local</th>
                     <th style={{ padding: '10px 12px' }}>Responsável</th>
                   </tr>
@@ -252,12 +275,19 @@ export default function AgendaPage() {
                     const c = corTipo(e.tipo)
                     return (
                       <tr key={e.id} style={{ borderTop: '1px solid #F0EAE0', cursor: 'pointer' }} onClick={() => setSelecionado(e)}>
-                        <td style={{ padding: '10px 12px', color: '#5A5A5A' }}>{formatarData(e.data_inicio)}</td>
+                        <td style={{ padding: '10px 12px', color: '#5A5A5A' }}>
+                          {e.tipo_evento === 'permanente' ? DIAS_SEMANA_LABEL[e.dia_semana] : formatarData(e.data_inicio)}
+                        </td>
                         <td style={{ padding: '10px 12px', color: '#5A5A5A' }}>{formatarHora(e.hora_inicio)}</td>
                         <td style={{ padding: '10px 12px', fontWeight: 600, color: '#2E2E2E' }}>{e.titulo}</td>
                         <td style={{ padding: '10px 12px' }}>
                           <span style={{ background: c.bg, color: c.cor, padding: '3px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600 }}>
                             {rotuloTipo(e.tipo)}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <span style={{ background: e.tipo_evento === 'permanente' ? '#E8F0FA' : '#F5F0E6', color: e.tipo_evento === 'permanente' ? '#1F3A5F' : '#5A5A5A', padding: '3px 8px', borderRadius: 999, fontSize: 11 }}>
+                            {e.tipo_evento === 'permanente' ? 'Permanente' : 'Data única'}
                           </span>
                         </td>
                         <td style={{ padding: '10px 12px', color: '#5A5A5A' }}>{e.local || '—'}</td>
@@ -281,14 +311,22 @@ export default function AgendaPage() {
             </div>
 
             <div style={{ display: 'grid', gap: '0.6rem', fontSize: 14 }}>
-              <div>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <span style={{ background: corTipo(selecionado.tipo).bg, color: corTipo(selecionado.tipo).cor, padding: '3px 8px', borderRadius: 999, fontSize: 12, fontWeight: 600 }}>
                   {rotuloTipo(selecionado.tipo)}
                 </span>
+                <span style={{ background: selecionado.tipo_evento === 'permanente' ? '#E8F0FA' : '#F5F0E6', color: selecionado.tipo_evento === 'permanente' ? '#1F3A5F' : '#5A5A5A', padding: '3px 8px', borderRadius: 999, fontSize: 12, fontWeight: 600 }}>
+                  {selecionado.tipo_evento === 'permanente' ? 'Evento permanente' : 'Evento específico'}
+                </span>
               </div>
-              <div><strong style={{ color: '#1F3A5F' }}>Data:</strong> {formatarData(selecionado.data_inicio)}</div>
+              <div>
+                <strong style={{ color: '#1F3A5F' }}>Data:</strong>{' '}
+                {selecionado.tipo_evento === 'permanente'
+                  ? `Todos os ${DIAS_SEMANA_LABEL[selecionado.dia_semana]}`
+                  : formatarData(selecionado.data_inicio)}
+              </div>
               <div><strong style={{ color: '#1F3A5F' }}>Hora:</strong> {formatarHora(selecionado.hora_inicio)}{selecionado.hora_fim ? ` às ${formatarHora(selecionado.hora_fim)}` : ''}</div>
-              {selecionado.data_fim && (
+              {selecionado.tipo_evento !== 'permanente' && selecionado.data_fim && (
                 <div><strong style={{ color: '#1F3A5F' }}>Data final:</strong> {formatarData(selecionado.data_fim)}</div>
               )}
               <div><strong style={{ color: '#1F3A5F' }}>Local:</strong> {selecionado.local || '—'}</div>
