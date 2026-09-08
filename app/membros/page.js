@@ -62,6 +62,13 @@ const SITUACOES = [
   { valor: 'visitante', rotulo: 'Visitantes' },
 ]
 
+const SITUACAO_ROTULO = {
+  ativo: 'Ativo',
+  congregado: 'Congregado',
+  visitante: 'Visitante',
+  inativo: 'Inativo',
+}
+
 const CORES_SITUACAO = {
   ativo: { bg: '#EAF4EE', cor: '#4C8C6E' },
   congregado: { bg: '#E8F0FA', cor: '#1F3A5F' },
@@ -88,6 +95,7 @@ export default function MembrosPage() {
   const [inativando, setInativando] = useState(null)
   const [motivo, setMotivo] = useState(MOTIVOS[0])
   const [excluindo, setExcluindo] = useState(null)
+  const [consultando, setConsultando] = useState(null)
   const [salvando, setSalvando] = useState(false)
 
   async function carregar() {
@@ -175,6 +183,8 @@ export default function MembrosPage() {
     const situacaoOk = !situacao || (m.situacao || '') === situacao
     return nomeOk && faixaOk && sexoOk && situacaoOk
   })
+
+  const rotuloSexo = (s) => s === 'masculino' ? 'Masculino' : s === 'feminino' ? 'Feminino' : '—'
 
   return (
     <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -275,15 +285,18 @@ export default function MembrosPage() {
                         )}
                       </td>
                       <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{idade === null ? '—' : `${idade} anos`}</td>
-                      <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{m.sexo === 'masculino' ? 'Masculino' : m.sexo === 'feminino' ? 'Feminino' : '—'}</td>
+                      <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{rotuloSexo(m.sexo)}</td>
                       <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{m.email || '—'}</td>
                       <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{formatarCelular(m.celular) || '—'}</td>
                       <td style={{ padding: '12px 16px' }}>
                         <span style={{ background: cores.bg, color: cores.cor, padding: '4px 10px', borderRadius: 999, fontSize: 12 }}>
-                          {m.situacao}
+                          {SITUACAO_ROTULO[m.situacao] || m.situacao}
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <button onClick={() => setConsultando(m)} style={{ background: 'none', border: 'none', color: '#1F3A5F', fontSize: 13, cursor: 'pointer', marginRight: 12 }}>
+                          Consultar
+                        </button>
                         <a href={`/membros/editar?id=${m.id}`} style={{ color: '#1F3A5F', marginRight: 12, fontSize: 13 }}>Editar</a>
                         <button onClick={() => setInativando(m)} style={{ background: 'none', border: 'none', color: '#B7791F', fontSize: 13, cursor: 'pointer', marginRight: 12 }}>
                           Inativar
@@ -300,6 +313,66 @@ export default function MembrosPage() {
           </div>
         )}
       </div>
+
+      {consultando && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+          <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', maxWidth: 560, width: '90%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#1F3A5F' }}>Ficha do membro</div>
+              <button onClick={() => setConsultando(null)} style={{ background: 'none', border: 'none', fontSize: 20, color: '#8A8A8A', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <div style={{ display: 'grid', gap: '0.6rem', fontSize: 14 }}>
+              <div><strong style={{ color: '#1F3A5F' }}>Nome:</strong> {consultando.nome}</div>
+              <div>
+                <strong style={{ color: '#1F3A5F' }}>Idade / Faixa:</strong>{' '}
+                {calcularIdade(consultando.data_nascimento) === null
+                  ? '—'
+                  : `${calcularIdade(consultando.data_nascimento)} anos (${FAIXA_ROTULO[faixaEtaria(calcularIdade(consultando.data_nascimento))] || '—'})`}
+              </div>
+              <div><strong style={{ color: '#1F3A5F' }}>Sexo:</strong> {rotuloSexo(consultando.sexo)}</div>
+              <div><strong style={{ color: '#1F3A5F' }}>E-mail:</strong> {consultando.email || '—'}</div>
+              <div><strong style={{ color: '#1F3A5F' }}>Celular:</strong> {formatarCelular(consultando.celular) || '—'}</div>
+              <div><strong style={{ color: '#1F3A5F' }}>Data de nascimento:</strong> {formatarData(consultando.data_nascimento) || '—'}</div>
+              <div><strong style={{ color: '#1F3A5F' }}>Data de batismo:</strong> {formatarData(consultando.data_batismo) || '—'}</div>
+              <div><strong style={{ color: '#1F3A5F' }}>Data de recebimento:</strong> {formatarData(consultando.data_recebimento) || '—'}</div>
+              {consultando.endereco && <div><strong style={{ color: '#1F3A5F' }}>Endereço:</strong> {consultando.endereco}</div>}
+              {consultando.bairro && <div><strong style={{ color: '#1F3A5F' }}>Bairro:</strong> {consultando.bairro}</div>}
+              {consultando.cidade && <div><strong style={{ color: '#1F3A5F' }}>Cidade / UF:</strong> {consultando.cidade}{consultando.uf ? ` / ${consultando.uf}` : ''}</div>}
+              {consultando.cep && <div><strong style={{ color: '#1F3A5F' }}>CEP:</strong> {consultando.cep}</div>}
+              {consultando.nome_pai && <div><strong style={{ color: '#1F3A5F' }}>Nome do pai:</strong> {consultando.nome_pai}</div>}
+              {consultando.nome_mae && <div><strong style={{ color: '#1F3A5F' }}>Nome da mãe:</strong> {consultando.nome_mae}</div>}
+              <div>
+                <strong style={{ color: '#1F3A5F' }}>Situação:</strong>{' '}
+                <span style={{ background: (CORES_SITUACAO[consultando.situacao] || { bg: '#F5F0E6', cor: '#8A8A8A' }).bg, color: (CORES_SITUACAO[consultando.situacao] || { bg: '#F5F0E6', cor: '#8A8A8A' }).cor, padding: '3px 8px', borderRadius: 999, fontSize: 12 }}>
+                  {SITUACAO_ROTULO[consultando.situacao] || consultando.situacao}
+                </span>
+              </div>
+              <div>
+                <strong style={{ color: '#1F3A5F' }}>Observações:</strong>{' '}
+                {consultando.observacoes ? (
+                  <span style={{ whiteSpace: 'pre-line', color: '#2E2E2E' }}>{consultando.observacoes}</span>
+                ) : '—'}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: 20 }}>
+              <button
+                onClick={() => setConsultando(null)}
+                style={{ flex: 1, padding: '12px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Fechar
+              </button>
+              <a
+                href={`/membros/editar?id=${consultando.id}`}
+                style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}
+              >
+                Editar cadastro
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {inativando && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
