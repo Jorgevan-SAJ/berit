@@ -111,11 +111,16 @@ export default function AcessosPage() {
 
   async function mudarPerfil(usuario, perfil) {
     setErro('')
+    setAviso('')
+    if (usuario.id === meuId) {
+      setErro('Um Administrador não pode alterar o próprio perfil.')
+      return
+    }
     const { error } = await supabase
       .from('perfis')
       .upsert({ user_id: usuario.id, perfil }, { onConflict: 'user_id' })
     if (error) {
-      setErro('Não foi possível alterar o perfil.')
+      setErro(error.message || 'Não foi possível alterar o perfil.')
     } else {
       carregarUsuarios()
     }
@@ -123,6 +128,11 @@ export default function AcessosPage() {
 
   async function alternarAtivo(usuario) {
     setErro('')
+    setAviso('')
+    if (usuario.id === meuId) {
+      setErro('Você não pode inativar o próprio usuário.')
+      return
+    }
     const novoAtivo = usuario.ativo ? false : true
     const { error } = await supabase
       .from('perfis')
@@ -348,16 +358,27 @@ export default function AcessosPage() {
                         )}
                       </td>
                       <td style={{ padding: '12px 16px' }}>
-                        <select
-                          value={u.perfil || ''}
-                          onChange={(e) => mudarPerfil(u, e.target.value)}
-                          style={{ padding: '8px 10px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 13, fontFamily: 'inherit' }}
-                        >
-                          <option value="" disabled>Sem perfil</option>
-                          {PERFIS_DISPONIVEIS.map((p) => (
-                            <option key={p.valor} value={p.valor}>{p.rotulo}</option>
-                          ))}
-                        </select>
+                        {u.id === meuId ? (
+                          <div>
+                            <span style={{ fontWeight: 600, color: '#2E2E2E' }}>
+                              {PERFIS_DISPONIVEIS.find((p) => p.valor === u.perfil)?.rotulo || 'Sem perfil'}
+                            </span>
+                            <div style={{ fontSize: 11, color: '#8A8A8A', marginTop: 2 }}>
+                              Você não pode alterar seu próprio perfil
+                            </div>
+                          </div>
+                        ) : (
+                          <select
+                            value={u.perfil || ''}
+                            onChange={(e) => mudarPerfil(u, e.target.value)}
+                            style={{ padding: '8px 10px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 13, fontFamily: 'inherit' }}
+                          >
+                            <option value="" disabled>Sem perfil</option>
+                            {PERFIS_DISPONIVEIS.map((p) => (
+                              <option key={p.valor} value={p.valor}>{p.rotulo}</option>
+                            ))}
+                          </select>
+                        )}
                       </td>
                       <td style={{ padding: '12px 16px' }}>
                         <span style={{ background: u.ativo === false ? '#FDECEC' : '#EAF4EE', color: u.ativo === false ? '#B71C1C' : '#4C8C6E', padding: '4px 10px', borderRadius: 999, fontSize: 12 }}>
@@ -365,13 +386,18 @@ export default function AcessosPage() {
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                        <button onClick={() => alternarAtivo(u)} style={{ background: 'none', border: 'none', color: u.ativo === false ? '#4C8C6E' : '#B7791F', fontSize: 13, cursor: 'pointer', marginRight: 12 }}>
-                          {u.ativo === false ? 'Reativar' : 'Inativar'}
-                        </button>
                         {u.id !== meuId && (
-                          <button onClick={() => setExcluindo(u)} style={{ background: 'none', border: 'none', color: '#B71C1C', fontSize: 13, cursor: 'pointer' }}>
-                            Excluir
-                          </button>
+                          <>
+                            <button onClick={() => alternarAtivo(u)} style={{ background: 'none', border: 'none', color: u.ativo === false ? '#4C8C6E' : '#B7791F', fontSize: 13, cursor: 'pointer', marginRight: 12 }}>
+                              {u.ativo === false ? 'Reativar' : 'Inativar'}
+                            </button>
+                            <button onClick={() => setExcluindo(u)} style={{ background: 'none', border: 'none', color: '#B71C1C', fontSize: 13, cursor: 'pointer' }}>
+                              Excluir
+                            </button>
+                          </>
+                        )}
+                        {u.id === meuId && (
+                          <span style={{ fontSize: 12, color: '#C9C2B6' }}>—</span>
                         )}
                       </td>
                     </tr>
