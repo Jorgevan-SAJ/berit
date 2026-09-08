@@ -38,6 +38,7 @@ export default function AreaPage() {
 
   const ehAdmin = perfil && perfil.perfil === 'admin_master'
   const podeFinancas = perfil && (perfil.perfil === 'admin_master' || perfil.perfil === 'tesouraria')
+  const podeAgenda = perfil && (perfil.perfil === 'admin_master' || perfil.perfil === 'secretaria')
 
   return (
     <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -50,17 +51,20 @@ export default function AreaPage() {
           Sair
         </button>
       </header>
+
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Área da Igreja</h1>
         <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 2rem' }}>
           Bem-vindo{usuario?.email ? `, ${usuario.email}` : ''}
           {perfil ? ` · Perfil: ${perfilLabel(perfil.perfil)}` : ''} — gestão simples para igrejas.
         </p>
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
           <a href="/membros" style={card}>
             <div style={cardTitulo}>Membros</div>
             <p style={cardTexto}>Cadastro e gestão do rol de membros. Clique para acessar.</p>
           </a>
+
           {podeFinancas ? (
             <a href="/financas" style={card}>
               <div style={cardTitulo}>Finanças</div>
@@ -72,22 +76,29 @@ export default function AreaPage() {
               <p style={cardTexto}>Acesso restrito ao perfil Tesouraria.</p>
             </div>
           )}
+
           {ehAdmin && (
             <a href="/acessos" style={card}>
               <div style={cardTitulo}>Perfis de Acesso</div>
               <p style={cardTexto}>Crie usuários e controle as permissões da plataforma.</p>
             </a>
           )}
-          <div style={card}>
+
+          <a href="/agenda" style={card}>
             <div style={cardTitulo}>Agenda</div>
-            <p style={cardTexto}>Programações e eventos da igreja. Disponível na Fase 2.</p>
-          </div>
+            <p style={cardTexto}>
+              Programações e eventos da igreja. Clique para acessar.
+              {podeAgenda ? ' Gerenciamento liberado para o seu perfil.' : ''}
+            </p>
+          </a>
+
           <div style={card}>
             <div style={cardTitulo}>Diretório Público</div>
             <p style={cardTexto}>Busca de igrejas perto de você. Disponível na Fase 3.</p>
           </div>
         </div>
       </div>
+
       <footer style={{ textAlign: 'center', padding: '1.5rem', fontSize: 12, color: '#8A8A8A' }}>
         <a href="/recuperar-acesso" style={{ color: '#8A8A8A', textDecoration: 'underline' }}>Recuperar acesso de administrador</a>
         <span style={{ margin: '0 8px' }}>·</span>
