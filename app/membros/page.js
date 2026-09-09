@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../../lib/supabase'
+import { getPerfil } from '../../lib/perfil'
 
 function formatarCelular(valor) {
   const d = (valor || '').replace(/\D/g, '').slice(0, 11)
@@ -85,6 +86,8 @@ const MOTIVOS = [
 ]
 
 export default function MembrosPage() {
+  const [perfilAtual, setPerfilAtual] = useState(null)
+  const [verificando, setVerificando] = useState(true)
   const [membros, setMembros] = useState([])
   const [busca, setBusca] = useState('')
   const [faixa, setFaixa] = useState('')
@@ -97,6 +100,10 @@ export default function MembrosPage() {
   const [excluindo, setExcluindo] = useState(null)
   const [consultando, setConsultando] = useState(null)
   const [salvando, setSalvando] = useState(false)
+
+  const podeVer = perfilAtual && ['admin_master', 'secretaria', 'conselho_fiscal'].includes(perfilAtual.perfil)
+  const podeEditar = perfilAtual && ['admin_master', 'secretaria'].includes(perfilAtual.perfil)
+  const ehConselhoFiscal = perfilAtual && perfilAtual.perfil === 'conselho_fiscal'
 
   async function carregar() {
     setCarregando(true)
@@ -113,7 +120,13 @@ export default function MembrosPage() {
     setCarregando(false)
   }
 
-  useEffect(() => { carregar() }, [])
+  useEffect(() => {
+    getPerfil().then((p) => {
+      setPerfilAtual(p)
+      setVerificando(false)
+      if (p && ['admin_master', 'secretaria', 'conselho_fiscal'].includes(p.perfil)) carregar()
+    })
+  }, [])
 
   async function confirmarInativacao() {
     if (!inativando) return
@@ -186,6 +199,38 @@ export default function MembrosPage() {
 
   const rotuloSexo = (s) => s === 'masculino' ? 'Masculino' : s === 'feminino' ? 'Feminino' : '—'
 
+  if (verificando) {
+    return (
+      <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem', textAlign: 'center', fontSize: 14, color: '#8A8A8A' }}>
+          Verificando permissões...
+        </div>
+      </main>
+    )
+  }
+
+  if (!perfilAtual || !podeVer) {
+    return (
+      <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
+        <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <a href="/area" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF', textDecoration: 'none' }}>
+            Berit
+          </a>
+          <a href="/area" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}>
+            Voltar
+          </a>
+        </header>
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem', textAlign: 'center' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#1F3A5F', marginBottom: 8 }}>Acesso restrito</div>
+          <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 16px' }}>
+            Esta área é exclusiva dos perfis <strong>Administrador</strong>, <strong>Secretaria</strong> e <strong>Conselho Fiscal</strong>.
+          </p>
+          <a href="/area" style={{ color: '#1F3A5F', fontSize: 14 }}>Voltar para o início</a>
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
       <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -201,21 +246,32 @@ export default function MembrosPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
           <div>
             <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Membros</h1>
-            <p style={{ fontSize: 14, color: '#8A8A8A', margin: 0 }}>Cadastro e gestão do rol de membros da igreja.</p>
+            <p style={{ fontSize: 14, color: '#8A8A8A', margin: 0 }}>
+              Cadastro e gestão do rol de membros da igreja.
+              {ehConselhoFiscal && ' Consulta em modo somente leitura — Conselho Fiscal.'}
+            </p>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <a href="/membros/inativos" style={{ background: '#F5F0E6', color: '#1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
-              Inativos
-            </a>
-            <a href="/membros/importar" style={{ background: '#FFFFFF', color: '#1F3A5F', border: '1px solid #1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
-              Importar dados
-            </a>
-            <button onClick={exportar} style={{ background: '#FFFFFF', color: '#1F3A5F', border: '1px solid #1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-              Exportar
-            </button>
-            <a href="/membros/novo" style={{ background: '#D9A441', color: '#1F3A5F', padding: '10px 18px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
-              + Novo membro
-            </a>
+            {podeEditar && (
+              <a href="/membros/inativos" style={{ background: '#F5F0E6', color: '#1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+                Inativos
+              </a>
+            )}
+            {podeEditar && (
+              <a href="/membros/importar" style={{ background: '#FFFFFF', color: '#1F3A5F', border: '1px solid #1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+                Importar dados
+              </a>
+            )}
+            {podeEditar && (
+              <button onClick={exportar} style={{ background: '#FFFFFF', color: '#1F3A5F', border: '1px solid #1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                Exportar
+              </button>
+            )}
+            {podeEditar && (
+              <a href="/membros/novo" style={{ background: '#D9A441', color: '#1F3A5F', padding: '10px 18px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+                + Novo membro
+              </a>
+            )}
           </div>
         </div>
 
@@ -297,13 +353,17 @@ export default function MembrosPage() {
                         <button onClick={() => setConsultando(m)} style={{ background: 'none', border: 'none', color: '#1F3A5F', fontSize: 13, cursor: 'pointer', marginRight: 12 }}>
                           Consultar
                         </button>
-                        <a href={`/membros/editar?id=${m.id}`} style={{ color: '#1F3A5F', marginRight: 12, fontSize: 13 }}>Editar</a>
-                        <button onClick={() => setInativando(m)} style={{ background: 'none', border: 'none', color: '#B7791F', fontSize: 13, cursor: 'pointer', marginRight: 12 }}>
-                          Inativar
-                        </button>
-                        <button onClick={() => setExcluindo(m)} style={{ background: 'none', border: 'none', color: '#B71C1C', fontSize: 13, cursor: 'pointer' }}>
-                          Excluir
-                        </button>
+                        {podeEditar && (
+                          <>
+                            <a href={`/membros/editar?id=${m.id}`} style={{ color: '#1F3A5F', marginRight: 12, fontSize: 13 }}>Editar</a>
+                            <button onClick={() => setInativando(m)} style={{ background: 'none', border: 'none', color: '#B7791F', fontSize: 13, cursor: 'pointer', marginRight: 12 }}>
+                              Inativar
+                            </button>
+                            <button onClick={() => setExcluindo(m)} style={{ background: 'none', border: 'none', color: '#B71C1C', fontSize: 13, cursor: 'pointer' }}>
+                              Excluir
+                            </button>
+                          </>
+                        )}
                       </td>
                     </tr>
                   )
@@ -321,7 +381,6 @@ export default function MembrosPage() {
               <div style={{ fontSize: 18, fontWeight: 700, color: '#1F3A5F' }}>Ficha do membro</div>
               <button onClick={() => setConsultando(null)} style={{ background: 'none', border: 'none', fontSize: 20, color: '#8A8A8A', cursor: 'pointer' }}>✕</button>
             </div>
-
             <div style={{ display: 'grid', gap: '0.6rem', fontSize: 14 }}>
               <div><strong style={{ color: '#1F3A5F' }}>Nome:</strong> {consultando.nome}</div>
               <div>
@@ -355,7 +414,6 @@ export default function MembrosPage() {
                 ) : '—'}
               </div>
             </div>
-
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: 20 }}>
               <button
                 onClick={() => setConsultando(null)}
@@ -363,12 +421,14 @@ export default function MembrosPage() {
               >
                 Fechar
               </button>
-              <a
-                href={`/membros/editar?id=${consultando.id}`}
-                style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}
-              >
-                Editar cadastro
-              </a>
+              {podeEditar && (
+                <a
+                  href={`/membros/editar?id=${consultando.id}`}
+                  style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}
+                >
+                  Editar cadastro
+                </a>
+              )}
             </div>
           </div>
         </div>
