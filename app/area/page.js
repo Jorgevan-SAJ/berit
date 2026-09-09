@@ -51,7 +51,20 @@ export default function AreaPage() {
           Sair
         </button>
       </header>
-
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <a
+            href="/ajuda"
+            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}
+          >
+            Ajuda
+          </a>
+          <button
+            onClick={async () => { await supabase.auth.signOut(); window.location.href = '/login' }}
+            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}
+          >
+            Sair
+          </button>
+        </div>
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Área da Igreja</h1>
         <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 2rem' }}>
