@@ -13,6 +13,16 @@ const TIPOS = [
   { v: 'outro', r: 'Outro' },
 ]
 
+const DIAS_SEMANA_OPCOES = [
+  { v: '0', r: 'Domingo' },
+  { v: '1', r: 'Segunda-feira' },
+  { v: '2', r: 'Terça-feira' },
+  { v: '3', r: 'Quarta-feira' },
+  { v: '4', r: 'Quinta-feira' },
+  { v: '5', r: 'Sexta-feira' },
+  { v: '6', r: 'Sábado' },
+]
+
 export default function EditarEvento() {
   const [perfilAtual, setPerfilAtual] = useState(null)
   const [verificando, setVerificando] = useState(true)
@@ -45,6 +55,8 @@ export default function EditarEvento() {
       setForm({
         titulo: data.titulo,
         tipo: data.tipo,
+        tipo_evento: data.tipo_evento || 'especifico',
+        dia_semana: data.dia_semana !== null && data.dia_semana !== undefined ? String(data.dia_semana) : '0',
         data_inicio: data.data_inicio || '',
         hora_inicio: data.hora_inicio || '19:00',
         data_fim: data.data_fim || '',
@@ -63,20 +75,27 @@ export default function EditarEvento() {
       setErro('Informe o título do evento.')
       return
     }
-    if (!form.data_inicio) {
+    if (form.tipo_evento === 'permanente' && form.dia_semana === '') {
+      setErro('Selecione o dia da semana do evento permanente.')
+      return
+    }
+    if (form.tipo_evento === 'especifico' && !form.data_inicio) {
       setErro('Informe a data do evento.')
       return
     }
+    const permanente = form.tipo_evento === 'permanente'
     setCarregando(true)
     const params = new URLSearchParams(window.location.search)
     const id = params.get('id')
     const { error } = await supabase.from('eventos').update({
       titulo: form.titulo.trim(),
       tipo: form.tipo,
-      data_inicio: form.data_inicio,
+      tipo_evento: form.tipo_evento,
+      dia_semana: permanente ? Number(form.dia_semana) : null,
+      data_inicio: permanente ? null : form.data_inicio,
       hora_inicio: form.hora_inicio || '19:00',
-      data_fim: form.data_fim || null,
-      hora_fim: form.hora_fim || null,
+      data_fim: permanente ? null : (form.data_fim || null),
+      hora_fim: permanente ? null : (form.hora_fim || null),
       local: form.local.trim() || '',
       responsavel: form.responsavel.trim() || '',
       descricao: form.descricao.trim() || '',
@@ -167,27 +186,71 @@ export default function EditarEvento() {
             ))}
           </select>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 1rem' }}>
-            <div>
-              <label style={rotulo}>Data *</label>
-              <input type="date" value={form.data_inicio} onChange={(e) => setForm({ ...form, data_inicio: e.target.value })} required style={campo} />
-            </div>
-            <div>
-              <label style={rotulo}>Hora</label>
-              <input type="time" value={form.hora_inicio} onChange={(e) => setForm({ ...form, hora_inicio: e.target.value })} style={campo} />
-            </div>
+          <label style={rotulo}>Tipo de evento</label>
+          <div style={{ display: 'flex', gap: '0.75rem', marginBottom: 16 }}>
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, tipo_evento: 'especifico' })}
+              style={{
+                flex: 1, padding: '12px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', border: 'none',
+                background: form.tipo_evento === 'especifico' ? '#1F3A5F' : '#F5F0E6',
+                color: form.tipo_evento === 'especifico' ? '#FFFFFF' : '#5A5A5A',
+              }}
+            >
+              Data única
+            </button>
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, tipo_evento: 'permanente' })}
+              style={{
+                flex: 1, padding: '12px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', border: 'none',
+                background: form.tipo_evento === 'permanente' ? '#4C8C6E' : '#F5F0E6',
+                color: form.tipo_evento === 'permanente' ? '#FFFFFF' : '#5A5A5A',
+              }}
+            >
+              Permanente (recorrente)
+            </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 1rem' }}>
-            <div>
-              <label style={rotulo}>Data final (opcional)</label>
-              <input type="date" value={form.data_fim} onChange={(e) => setForm({ ...form, data_fim: e.target.value })} style={campo} />
+          {form.tipo_evento === 'especifico' ? (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 1rem' }}>
+                <div>
+                  <label style={rotulo}>Data *</label>
+                  <input type="date" value={form.data_inicio} onChange={(e) => setForm({ ...form, data_inicio: e.target.value })} required style={campo} />
+                </div>
+                <div>
+                  <label style={rotulo}>Hora</label>
+                  <input type="time" value={form.hora_inicio} onChange={(e) => setForm({ ...form, hora_inicio: e.target.value })} style={campo} />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 1rem' }}>
+                <div>
+                  <label style={rotulo}>Data final (opcional)</label>
+                  <input type="date" value={form.data_fim} onChange={(e) => setForm({ ...form, data_fim: e.target.value })} style={campo} />
+                </div>
+                <div>
+                  <label style={rotulo}>Hora final (opcional)</label>
+                  <input type="time" value={form.hora_fim} onChange={(e) => setForm({ ...form, hora_fim: e.target.value })} style={campo} />
+                </div>
+              </div>
+            </>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 1rem' }}>
+              <div>
+                <label style={rotulo}>Dia da semana *</label>
+                <select value={form.dia_semana} onChange={(e) => setForm({ ...form, dia_semana: e.target.value })} style={campo}>
+                  {DIAS_SEMANA_OPCOES.map((d) => (
+                    <option key={d.v} value={d.v}>{d.r}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={rotulo}>Hora</label>
+                <input type="time" value={form.hora_inicio} onChange={(e) => setForm({ ...form, hora_inicio: e.target.value })} style={campo} />
+              </div>
             </div>
-            <div>
-              <label style={rotulo}>Hora final (opcional)</label>
-              <input type="time" value={form.hora_fim} onChange={(e) => setForm({ ...form, hora_fim: e.target.value })} style={campo} />
-            </div>
-          </div>
+          )}
 
           <label style={rotulo}>Local</label>
           <input type="text" value={form.local} onChange={(e) => setForm({ ...form, local: e.target.value })} style={campo} />
