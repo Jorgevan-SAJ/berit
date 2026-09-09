@@ -1,7 +1,7 @@
 'use client'
-
 import { useEffect, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
+import { getPerfil } from '../../../lib/perfil'
 
 function formatarCelular(valor) {
   const d = (valor || '').replace(/\D/g, '').slice(0, 11)
@@ -11,11 +11,22 @@ function formatarCelular(valor) {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
 }
 
+function formatarData(d) {
+  if (!d) return '—'
+  const partes = d.split('-')
+  if (partes.length !== 3) return d
+  return `${partes[2]}/${partes[1]}/${partes[0]}`
+}
+
 export default function MembrosInativos() {
+  const [perfilAtual, setPerfilAtual] = useState(null)
+  const [verificando, setVerificando] = useState(true)
   const [membros, setMembros] = useState([])
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
   const [reativando, setReativando] = useState(null)
+
+  const podeReativar = perfilAtual && ['admin_master', 'secretaria'].includes(perfilAtual.perfil)
 
   async function carregar() {
     setCarregando(true)
@@ -32,7 +43,13 @@ export default function MembrosInativos() {
     setCarregando(false)
   }
 
-  useEffect(() => { carregar() }, [])
+  useEffect(() => {
+    getPerfil().then((p) => {
+      setPerfilAtual(p)
+      setVerificando(false)
+      if (p && ['admin_master', 'secretaria'].includes(p.perfil)) carregar()
+    })
+  }, [])
 
   async function reativar(m) {
     if (!window.confirm(`Reativar o membro "${m.nome}"? Ele voltará para a lista de membros ativos.`)) return
@@ -53,11 +70,36 @@ export default function MembrosInativos() {
     }
   }
 
-  function formatarData(d) {
-    if (!d) return '—'
-    const partes = d.split('-')
-    if (partes.length !== 3) return d
-    return `${partes[2]}/${partes[1]}/${partes[0]}`
+  if (verificando) {
+    return (
+      <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem', textAlign: 'center', fontSize: 14, color: '#8A8A8A' }}>
+          Verificando permissões...
+        </div>
+      </main>
+    )
+  }
+
+  if (!perfilAtual || !podeReativar) {
+    return (
+      <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
+        <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <a href="/area" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF', textDecoration: 'none' }}>
+            Berit
+          </a>
+          <a href="/area" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}>
+            Voltar
+          </a>
+        </header>
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem', textAlign: 'center' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#1F3A5F', marginBottom: 8 }}>Acesso restrito</div>
+          <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 16px' }}>
+            Esta área é exclusiva dos perfis <strong>Administrador</strong> e <strong>Secretaria</strong>.
+          </p>
+          <a href="/area" style={{ color: '#1F3A5F', fontSize: 14 }}>Voltar para o início</a>
+        </div>
+      </main>
+    )
   }
 
   return (
@@ -70,7 +112,6 @@ export default function MembrosInativos() {
           Voltar
         </a>
       </header>
-
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
           <div>
