@@ -1,5 +1,4 @@
 'use client'
-
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getPerfil } from '../../lib/perfil'
@@ -8,6 +7,7 @@ const PERFIS_DISPONIVEIS = [
   { valor: 'admin_master', rotulo: 'Administrador' },
   { valor: 'secretaria', rotulo: 'Secretaria' },
   { valor: 'tesouraria', rotulo: 'Tesouraria' },
+  { valor: 'conselho_fiscal', rotulo: 'Conselho Fiscal' },
 ]
 
 function gerarSenhaAleatoria() {
@@ -31,7 +31,6 @@ export default function AcessosPage() {
   const [meuId, setMeuId] = useState(null)
   const [excluindo, setExcluindo] = useState(null)
   const [salvando, setSalvando] = useState(false)
-
   const [chaveDefinida, setChaveDefinida] = useState(false)
   const [verificandoChave, setVerificandoChave] = useState(true)
   const [mostrarFormChave, setMostrarFormChave] = useState(false)
@@ -253,6 +252,9 @@ export default function AcessosPage() {
           <div style={{ background: '#FDF3E3', color: '#B26A00', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
             <strong>Dica de segurança:</strong> cadastre sempre pelo menos um segundo usuário com o perfil Administrador. Assim, se o administrador principal ficar impossibilitado de acessar (saída, falecimento ou outro motivo), a igreja mantém o controle da plataforma.
           </div>
+          <div style={{ background: '#EAF4EE', color: '#4C8C6E', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
+            <strong>Conselho Fiscal:</strong> perfil com acesso <strong>somente leitura</strong> ao módulo de Finanças (consulta de lançamentos, relatórios e histórico da auditoria), sem qualquer poder de lançamento, edição, consolidação ou conferência. Ideal para a fiscalização estatutária das contas da igreja.
+          </div>
           <form onSubmit={criarUsuario} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0 1rem' }}>
             <div>
               <label style={estilo.rotulo}>E-mail</label>
@@ -294,7 +296,6 @@ export default function AcessosPage() {
                   {mostrarFormChave ? 'Cancelar' : chaveDefinida ? 'Alterar chave' : 'Definir chave'}
                 </button>
               </div>
-
               {fraseExibida && (
                 <div style={{ background: '#FDF3E3', color: '#B26A00', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 12, lineHeight: 1.5, border: '1px solid #F0D9A8' }}>
                   <strong>Guarde esta frase em local seguro!</strong> Ela é exibida apenas agora, pois o sistema não consegue mostrá-la novamente. Entregue-a à liderança da igreja (conselho ou diaconia).
@@ -307,7 +308,6 @@ export default function AcessosPage() {
                   </button>
                 </div>
               )}
-
               {mostrarFormChave && (
                 <form onSubmit={salvarChave} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0 1rem' }}>
                   <div>
