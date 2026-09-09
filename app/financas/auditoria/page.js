@@ -57,5 +57,3 @@ export default function AuditoriaPage() {
   }, [])
 
   async function carregarDados() {
-    setCarregando(true)
-    const [pend, hist, cat, mem, usr] = await
