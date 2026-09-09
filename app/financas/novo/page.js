@@ -160,4 +160,68 @@ export default function NovoFinancas() {
               onClick={() => mudarTipo('saida')}
               style={{
                 flex: 1, padding: '12px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                background: form.tipo === 'saida'
+                background: form.tipo === 'saida' ? '#B71C1C' : '#F5F0E6',
+                color: form.tipo === 'saida' ? '#FFFFFF' : '#5A5A5A',
+                border: 'none',
+              }}
+            >
+              Saída
+            </button>
+          </div>
+
+          <label style={rotulo}>Categoria</label>
+          <select value={form.categoria_id} onChange={(e) => setForm({ ...form, categoria_id: e.target.value })} style={campo}>
+            {categorias.filter((c) => c.tipo === form.tipo).map((c) => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
+
+          {form.tipo === 'saida' && (
+            <>
+              <label style={rotulo}>Descrição</label>
+              <input type="text" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} placeholder="ex.: Conta de luz" style={campo} />
+            </>
+          )}
+
+          <label style={rotulo}>Valor (R$) *</label>
+          <input type="text" inputMode="decimal" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} placeholder="0,00" required style={campo} />
+
+          <label style={rotulo}>Data</label>
+          <input type="date" value={form.data_lancamento} onChange={(e) => setForm({ ...form, data_lancamento: e.target.value })} style={campo} />
+
+          <label style={rotulo}>Forma de pagamento</label>
+          <select value={form.forma_pagamento} onChange={(e) => setForm({ ...form, forma_pagamento: e.target.value })} style={campo}>
+            <option value="">— Selecione —</option>
+            {FORMAS_PAGAMENTO.map((f) => (
+              <option key={f} value={f}>{f}</option>
+            ))}
+          </select>
+
+          {form.tipo === 'entrada' && (
+            <>
+              <label style={rotulo}>Membro (para dízimos e ofertas)</label>
+              <select value={form.membro_id} onChange={(e) => setForm({ ...form, membro_id: e.target.value })} style={campo}>
+                <option value="">— Não vinculado —</option>
+                {membros.map((m) => (
+                  <option key={m.id} value={m.id}>{m.nome}</option>
+                ))}
+              </select>
+            </>
+          )}
+
+          <label style={rotulo}>Observações</label>
+          <textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} rows={3} placeholder="Anotações opcionais" style={campo} />
+
+          <div style={{ display: 'flex', gap: '0.75rem', marginTop: 4 }}>
+            <button type="submit" disabled={carregando} style={{ flex: 1, padding: '12px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
+              {carregando ? 'Salvando...' : 'Salvar lançamento'}
+            </button>
+            <a href="/financas" style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}>
+              Cancelar
+            </a>
+          </div>
+        </form>
+      </div>
+    </main>
+  )
+}
