@@ -33,17 +33,15 @@ export default function AreaPage() {
     background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', border: '1px solid #E4DED2',
     boxShadow: '0 2px 12px rgba(31,58,95,0.06)', textDecoration: 'none', display: 'block',
   }
-  const cardBloqueado = {
-    background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', border: '1px solid #E4DED2',
-    opacity: 0.6,
-  }
   const cardTitulo = { fontSize: 16, fontWeight: 600, color: '#1F3A5F', marginBottom: 6 }
   const cardTexto = { fontSize: 13, color: '#8A8A8A', margin: 0 }
 
   const ehAdmin = perfil && perfil.perfil === 'admin_master'
   const ehConselhoFiscal = perfil && perfil.perfil === 'conselho_fiscal'
   const podeFinancas = perfil && ['admin_master', 'tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
-  const podeAgenda = perfil && (perfil.perfil === 'admin_master' || perfil.perfil === 'secretaria')
+  const podeMembros = perfil && (perfil.perfil === 'admin_master' || perfil.perfil === 'secretaria' || perfil.perfil === 'conselho_fiscal')
+  const podeAgenda = perfil && (perfil.perfil === 'admin_master' || perfil.perfil === 'secretaria' || perfil.perfil === 'conselho_fiscal')
+  const seloLeitura = { display: 'inline-block', background: '#E8F0FA', color: '#1F3A5F', padding: '2px 8px', borderRadius: 999, fontSize: 11, marginBottom: 6 }
 
   return (
     <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -72,22 +70,33 @@ export default function AreaPage() {
           {perfil ? ` · Perfil: ${perfilLabel(perfil.perfil)}` : ''} — gestão simples para igrejas.
           {ehConselhoFiscal && (
             <span style={{ display: 'block', marginTop: 6, color: '#4C8C6E' }}>
-              🔍 Acesso exclusivo ao módulo Finanças, em modo somente leitura (fiscalização).
+              🔍 Acesso de consulta em todos os módulos, em modo somente leitura (fiscalização).
             </span>
           )}
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-          {!ehConselhoFiscal && (
+          {podeMembros ? (
             <a href="/membros" style={card}>
               <div style={cardTitulo}>Membros</div>
-              <p style={cardTexto}>Cadastro e gestão do rol de membros. Clique para acessar.</p>
+              {ehConselhoFiscal && <span style={seloLeitura}>Somente leitura</span>}
+              <p style={cardTexto}>
+                {ehConselhoFiscal
+                  ? 'Consulta do rol de membros — sem cadastro ou edição.'
+                  : 'Cadastro e gestão do rol de membros. Clique para acessar.'}
+              </p>
             </a>
+          ) : (
+            <div style={{ ...card, opacity: 0.6 }}>
+              <div style={cardTitulo}>Membros</div>
+              <p style={cardTexto}>Acesso restrito.</p>
+            </div>
           )}
 
           {podeFinancas ? (
             <a href="/financas" style={card}>
               <div style={cardTitulo}>Finanças</div>
+              {ehConselhoFiscal && <span style={seloLeitura}>Somente leitura</span>}
               <p style={cardTexto}>
                 {ehConselhoFiscal
                   ? 'Consulta de lançamentos, relatórios e auditoria — modo somente leitura.'
@@ -95,7 +104,7 @@ export default function AreaPage() {
               </p>
             </a>
           ) : (
-            <div style={cardBloqueado}>
+            <div style={{ ...card, opacity: 0.6 }}>
               <div style={cardTitulo}>Finanças</div>
               <p style={cardTexto}>Acesso restrito ao perfil Tesouraria.</p>
             </div>
@@ -108,22 +117,27 @@ export default function AreaPage() {
             </a>
           )}
 
-          {!ehConselhoFiscal && (
+          {podeAgenda ? (
             <a href="/agenda" style={card}>
               <div style={cardTitulo}>Agenda</div>
+              {ehConselhoFiscal && <span style={seloLeitura}>Somente leitura</span>}
               <p style={cardTexto}>
-                Programações e eventos da igreja. Clique para acessar.
-                {podeAgenda ? ' Gerenciamento liberado para o seu perfil.' : ''}
+                {ehConselhoFiscal
+                  ? 'Consulta de programações e eventos — sem cadastro ou edição.'
+                  : 'Programações e eventos da igreja. Clique para acessar.'}
               </p>
             </a>
-          )}
-
-          {!ehConselhoFiscal && (
-            <div style={card}>
-              <div style={cardTitulo}>Diretório Público</div>
-              <p style={cardTexto}>Busca de igrejas perto de você. Disponível na Fase 3.</p>
+          ) : (
+            <div style={{ ...card, opacity: 0.6 }}>
+              <div style={cardTitulo}>Agenda</div>
+              <p style={cardTexto}>Acesso restrito.</p>
             </div>
           )}
+
+          <div style={card}>
+            <div style={cardTitulo}>Diretório Público</div>
+            <p style={cardTexto}>Busca de igrejas perto de você. Disponível na Fase 3.</p>
+          </div>
         </div>
       </div>
 
