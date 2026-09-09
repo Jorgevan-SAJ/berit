@@ -36,7 +36,7 @@ export default function FinancasPage() {
     getPerfil().then((p) => {
       setPerfilAtual(p)
       setVerificando(false)
-      if (p && (p.perfil === 'admin_master' || p.perfil === 'tesouraria')) {
+      if (p && ['admin_master', 'tesouraria', 'conselho_fiscal'].includes(p.perfil)) {
         carregarDados()
       }
     })
@@ -80,6 +80,11 @@ export default function FinancasPage() {
   const totalSaidas = filtrados.filter((l) => l.tipo === 'saida').reduce((s, l) => s + Number(l.valor), 0)
   const saldo = totalEntradas - totalSaidas
 
+  // Permissões por perfil
+  const podeLancar = perfilAtual && perfilAtual.perfil === 'tesouraria'
+  const podeConferir = perfilAtual && ['admin_master', 'tesouraria'].includes(perfilAtual.perfil)
+  const ehConselhoFiscal = perfilAtual && perfilAtual.perfil === 'conselho_fiscal'
+
   async function confirmarExclusao() {
     if (!excluindo) return
     setSalvando(true)
@@ -112,7 +117,7 @@ export default function FinancasPage() {
     )
   }
 
-  if (!perfilAtual || (perfilAtual.perfil !== 'admin_master' && perfilAtual.perfil !== 'tesouraria')) {
+  if (!perfilAtual || !['admin_master', 'tesouraria', 'conselho_fiscal'].includes(perfilAtual.perfil)) {
     return (
       <main style={estilo.main}>
         <header style={estilo.header}>
@@ -122,7 +127,7 @@ export default function FinancasPage() {
         <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem', textAlign: 'center' }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: '#1F3A5F', marginBottom: 8 }}>Acesso restrito</div>
           <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 16px' }}>
-            Esta área é exclusiva dos perfis <strong>Administrador</strong> e <strong>Tesouraria</strong>.
+            Esta área é exclusiva dos perfis <strong>Administrador</strong>, <strong>Tesouraria</strong> e <strong>Conselho Fiscal</strong>.
           </p>
           <a href="/area" style={{ color: '#1F3A5F', fontSize: 14 }}>Voltar para o início</a>
         </div>
@@ -141,26 +146,34 @@ export default function FinancasPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
           <div>
             <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Finanças e Tesouraria</h1>
-            <p style={{ fontSize: 14, color: '#8A8A8A', margin: 0 }}>Entradas, saídas e controle financeiro da igreja.</p>
+            <p style={{ fontSize: 14, color: '#8A8A8A', margin: 0 }}>
+              {ehConselhoFiscal
+                ? 'Consulta em modo somente leitura — Conselho Fiscal.'
+                : 'Entradas, saídas e controle financeiro da igreja.'}
+            </p>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <a href="/financas/relatorios" style={{ background: '#FFFFFF', color: '#1F3A5F', border: '1px solid #1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
               Relatórios
             </a>
-            <a href="/financas/consolidar" style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
-              Consolidar
-            </a>
+            {podeLancar && (
+              <a href="/financas/consolidar" style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+                Consolidar
+              </a>
+            )}
             <a href="/financas/auditoria" style={{ background: '#FFFFFF', color: '#1F3A5F', border: '1px solid #1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
               Auditoria
             </a>
-            {perfilAtual && perfilAtual.perfil === 'tesouraria' && (
+            {podeLancar && (
               <a href="/financas/contribuicoes" style={{ background: '#FFFFFF', color: '#4C8C6E', border: '1px solid #4C8C6E', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
                 Contribuições
               </a>
             )}
-            <a href="/financas/novo" style={{ background: '#D9A441', color: '#1F3A5F', padding: '10px 18px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
-              + Novo lançamento
-            </a>
+            {podeLancar && (
+              <a href="/financas/novo" style={{ background: '#D9A441', color: '#1F3A5F', padding: '10px 18px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+                + Novo lançamento
+              </a>
+            )}
           </div>
         </div>
 
@@ -254,13 +267,17 @@ export default function FinancasPage() {
                       <button onClick={() => setConsultando(l)} style={{ background: 'none', border: 'none', color: '#1F3A5F', fontSize: 13, cursor: 'pointer', marginRight: 12 }}>
                         Consultar
                       </button>
-                      <a href={`/financas/editar?id=${l.id}`} style={{ color: '#1F3A5F', marginRight: 12, fontSize: 13 }}>Editar</a>
-                      {l.consolidado ? (
-                        <span style={{ color: '#C9C2B6', fontSize: 13 }} title="Lançamento consolidado não pode ser excluído">Excluir</span>
-                      ) : (
-                        <button onClick={() => setExcluindo(l)} style={{ background: 'none', border: 'none', color: '#B71C1C', fontSize: 13, cursor: 'pointer' }}>
-                          Excluir
-                        </button>
+                      {podeLancar && (
+                        <>
+                          <a href={`/financas/editar?id=${l.id}`} style={{ color: '#1F3A5F', marginRight: 12, fontSize: 13 }}>Editar</a>
+                          {l.consolidado ? (
+                            <span style={{ color: '#C9C2B6', fontSize: 13 }} title="Lançamento consolidado não pode ser excluído">Excluir</span>
+                          ) : (
+                            <button onClick={() => setExcluindo(l)} style={{ background: 'none', border: 'none', color: '#B71C1C', fontSize: 13, cursor: 'pointer' }}>
+                              Excluir
+                            </button>
+                          )}
+                        </>
                       )}
                     </td>
                   </tr>
@@ -318,12 +335,14 @@ export default function FinancasPage() {
               >
                 Fechar
               </button>
-              <a
-                href={`/financas/editar?id=${consultando.id}`}
-                style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}
-              >
-                Editar lançamento
-              </a>
+              {podeLancar && (
+                <a
+                  href={`/financas/editar?id=${consultando.id}`}
+                  style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}
+                >
+                  Editar lançamento
+                </a>
+              )}
             </div>
           </div>
         </div>
