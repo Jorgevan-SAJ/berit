@@ -40,7 +40,9 @@ export default function LoginPage() {
       return
     }
     setCarregando(true)
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase())
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+  redirectTo: `${window.location.origin}/auth/callback?next=/auth/update-password`,
+})
     setCarregando(false)
     if (error) {
       setErro('Não foi possível enviar o e-mail de recuperação.')
