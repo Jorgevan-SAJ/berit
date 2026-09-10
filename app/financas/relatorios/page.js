@@ -1,5 +1,4 @@
 'use client'
-
 import { useEffect, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { getPerfil } from '../../../lib/perfil'
@@ -21,6 +20,8 @@ function primeiroDiaDoMes() {
   return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-01`
 }
 
+const PERFIS_RELATORIOS = ['admin_master', 'tesouraria', 'conselho_fiscal']
+
 export default function RelatoriosPage() {
   const [perfilAtual, setPerfilAtual] = useState(null)
   const [verificando, setVerificando] = useState(true)
@@ -29,23 +30,24 @@ export default function RelatoriosPage() {
   const [membros, setMembros] = useState([])
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
-
   const [modo, setModo] = useState('dia')
   const [tipoRel, setTipoRel] = useState('completo')
   const [dia, setDia] = useState(hojeISO())
   const [mes, setMes] = useState(mesAtual())
   const [dataInicio, setDataInicio] = useState(primeiroDiaDoMes())
   const [dataFim, setDataFim] = useState(hojeISO())
-
   const [assinatura1, setAssinatura1] = useState('')
   const [assinatura2, setAssinatura2] = useState('')
   const [assinatura3, setAssinatura3] = useState('')
+
+  const podeConsultar = perfilAtual && PERFIS_RELATORIOS.includes(perfilAtual.perfil)
+  const ehConselhoFiscal = perfilAtual && perfilAtual.perfil === 'conselho_fiscal'
 
   useEffect(() => {
     getPerfil().then((p) => {
       setPerfilAtual(p)
       setVerificando(false)
-      if (p && (p.perfil === 'admin_master' || p.perfil === 'tesouraria')) {
+      if (p && PERFIS_RELATORIOS.includes(p.perfil)) {
         carregarDados()
       }
     })
@@ -87,7 +89,6 @@ export default function RelatoriosPage() {
     })
     if (tipoRel === 'entrada') lista = lista.filter((l) => l.tipo === 'entrada')
     if (tipoRel === 'saida') lista = lista.filter((l) => l.tipo === 'saida')
-
     let saldo = 0
     return lista.map((l, i) => {
       saldo += l.tipo === 'entrada' ? Number(l.valor) : -Number(l.valor)
@@ -156,7 +157,7 @@ export default function RelatoriosPage() {
     )
   }
 
-  if (!perfilAtual || (perfilAtual.perfil !== 'admin_master' && perfilAtual.perfil !== 'tesouraria')) {
+  if (!perfilAtual || !podeConsultar) {
     return (
       <main style={estilo.main}>
         <header style={estilo.header}>
@@ -166,7 +167,7 @@ export default function RelatoriosPage() {
         <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem', textAlign: 'center' }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: '#1F3A5F', marginBottom: 8 }}>Acesso restrito</div>
           <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 16px' }}>
-            Esta área é exclusiva dos perfis <strong>Administrador</strong> e <strong>Tesouraria</strong>.
+            Esta área é exclusiva dos perfis <strong>Administrador</strong>, <strong>Tesouraria</strong> e <strong>Conselho Fiscal</strong>.
           </p>
           <a href="/area" style={{ color: '#1F3A5F', fontSize: 14 }}>Voltar para o início</a>
         </div>
@@ -183,11 +184,11 @@ export default function RelatoriosPage() {
         <a href="/area" style={estilo.linkLogo}>Berit</a>
         <a href="/financas" style={estilo.botaoVoltar}>Voltar</a>
       </header>
-
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Relatórios Financeiros</h1>
         <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 1.5rem' }}>
           Gere relatórios do dia, mensais ou por período, em PDF ou Excel, para baixar e/ou imprimir.
+          {ehConselhoFiscal && ' Consulta em modo somente leitura — Conselho Fiscal.'}
         </p>
 
         {erro && (
@@ -302,6 +303,7 @@ export default function RelatoriosPage() {
               {lista.length} lançamento(s) · Entradas {formatarMoeda(totais.entradas)} · Saídas {formatarMoeda(totais.saidas)} · Saldo {formatarMoeda(totais.saldo)}
             </div>
           </div>
+
           {carregando ? (
             <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '1.5rem' }}>Carregando...</div>
           ) : lista.length === 0 ? (
