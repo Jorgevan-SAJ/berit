@@ -10,15 +10,6 @@ const PERFIS_DISPONIVEIS = [
   { valor: 'conselho_fiscal', rotulo: 'Conselho Fiscal' },
 ]
 
-function gerarSenhaAleatoria() {
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  let senha = ''
-  for (let i = 0; i < 20; i++) {
-    senha += chars[Math.floor(Math.random() * chars.length)]
-  }
-  return senha + '!B3r1t'
-}
-
 export default function AcessosPage() {
   const [perfilAtual, setPerfilAtual] = useState(null)
   const [verificando, setVerificando] = useState(true)
@@ -86,26 +77,29 @@ export default function AcessosPage() {
       return
     }
     setCriando(true)
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password: gerarSenhaAleatoria(),
-    })
-    if (error || !data.user) {
-      setErro('Não foi possível criar o usuário. Verifique se o e-mail já está em uso.')
+    const { data: sessao } = await supabase.auth.getSession()
+    const token = sessao?.session?.access_token || ''
+    let resposta
+    try {
+      resposta = await fetch('/api/criar-usuario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ email, perfil: novo.perfil }),
+      })
+    } catch (erroRede) {
       setCriando(false)
+      setErro('Não foi possível contatar o servidor. Tente novamente.')
       return
     }
-    const { error: erroPerfil } = await supabase.from('perfis').insert([
-      { user_id: data.user.id, perfil: novo.perfil },
-    ])
+    const dados = await resposta.json()
     setCriando(false)
-    if (erroPerfil) {
-      setErro('Usuário criado, mas não foi possível atribuir o perfil. Tente novamente.')
-    } else {
-      setAviso(`Usuário ${email} criado com sucesso! Ele receberá um e-mail de confirmação e, depois de confirmar, poderá definir a própria senha pelo link "Esqueci minha senha" na tela de login.`)
-      setNovo({ email: '', perfil: 'secretaria' })
-      carregarUsuarios()
+    if (!dados.ok) {
+      setErro(dados.mensagem || 'Não foi possível criar o usuário.')
+      return
     }
+    setAviso(`Usuário ${email} criado com sucesso! Oriente-o a abrir a tela de login e usar o link "Esqueci minha senha" para definir a própria senha.`)
+    setNovo({ email: '', perfil: 'secretaria' })
+    carregarUsuarios()
   }
 
   async function mudarPerfil(usuario, perfil) {
@@ -148,15 +142,29 @@ export default function AcessosPage() {
     setSalvando(true)
     setErro('')
     setAviso('')
-    const { error } = await supabase.rpc('excluir_usuario', { user_id: excluindo.id })
-    setSalvando(false)
-    if (error) {
-      setErro(error.message || 'Não foi possível excluir o usuário.')
-    } else {
-      setAviso(`Usuário ${excluindo.email} excluído definitivamente.`)
-      setExcluindo(null)
-      carregarUsuarios()
+    const { data: sessao } = await supabase.auth.getSession()
+    const token = sessao?.session?.access_token || ''
+    let resposta
+    try {
+      resposta = await fetch('/api/excluir-usuario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ userId: excluindo.id }),
+      })
+    } catch (erroRede) {
+      setSalvando(false)
+      setErro('Não foi possível contatar o servidor. Tente novamente.')
+      return
     }
+    const dados = await resposta.json()
+    setSalvando(false)
+    if (!dados.ok) {
+      setErro(dados.mensagem || 'Não foi possível excluir o usuário.')
+      return
+    }
+    setAviso(`Usuário ${excluindo.email} excluído definitivamente.`)
+    setExcluindo(null)
+    carregarUsuarios()
   }
 
   async function salvarChave(e) {
@@ -230,24 +238,21 @@ export default function AcessosPage() {
         <a href="/area" style={estilo.linkLogo}>Berit</a>
         <a href="/area" style={estilo.botaoVoltar}>Voltar</a>
       </header>
-
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Perfis de Acesso</h1>
         <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 1.5rem' }}>
           Crie usuários e controle as permissões de cada operador da plataforma.
         </p>
-
         {erro && (
           <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>
         )}
         {aviso && (
           <div style={{ background: '#EAF4EE', color: '#4C8C6E', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{aviso}</div>
         )}
-
         <div style={{ ...estilo.card, marginBottom: '1.5rem' }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 8 }}>Novo usuário</div>
           <div style={{ background: '#E8F0FA', color: '#1F3A5F', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
-            <strong>Como funciona o primeiro acesso:</strong> ao cadastrar um novo usuário, informe a ele que: (1) receberá um e-mail de confirmação de cadastro no e-mail indicado; (2) deve clicar no link desse e-mail para confirmar o endereço; (3) será direcionado para a área de acesso do app; (4) na tela de login, deve clicar em "Esqueci minha senha" para receber um e-mail e cadastrar a própria senha. O administrador não define nem vê a senha de nenhum usuário.
+            <strong>Como funciona o primeiro acesso:</strong> o usuário é criado já habilitado. Na tela de login, ele deve clicar em "Esqueci minha senha", informar o e-mail cadastrado e definir a própria senha pelo link que receberá. O administrador não define nem vê a senha de nenhum usuário.
           </div>
           <div style={{ background: '#FDF3E3', color: '#B26A00', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
             <strong>Dica de segurança:</strong> cadastre sempre pelo menos um segundo usuário com o perfil Administrador. Assim, se o administrador principal ficar impossibilitado de acessar (saída, falecimento ou outro motivo), a igreja mantém o controle da plataforma.
@@ -275,7 +280,6 @@ export default function AcessosPage() {
             </div>
           </form>
         </div>
-
         <div style={{ ...estilo.card, marginBottom: '1.5rem' }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 8 }}>Chave de recuperação de administrador</div>
           <p style={{ fontSize: 13, color: '#5A5A5A', margin: '0 0 12px', lineHeight: 1.5 }}>
@@ -328,7 +332,6 @@ export default function AcessosPage() {
             </>
           )}
         </div>
-
         <div style={estilo.card}>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 8 }}>Usuários cadastrados</div>
           {carregando ? (
@@ -408,7 +411,6 @@ export default function AcessosPage() {
           )}
         </div>
       </div>
-
       {excluindo && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
           <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', maxWidth: 420, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
@@ -416,6 +418,9 @@ export default function AcessosPage() {
             <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 16px' }}>
               Você deseja excluir o acesso de <strong>{excluindo.email}</strong>? Esta ação <strong>não pode ser desfeita</strong> e o usuário perderá o acesso à plataforma permanentemente.
             </p>
+            {erro && (
+              <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>
+            )}
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button
                 onClick={confirmarExclusao}
