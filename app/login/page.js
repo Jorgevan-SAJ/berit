@@ -1,5 +1,4 @@
 'use client'
-
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
@@ -35,17 +34,44 @@ export default function LoginPage() {
   async function recuperarSenha() {
     setErro('')
     setAviso('')
-    if (!email.trim()) {
+    const emailDigitado = email.trim().toLowerCase()
+    if (!emailDigitado) {
       setErro('Informe seu e-mail para receber o link de recuperação.')
       return
     }
     setCarregando(true)
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-  redirectTo: `${window.location.origin}/auth/callback?next=/auth/update-password`,
-})
+
+    // 1) Verifica se o e-mail existe na base antes de enviar
+    let cadastrado = true
+    try {
+      const resposta = await fetch('/api/verificar-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailDigitado }),
+      })
+      const dados = await resposta.json()
+      cadastrado = dados.cadastrado
+    } catch (erroRede) {
+      cadastrado = true // se a verificação falhar, tenta enviar normalmente
+    }
+
+    if (!cadastrado) {
+      setCarregando(false)
+      setErro('Este e-mail não consta na nossa base de dados.')
+      return
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(emailDigitado, {
+      redirectTo: `${window.location.origin}/auth/callback?next=/auth/update-password`,
+    })
     setCarregando(false)
+
     if (error) {
-      setErro('Não foi possível enviar o e-mail de recuperação.')
+      if (error.status === 429) {
+        setErro('Muitas tentativas. Aguarde alguns minutos e tente novamente.')
+      } else {
+        setErro('Não foi possível enviar o e-mail de recuperação.')
+      }
     } else {
       setAviso('Enviamos um link de recuperação para o seu e-mail. Verifique sua caixa de entrada.')
     }
@@ -67,14 +93,12 @@ export default function LoginPage() {
       <div style={estilo.card}>
         <div style={estilo.logo}>Berit</div>
         <p style={estilo.subtitulo}>Acesse a área da igreja</p>
-
         {erro && (
           <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>
         )}
         {aviso && (
           <div style={{ background: '#EAF4EE', color: '#4C8C6E', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{aviso}</div>
         )}
-
         <form onSubmit={entrar}>
           <label style={estilo.rotulo}>E-mail</label>
           <input
@@ -85,7 +109,6 @@ export default function LoginPage() {
             style={{ ...estilo.campo, marginBottom: 16 }}
             autoComplete="email"
           />
-
           <label style={estilo.rotulo}>Senha</label>
           <div style={{ position: 'relative', marginBottom: 12 }}>
             <input
@@ -120,13 +143,11 @@ export default function LoginPage() {
               )}
             </button>
           </div>
-
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
             <button type="button" onClick={recuperarSenha} style={estilo.link} disabled={carregando}>
               Esqueci minha senha
             </button>
           </div>
-
           <button type="submit" disabled={carregando} style={{ ...estilo.botao, opacity: carregando ? 0.6 : 1 }}>
             {carregando ? 'Entrando...' : 'Entrar'}
           </button>
