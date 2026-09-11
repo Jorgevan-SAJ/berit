@@ -248,12 +248,7 @@ export default function AcessosPage() {
         <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 1.5rem' }}>
           Crie usuários e controle as permissões de cada operador da plataforma.
         </p>
-        {erro && (
-          <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>
-        )}
-        {aviso && (
-          <div style={{ background: '#EAF4EE', color: '#4C8C6E', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{aviso}</div>
-        )}
+    
         <div style={{ ...estilo.card, marginBottom: '1.5rem' }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 8 }}>Novo usuário</div>
           <div style={{ background: '#E8F0FA', color: '#1F3A5F', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
@@ -287,9 +282,16 @@ export default function AcessosPage() {
                 {criando ? 'Criando...' : 'Criar usuário'}
               </button>
             </div>
-          </form>
+                    </form>
         </div>
+        {erro && (
+          <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>
+        )}
+        {aviso && (
+          <div style={{ background: '#EAF4EE', color: '#4C8C6E', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{aviso}</div>
+        )}
         <div style={{ ...estilo.card, marginBottom: '1.5rem' }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 8 }}>Chave de recuperação de administrador</div>        <div style={{ ...estilo.card, marginBottom: '1.5rem' }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 8 }}>Chave de recuperação de administrador</div>
           <p style={{ fontSize: 13, color: '#5A5A5A', margin: '0 0 12px', lineHeight: 1.5 }}>
             Esta chave é o caminho de emergência para recuperar o acesso de administrador caso nenhum administrador ativo consiga entrar na plataforma (saída, falecimento ou outro motivo). Ela deve ser criada pela própria igreja e guardada em local seguro, fora do sistema, pois é exibida apenas uma única vez.
