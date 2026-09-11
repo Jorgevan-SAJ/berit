@@ -97,7 +97,7 @@ export default function AcessosPage() {
       setErro(dados.mensagem || 'Não foi possível criar o usuário.')
       return
     }
-    setAviso(`Usuário ${email} criado com sucesso! Oriente-o a abrir a tela de login e usar o link "Esqueci minha senha" para definir a própria senha.`)
+    setAviso(`Usuário ${email} criado com sucesso!`)
     setNovo({ email: '', perfil: 'secretaria' })
     carregarUsuarios()
   }
@@ -252,7 +252,7 @@ export default function AcessosPage() {
         <div style={{ ...estilo.card, marginBottom: '1.5rem' }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 8 }}>Novo usuário</div>
           <div style={{ background: '#E8F0FA', color: '#1F3A5F', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
-            <strong>Como funciona o primeiro acesso:</strong> o usuário é criado já habilitado. Na tela de login, ele deve clicar em "Esqueci minha senha", informar o e-mail cadastrado e definir a própria senha pelo link que receberá. O administrador não define nem vê a senha de nenhum usuário.
+            <strong>Como funciona o primeiro acesso:</strong> O administrador cadastra o e-mail e o sistema envia um e-mail de convite com um link para o usuário definir a própria senha. O administrador não define nem vê a senha de nenhum usuário.
           </div>
           <div style={{ background: '#FDF3E3', color: '#B26A00', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
             <strong>Dica de segurança:</strong> cadastre sempre pelo menos um segundo usuário com o perfil Administrador. Assim, se o administrador principal ficar impossibilitado de acessar (saída, falecimento ou outro motivo), a igreja mantém o controle da plataforma.
