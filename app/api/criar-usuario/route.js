@@ -53,7 +53,8 @@ export async function POST(request) {
       pagina++
     }
 
-    let usuarioId = null
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL
+
     if (usuarioAchado) {
       const { data: perfilExistente } = await admin
         .from('perfis')
@@ -73,7 +74,7 @@ export async function POST(request) {
         if (erroUpdate) {
           return Response.json({ ok: false, mensagem: 'Usuário localizado, mas o perfil não foi atualizado: ' + erroUpdate.message }, { status: 500 })
         }
-        return Response.json({ ok: true }, { status: 200 })
+        return Response.json({ ok: true, mensagem: 'Este e-mail já existia e o perfil foi atualizado. Se ele ainda não tiver senha, use "Esqueci minha senha" na tela de login.' }, { status: 200 })
       }
 
       const criadoEm = usuarioAchado.created_at ? new Date(usuarioAchado.created_at).getTime() : 0
@@ -81,23 +82,32 @@ export async function POST(request) {
       if (!haMenosDe60Min) {
         return Response.json({ ok: false, mensagem: 'Este e-mail já existe na plataforma sem perfil vinculado. Contate o suporte para regularizar.' }, { status: 400 })
       }
-      usuarioId = usuarioAchado.id
-    } else {
-      const { data, error } = await admin.auth.admin.createUser({ email, email_confirm: true })
-      if (error || !data?.user) {
-        return Response.json({ ok: false, mensagem: error?.message || 'Não foi possível criar o usuário.' }, { status: 400 })
+      const { error: erroInsert } = await admin
+        .from('perfis')
+        .insert([{ user_id: usuarioAchado.id, igreja_id: igrejaId, perfil, ativo: true }])
+      if (erroInsert) {
+        return Response.json({ ok: false, mensagem: 'Usuário localizado, mas o perfil não foi gravado: ' + erroInsert.message }, { status: 500 })
       }
-      usuarioId = data.user.id
+      return Response.json({ ok: true, mensagem: 'Usuário já existia na base e foi vinculado. Use "Esqueci minha senha" na tela de login para ele definir a senha.' }, { status: 200 })
+    }
+
+    // Usuário novo: cria e envia o e-mail de convite
+    const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
+      redirectTo: appUrl ? `${appUrl}/auth/update-password` : undefined,
+    })
+
+    if (error || !data?.user) {
+      return Response.json({ ok: false, mensagem: error?.message || 'Não foi possível criar o usuário.' }, { status: 400 })
     }
 
     const { error: erroInsert } = await admin
       .from('perfis')
-      .insert([{ user_id: usuarioId, igreja_id: igrejaId, perfil, ativo: true }])
+      .insert([{ user_id: data.user.id, igreja_id: igrejaId, perfil, ativo: true }])
     if (erroInsert) {
       return Response.json({ ok: false, mensagem: 'Usuário criado, mas o perfil não foi gravado: ' + erroInsert.message }, { status: 500 })
     }
 
-    return Response.json({ ok: true }, { status: 200 })
+    return Response.json({ ok: true, mensagem: `Usuário ${email} criado! Enviamos um e-mail de convite para ele definir a própria senha.` }, { status: 200 })
   } catch (e) {
     return Response.json({ ok: false, mensagem: 'Erro inesperado ao criar o usuário.' }, { status: 500 })
   }
