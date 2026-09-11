@@ -18,21 +18,26 @@ export async function POST(request) {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
-    const { data: usuarios, error } = await supabaseAdmin.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000,
-    })
-
-    if (error) {
-      return new Response(JSON.stringify({ cadastrado: false }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
+    let existe = false
+    let pagina = 1
+    while (pagina <= 10 && !existe) {
+      const { data: usuarios, error } = await supabaseAdmin.auth.admin.listUsers({
+        page: pagina,
+        perPage: 1000,
       })
-    }
 
-    const existe = (usuarios?.users ?? []).some(
-      (usuario) => usuario.email && usuario.email.toLowerCase() === email
-    )
+      if (error) {
+        return new Response(JSON.stringify({ cadastrado: false }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
+      const lista = usuarios?.users ?? []
+      existe = lista.some((usuario) => usuario.email && usuario.email.toLowerCase() === email)
+      if (lista.length < 1000) break
+      pagina++
+    }
 
     return new Response(JSON.stringify({ cadastrado: existe }), {
       status: 200,
