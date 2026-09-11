@@ -107,7 +107,7 @@ export async function POST(request) {
       return Response.json({ ok: false, mensagem: 'Usuário criado, mas o perfil não foi gravado: ' + erroInsert.message }, { status: 500 })
     }
 
-    return Response.json({ ok: true, mensagem: `Usuário ${email} criado! Enviamos um e-mail de convite para ele definir a própria senha.` }, { status: 200 })
+    return Response.json({ ok: true, mensagem: `Usuário ${email} criado! Enviamos um e-mail de convite para ele definir a própria senha. Oriente-o a verificar também a caixa de spam ou lixo eletrônico, pois alguns provedores podem direcionar o e-mail para lá.` }, { status: 200 })
   } catch (e) {
     return Response.json({ ok: false, mensagem: 'Erro inesperado ao criar o usuário.' }, { status: 500 })
   }
