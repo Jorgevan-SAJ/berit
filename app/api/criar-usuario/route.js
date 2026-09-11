@@ -17,13 +17,11 @@ export async function POST(request) {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
-    // 1) Quem está pedindo
     const { data: quemPede } = await admin.auth.getUser(token)
     if (!quemPede?.user) {
       return Response.json({ ok: false, mensagem: 'Sessão inválida. Entre novamente.' }, { status: 401 })
     }
 
-    // 2) Perfil e igreja de quem pede
     const { data: perfilDeQuemPede, error: erroPerfilQuemPede } = await admin
       .from('perfis')
       .select('perfil, igreja_id')
@@ -42,23 +40,49 @@ export async function POST(request) {
       return Response.json({ ok: false, mensagem: 'Seu perfil não está vinculado a uma igreja. Verifique o registro na tabela de perfis.' }, { status: 400 })
     }
 
-    // 3) O usuário de autenticação já existe?
-    let usuarioId = null
+    let usuarioAchado = null
     let pagina = 1
-    while (pagina <= 10 && !usuarioId) {
+    while (pagina <= 10 && !usuarioAchado) {
       const { data: lista, error: erroLista } = await admin.auth.admin.listUsers({ page: pagina, perPage: 1000 })
       if (erroLista) {
         return Response.json({ ok: false, mensagem: 'Não foi possível consultar os usuários: ' + erroLista.message }, { status: 500 })
       }
       const usuarios = lista?.users ?? []
-      const achado = usuarios.find((u) => u.email && u.email.toLowerCase() === email)
-      if (achado) usuarioId = achado.id
+      usuarioAchado = usuarios.find((u) => u.email && u.email.toLowerCase() === email) || null
       if (usuarios.length < 1000) break
       pagina++
     }
 
-    // 4) Não existe: cria já confirmado, sem disparar e-mail
-    if (!usuarioId) {
+    let usuarioId = null
+    if (usuarioAchado) {
+      const { data: perfilExistente } = await admin
+        .from('perfis')
+        .select('user_id, igreja_id')
+        .eq('user_id', usuarioAchado.id)
+        .maybeSingle()
+
+      if (perfilExistente && perfilExistente.igreja_id && perfilExistente.igreja_id !== igrejaId) {
+        return Response.json({ ok: false, mensagem: 'Este e-mail já pertence a outra igreja.' }, { status: 400 })
+      }
+
+      if (perfilExistente) {
+        const { error: erroUpdate } = await admin
+          .from('perfis')
+          .update({ perfil, igreja_id: igrejaId })
+          .eq('user_id', usuarioAchado.id)
+        if (erroUpdate) {
+          return Response.json({ ok: false, mensagem: 'Usuário localizado, mas o perfil não foi atualizado: ' + erroUpdate.message }, { status: 500 })
+        }
+        return Response.json({ ok: true }, { status: 200 })
+      }
+
+      const criadoEm = usuarioAchado.created_at ? new Date(usuarioAchado.created_at).getTime() : 0
+      const haMenosDe60Min = Date.now() - criadoEm < 60 * 60 * 1000
+      if (!haMenosDe60Min) {
+        return Response.json({ ok: false, mensagem: 'Este e-mail já existe na plataforma sem perfil vinculado. Contate o suporte para regularizar.' }, { status: 400 })
+      }
+      usuarioId = usuarioAchado.id
+    } else {
       const { data, error } = await admin.auth.admin.createUser({ email, email_confirm: true })
       if (error || !data?.user) {
         return Response.json({ ok: false, mensagem: error?.message || 'Não foi possível criar o usuário.' }, { status: 400 })
@@ -66,31 +90,11 @@ export async function POST(request) {
       usuarioId = data.user.id
     }
 
-    // 5) Perfil: cria se não existir, completa se já existir
-    const { data: perfilExistente } = await admin
+    const { error: erroInsert } = await admin
       .from('perfis')
-      .select('user_id, igreja_id')
-      .eq('user_id', usuarioId)
-      .maybeSingle()
-
-    if (perfilExistente) {
-      if (perfilExistente.igreja_id && perfilExistente.igreja_id !== igrejaId) {
-        return Response.json({ ok: false, mensagem: 'Este e-mail já pertence a outra igreja.' }, { status: 400 })
-      }
-      const { error: erroUpdate } = await admin
-        .from('perfis')
-        .update({ perfil, igreja_id: igrejaId })
-        .eq('user_id', usuarioId)
-      if (erroUpdate) {
-        return Response.json({ ok: false, mensagem: 'Usuário localizado, mas o perfil não foi atualizado: ' + erroUpdate.message }, { status: 500 })
-      }
-    } else {
-      const { error: erroInsert } = await admin
-        .from('perfis')
-        .insert([{ user_id: usuarioId, igreja_id: igrejaId, perfil, ativo: true }])
-      if (erroInsert) {
-        return Response.json({ ok: false, mensagem: 'Usuário criado, mas o perfil não foi gravado: ' + erroInsert.message }, { status: 500 })
-      }
+      .insert([{ user_id: usuarioId, igreja_id: igrejaId, perfil, ativo: true }])
+    if (erroInsert) {
+      return Response.json({ ok: false, mensagem: 'Usuário criado, mas o perfil não foi gravado: ' + erroInsert.message }, { status: 500 })
     }
 
     return Response.json({ ok: true }, { status: 200 })
