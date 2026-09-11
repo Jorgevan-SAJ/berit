@@ -27,12 +27,22 @@ export async function POST(request) {
 
     const { data: perfilDeQuemPede } = await admin
       .from('perfis')
-      .select('perfil')
+      .select('perfil, igreja_id')
       .eq('user_id', quemPede.user.id)
       .maybeSingle()
 
     if (perfilDeQuemPede?.perfil !== 'admin_master') {
       return Response.json({ ok: false, mensagem: 'Apenas o Administrador pode excluir usuários.' }, { status: 403 })
+    }
+
+    const { data: perfilAlvo } = await admin
+      .from('perfis')
+      .select('igreja_id')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (!perfilAlvo || perfilAlvo.igreja_id !== perfilDeQuemPede.igreja_id) {
+      return Response.json({ ok: false, mensagem: 'Este usuário não pertence à sua igreja.' }, { status: 403 })
     }
 
     await admin.from('perfis').delete().eq('user_id', userId)
