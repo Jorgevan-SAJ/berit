@@ -66,7 +66,7 @@ export default function AreaPage() {
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Área da Igreja</h1>
         <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 2rem' }}>
-          Bem-vindo{usuario?.email ? `, ${usuario.email}` : ''}
+          Bem-vindo{perfil?.nome ? `, ${perfil.nome}` : usuario?.email ? `, ${usuario.email}` : ''}
           {perfil ? ` · Perfil: ${perfilLabel(perfil.perfil)}` : ''} — gestão simples para igrejas.
           {ehConselhoFiscal && (
             <span style={{ display: 'block', marginTop: 6, color: '#4C8C6E' }}>
