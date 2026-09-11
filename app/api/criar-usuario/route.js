@@ -91,7 +91,6 @@ export async function POST(request) {
       return Response.json({ ok: true, mensagem: 'Usuário já existia na base e foi vinculado. Use "Esqueci minha senha" na tela de login para ele definir a senha.' }, { status: 200 })
     }
 
-    // Usuário novo: cria e envia o e-mail de convite
     const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
       redirectTo: appUrl ? `${appUrl}/auth/update-password` : undefined,
     })
