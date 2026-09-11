@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../../lib/supabase'
 import { getPerfil } from '../../lib/perfil'
-
 function formatarCelular(valor) {
   const d = (valor || '').replace(/\D/g, '').slice(0, 11)
   if (d.length <= 2) return d
@@ -11,14 +10,12 @@ function formatarCelular(valor) {
   if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
 }
-
 function formatarData(valor) {
   if (!valor) return ''
   const partes = valor.split('-')
   if (partes.length !== 3) return valor
   return `${partes[2]}/${partes[1]}/${partes[0]}`
 }
-
 function calcularIdade(dataNascimento) {
   if (!dataNascimento) return null
   const nasc = new Date(dataNascimento + 'T00:00:00')
@@ -28,7 +25,6 @@ function calcularIdade(dataNascimento) {
   if (m < 0 || (m === 0 && hoje.getDate() < nasc.getDate())) idade--
   return idade
 }
-
 function faixaEtaria(idade) {
   if (idade === null || idade === undefined) return 'sem-data'
   if (idade <= 11) return 'crianca'
@@ -37,7 +33,6 @@ function faixaEtaria(idade) {
   if (idade <= 59) return 'adulto'
   return 'anciao'
 }
-
 const FAIXA_ROTULO = {
   crianca: 'Criança',
   adolescente: 'Adolescente',
@@ -46,7 +41,6 @@ const FAIXA_ROTULO = {
   anciao: 'Ancião',
   'sem-data': '',
 }
-
 const FAIXAS = [
   { valor: '', rotulo: 'Todas as idades' },
   { valor: 'crianca', rotulo: 'Crianças (0 a 11)' },
@@ -55,27 +49,23 @@ const FAIXAS = [
   { valor: 'adulto', rotulo: 'Adultos (36 a 59)' },
   { valor: 'anciao', rotulo: 'Anciãos (60+)' },
 ]
-
 const SITUACOES = [
   { valor: '', rotulo: 'Todas as situações' },
-  { valor: 'ativo', rotulo: 'Ativos' },
+  { valor: 'membro', rotulo: 'Membros' },
   { valor: 'congregado', rotulo: 'Congregados' },
   { valor: 'visitante', rotulo: 'Visitantes' },
 ]
-
 const SITUACAO_ROTULO = {
-  ativo: 'Ativo',
+  membro: 'Membro',
   congregado: 'Congregado',
   visitante: 'Visitante',
   inativo: 'Inativo',
 }
-
 const CORES_SITUACAO = {
-  ativo: { bg: '#EAF4EE', cor: '#4C8C6E' },
+  membro: { bg: '#EAF4EE', cor: '#4C8C6E' },
   congregado: { bg: '#E8F0FA', cor: '#1F3A5F' },
   visitante: { bg: '#FFF8E1', cor: '#B7791F' },
 }
-
 const MOTIVOS = [
   'Falecido',
   'Abandono',
@@ -84,7 +74,6 @@ const MOTIVOS = [
   'Mudança de cidade',
   'Outros',
 ]
-
 export default function MembrosPage() {
   const [perfilAtual, setPerfilAtual] = useState(null)
   const [verificando, setVerificando] = useState(true)
@@ -100,17 +89,15 @@ export default function MembrosPage() {
   const [excluindo, setExcluindo] = useState(null)
   const [consultando, setConsultando] = useState(null)
   const [salvando, setSalvando] = useState(false)
-
-  const podeVer = perfilAtual && ['admin_master', 'secretaria', 'conselho_fiscal'].includes(perfilAtual.perfil)
+  const podeVer = perfilAtual && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(perfilAtual.perfil)
   const podeEditar = perfilAtual && ['admin_master', 'secretaria'].includes(perfilAtual.perfil)
-  const ehConselhoFiscal = perfilAtual && perfilAtual.perfil === 'conselho_fiscal'
-
+  const ehSomenteLeitura = perfilAtual && ['tesouraria', 'conselho_fiscal'].includes(perfilAtual.perfil)
   async function carregar() {
     setCarregando(true)
     const { data, error } = await supabase
       .from('membros')
       .select('*')
-      .in('situacao', ['ativo', 'congregado', 'visitante'])
+      .in('situacao', ['membro', 'congregado', 'visitante'])
       .order('nome')
     if (error) {
       setErro('Não foi possível carregar os membros.')
@@ -119,15 +106,13 @@ export default function MembrosPage() {
     }
     setCarregando(false)
   }
-
   useEffect(() => {
     getPerfil().then((p) => {
       setPerfilAtual(p)
       setVerificando(false)
-      if (p && ['admin_master', 'secretaria', 'conselho_fiscal'].includes(p.perfil)) carregar()
+      if (p && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(p.perfil)) carregar()
     })
   }, [])
-
   async function confirmarInativacao() {
     if (!inativando) return
     setSalvando(true)
@@ -148,7 +133,6 @@ export default function MembrosPage() {
       carregar()
     }
   }
-
   async function confirmarExclusao() {
     if (!excluindo) return
     setSalvando(true)
@@ -161,7 +145,6 @@ export default function MembrosPage() {
       carregar()
     }
   }
-
   function exportar() {
     const dados = filtrados.map((m) => {
       const idade = calcularIdade(m.data_nascimento)
@@ -175,7 +158,7 @@ export default function MembrosPage() {
         'Data de Nascimento': formatarData(m.data_nascimento),
         'Data de Batismo': formatarData(m.data_batismo),
         'Data de Recebimento': formatarData(m.data_recebimento),
-        Situacao: m.situacao,
+        Situacao: SITUACAO_ROTULO[m.situacao] || m.situacao,
         Observações: m.observacoes || '',
       }
     })
@@ -184,7 +167,6 @@ export default function MembrosPage() {
     XLSX.utils.book_append_sheet(wb, ws, 'Membros')
     XLSX.writeFile(wb, 'membros_berit.xlsx')
   }
-
   const filtrados = membros.filter((m) => {
     const texto = busca.trim().toLowerCase()
     const nomeOk = !texto ||
@@ -196,9 +178,7 @@ export default function MembrosPage() {
     const situacaoOk = !situacao || (m.situacao || '') === situacao
     return nomeOk && faixaOk && sexoOk && situacaoOk
   })
-
   const rotuloSexo = (s) => s === 'masculino' ? 'Masculino' : s === 'feminino' ? 'Feminino' : '—'
-
   if (verificando) {
     return (
       <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -208,7 +188,6 @@ export default function MembrosPage() {
       </main>
     )
   }
-
   if (!perfilAtual || !podeVer) {
     return (
       <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -223,14 +202,13 @@ export default function MembrosPage() {
         <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem', textAlign: 'center' }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: '#1F3A5F', marginBottom: 8 }}>Acesso restrito</div>
           <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 16px' }}>
-            Esta área é exclusiva dos perfis <strong>Administrador</strong>, <strong>Secretaria</strong> e <strong>Conselho Fiscal</strong>.
+            Esta área é exclusiva dos perfis <strong>Administrador</strong>, <strong>Secretaria</strong>, <strong>Tesouraria</strong> e <strong>Conselho Fiscal</strong>.
           </p>
           <a href="/area" style={{ color: '#1F3A5F', fontSize: 14 }}>Voltar para o início</a>
         </div>
       </main>
     )
   }
-
   return (
     <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
       <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -241,14 +219,13 @@ export default function MembrosPage() {
           Voltar
         </a>
       </header>
-
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
           <div>
             <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Membros</h1>
             <p style={{ fontSize: 14, color: '#8A8A8A', margin: 0 }}>
               Cadastro e gestão do rol de membros da igreja.
-              {ehConselhoFiscal && ' Consulta em modo somente leitura — Conselho Fiscal.'}
+              {ehSomenteLeitura && ' Consulta em modo somente leitura.'}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -274,7 +251,6 @@ export default function MembrosPage() {
             )}
           </div>
         </div>
-
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
           <input
             type="text"
@@ -299,13 +275,11 @@ export default function MembrosPage() {
             ))}
           </select>
         </div>
-
         {erro && (
           <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>
             {erro}
           </div>
         )}
-
         {carregando ? (
           <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '2rem' }}>Carregando membros...</div>
         ) : filtrados.length === 0 ? (
@@ -373,7 +347,6 @@ export default function MembrosPage() {
           </div>
         )}
       </div>
-
       {consultando && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
           <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', maxWidth: 560, width: '90%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
@@ -433,7 +406,6 @@ export default function MembrosPage() {
           </div>
         </div>
       )}
-
       {inativando && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
           <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', maxWidth: 420, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
@@ -468,7 +440,6 @@ export default function MembrosPage() {
           </div>
         </div>
       )}
-
       {excluindo && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
           <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', maxWidth: 420, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
