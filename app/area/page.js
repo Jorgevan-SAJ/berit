@@ -38,9 +38,10 @@ export default function AreaPage() {
 
   const ehAdmin = perfil && perfil.perfil === 'admin_master'
   const ehConselhoFiscal = perfil && perfil.perfil === 'conselho_fiscal'
+  const ehSomenteLeitura = perfil && ['tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
   const podeFinancas = perfil && ['admin_master', 'tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
-  const podeMembros = perfil && (perfil.perfil === 'admin_master' || perfil.perfil === 'secretaria' || perfil.perfil === 'conselho_fiscal')
-  const podeAgenda = perfil && (perfil.perfil === 'admin_master' || perfil.perfil === 'secretaria' || perfil.perfil === 'conselho_fiscal')
+  const podeMembros = perfil && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
+  const podeAgenda = perfil && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
   const seloLeitura = { display: 'inline-block', background: '#E8F0FA', color: '#1F3A5F', padding: '2px 8px', borderRadius: 999, fontSize: 11, marginBottom: 6 }
 
   return (
@@ -62,7 +63,6 @@ export default function AreaPage() {
           </button>
         </div>
       </header>
-
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Área da Igreja</h1>
         <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 2rem' }}>
@@ -74,14 +74,13 @@ export default function AreaPage() {
             </span>
           )}
         </p>
-
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
           {podeMembros ? (
             <a href="/membros" style={card}>
               <div style={cardTitulo}>Membros</div>
-              {ehConselhoFiscal && <span style={seloLeitura}>Somente leitura</span>}
+              {ehSomenteLeitura && <span style={seloLeitura}>Somente leitura</span>}
               <p style={cardTexto}>
-                {ehConselhoFiscal
+                {ehSomenteLeitura
                   ? 'Consulta do rol de membros — sem cadastro ou edição.'
                   : 'Cadastro e gestão do rol de membros. Clique para acessar.'}
               </p>
@@ -92,7 +91,6 @@ export default function AreaPage() {
               <p style={cardTexto}>Acesso restrito.</p>
             </div>
           )}
-
           {podeFinancas ? (
             <a href="/financas" style={card}>
               <div style={cardTitulo}>Finanças</div>
@@ -109,20 +107,18 @@ export default function AreaPage() {
               <p style={cardTexto}>Acesso restrito ao perfil Tesouraria.</p>
             </div>
           )}
-
           {ehAdmin && (
             <a href="/acessos" style={card}>
               <div style={cardTitulo}>Perfis de Acesso</div>
               <p style={cardTexto}>Crie usuários e controle as permissões da plataforma.</p>
             </a>
           )}
-
           {podeAgenda ? (
             <a href="/agenda" style={card}>
               <div style={cardTitulo}>Agenda</div>
-              {ehConselhoFiscal && <span style={seloLeitura}>Somente leitura</span>}
+              {ehSomenteLeitura && <span style={seloLeitura}>Somente leitura</span>}
               <p style={cardTexto}>
-                {ehConselhoFiscal
+                {ehSomenteLeitura
                   ? 'Consulta de programações e eventos — sem cadastro ou edição.'
                   : 'Programações e eventos da igreja. Clique para acessar.'}
               </p>
@@ -133,14 +129,12 @@ export default function AreaPage() {
               <p style={cardTexto}>Acesso restrito.</p>
             </div>
           )}
-
           <div style={card}>
             <div style={cardTitulo}>Diretório Público</div>
             <p style={cardTexto}>Busca de igrejas perto de você. Disponível na Fase 3.</p>
           </div>
         </div>
       </div>
-
       <footer style={{ textAlign: 'center', padding: '1.5rem', fontSize: 12, color: '#8A8A8A' }}>
         <a href="/recuperar-acesso" style={{ color: '#8A8A8A', textDecoration: 'underline' }}>Recuperar acesso de administrador</a>
         <span style={{ margin: '0 8px' }}>·</span>
