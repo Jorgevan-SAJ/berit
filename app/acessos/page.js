@@ -17,7 +17,7 @@ export default function AcessosPage() {
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
   const [aviso, setAviso] = useState('')
-  const [novo, setNovo] = useState({ email: '', perfil: 'secretaria' })
+  const [novo, setNovo] = useState({ nome: '', email: '', perfil: 'secretaria' })
   const [criando, setCriando] = useState(false)
   const [meuId, setMeuId] = useState(null)
   const [excluindo, setExcluindo] = useState(null)
@@ -48,7 +48,7 @@ export default function AcessosPage() {
     setCarregando(true)
     const { data, error } = await supabase
       .from('v_usuarios')
-      .select('id, email, created_at, perfil, ativo')
+      .select('id, email, created_at, perfil, ativo, nome')
       .order('email')
     if (error) {
       setErro('Não foi possível carregar os usuários.')
@@ -71,7 +71,12 @@ export default function AcessosPage() {
     e.preventDefault()
     setErro('')
     setAviso('')
+    const nome = novo.nome.trim()
     const email = novo.email.trim().toLowerCase()
+    if (!nome) {
+      setErro('Informe o nome do usuário.')
+      return
+    }
     if (!email) {
       setErro('Informe um e-mail válido.')
       return
@@ -84,7 +89,7 @@ export default function AcessosPage() {
       resposta = await fetch('/api/criar-usuario', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ email, perfil: novo.perfil }),
+        body: JSON.stringify({ nome, email, perfil: novo.perfil }),
       })
     } catch (erroRede) {
       setCriando(false)
@@ -97,8 +102,8 @@ export default function AcessosPage() {
       setErro(dados.mensagem || 'Não foi possível criar o usuário.')
       return
     }
-    setAviso(`Usuário ${email} criado com sucesso!`)
-    setNovo({ email: '', perfil: 'secretaria' })
+    setAviso(dados.mensagem || `Usuário ${email} criado com sucesso!`)
+    setNovo({ nome: '', email: '', perfil: 'secretaria' })
     carregarUsuarios()
   }
 
@@ -252,7 +257,7 @@ export default function AcessosPage() {
         <div style={{ ...estilo.card, marginBottom: '1.5rem' }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 8 }}>Novo usuário</div>
           <div style={{ background: '#E8F0FA', color: '#1F3A5F', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
-            <strong>Como funciona o primeiro acesso:</strong> O administrador cadastra o e-mail e o sistema envia um e-mail de convite com um link para o usuário definir a própria senha. O administrador não define nem vê a senha de nenhum usuário.
+            <strong>Como funciona o primeiro acesso:</strong> o administrador cadastra o usuário e o sistema envia um e-mail de convite com um link para o usuário definir a própria senha. Após clicar no link enviado pelo Berit Inovações, ele será redirecionado para a área de acesso, deve informar o e-mail cadastrado e clicar em <strong>"Esqueci minha senha"</strong>; um novo e-mail será enviado para o cadastramento da senha. O administrador não define nem vê a senha de nenhum usuário.
           </div>
           <div style={{ background: '#FDF3E3', color: '#B26A00', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
             <strong>Dica de segurança:</strong> cadastre sempre pelo menos um segundo usuário com o perfil Administrador. Assim, se o administrador principal ficar impossibilitado de acessar (saída, falecimento ou outro motivo), a igreja mantém o controle da plataforma.
@@ -261,6 +266,10 @@ export default function AcessosPage() {
             <strong>Conselho Fiscal:</strong> perfil com acesso <strong>somente leitura</strong> ao módulo de Finanças (consulta de lançamentos, relatórios e histórico da auditoria), sem qualquer poder de lançamento, edição, consolidação ou conferência. Ideal para a fiscalização estatutária das contas da igreja.
           </div>
           <form onSubmit={criarUsuario} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0 1rem' }}>
+            <div>
+              <label style={estilo.rotulo}>Nome</label>
+              <input type="text" value={novo.nome} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} placeholder="Nome completo" required style={estilo.campo} />
+            </div>
             <div>
               <label style={estilo.rotulo}>E-mail</label>
               <input type="email" value={novo.email} onChange={(e) => setNovo({ ...novo, email: e.target.value })} placeholder="email@exemplo.com" required style={estilo.campo} />
@@ -343,6 +352,7 @@ export default function AcessosPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                 <thead>
                   <tr style={{ background: '#F5F0E6', color: '#1F3A5F', textAlign: 'left' }}>
+                    <th style={{ padding: '12px 16px' }}>Nome</th>
                     <th style={{ padding: '12px 16px' }}>E-mail</th>
                     <th style={{ padding: '12px 16px' }}>Perfil</th>
                     <th style={{ padding: '12px 16px' }}>Status</th>
@@ -353,6 +363,9 @@ export default function AcessosPage() {
                   {usuarios.map((u) => (
                     <tr key={u.id} style={{ borderTop: '1px solid #F0EAE0' }}>
                       <td style={{ padding: '12px 16px', fontWeight: 600, color: '#2E2E2E' }}>
+                        {u.nome || '—'}
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
                         {u.email}
                         {u.id === meuId && (
                           <span style={{ background: '#E8F0FA', color: '#1F3A5F', padding: '2px 8px', borderRadius: 999, fontSize: 11, marginLeft: 8 }}>
