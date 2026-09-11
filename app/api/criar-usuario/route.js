@@ -5,6 +5,7 @@ export async function POST(request) {
     const corpo = await request.json()
     const email = (corpo?.email || '').trim().toLowerCase()
     const perfil = corpo?.perfil || 'secretaria'
+    const nome = (corpo?.nome || '').trim()
     const token = (request.headers.get('authorization') || '').replace('Bearer ', '').trim()
 
     if (!email.includes('@')) {
@@ -69,7 +70,7 @@ export async function POST(request) {
       if (perfilExistente) {
         const { error: erroUpdate } = await admin
           .from('perfis')
-          .update({ perfil, igreja_id: igrejaId })
+          .update({ perfil, igreja_id: igrejaId, nome })
           .eq('user_id', usuarioAchado.id)
         if (erroUpdate) {
           return Response.json({ ok: false, mensagem: 'Usuário localizado, mas o perfil não foi atualizado: ' + erroUpdate.message }, { status: 500 })
@@ -84,7 +85,7 @@ export async function POST(request) {
       }
       const { error: erroInsert } = await admin
         .from('perfis')
-        .insert([{ user_id: usuarioAchado.id, igreja_id: igrejaId, perfil, ativo: true }])
+        .insert([{ user_id: usuarioAchado.id, igreja_id: igrejaId, perfil, ativo: true, nome }])
       if (erroInsert) {
         return Response.json({ ok: false, mensagem: 'Usuário localizado, mas o perfil não foi gravado: ' + erroInsert.message }, { status: 500 })
       }
@@ -101,7 +102,7 @@ export async function POST(request) {
 
     const { error: erroInsert } = await admin
       .from('perfis')
-      .insert([{ user_id: data.user.id, igreja_id: igrejaId, perfil, ativo: true }])
+      .insert([{ user_id: data.user.id, igreja_id: igrejaId, perfil, ativo: true, nome }])
     if (erroInsert) {
       return Response.json({ ok: false, mensagem: 'Usuário criado, mas o perfil não foi gravado: ' + erroInsert.message }, { status: 500 })
     }
