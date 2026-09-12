@@ -11,6 +11,8 @@ function formatarCelular(valor) {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
 }
 
+const UFS = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO']
+
 export default function NovoMembro() {
   const [perfilAtual, setPerfilAtual] = useState(null)
   const [verificando, setVerificando] = useState(true)
@@ -22,6 +24,13 @@ export default function NovoMembro() {
     data_nascimento: '',
     data_batismo: '',
     data_recebimento: '',
+    endereco: '',
+    bairro: '',
+    cidade: '',
+    uf: '',
+    cep: '',
+    nome_pai: '',
+    nome_mae: '',
     situacao: 'membro',
     observacoes: '',
   })
@@ -66,6 +75,13 @@ export default function NovoMembro() {
         data_nascimento: form.data_nascimento,
         data_batismo: form.data_batismo || null,
         data_recebimento: form.data_recebimento || null,
+        endereco: form.endereco.trim() || null,
+        bairro: form.bairro.trim() || null,
+        cidade: form.cidade.trim() || null,
+        uf: form.uf || null,
+        cep: form.cep.replace(/\D/g, '') || null,
+        nome_pai: form.nome_pai.trim() || null,
+        nome_mae: form.nome_mae.trim() || null,
         situacao: form.situacao,
         observacoes: form.observacoes.trim() || null,
       },
@@ -149,6 +165,42 @@ export default function NovoMembro() {
 
           <label style={rotulo}>Data de recebimento</label>
           <input type="date" value={form.data_recebimento} onChange={(e) => atualizar('data_recebimento', e.target.value)} style={campo} />
+
+          <label style={rotulo}>Endereço</label>
+          <input type="text" value={form.endereco} onChange={(e) => atualizar('endereco', e.target.value)} placeholder="Rua e número" style={campo} />
+
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <div style={{ flex: 1 }}>
+              <label style={rotulo}>Bairro</label>
+              <input type="text" value={form.bairro} onChange={(e) => atualizar('bairro', e.target.value)} placeholder="Bairro" style={campo} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={rotulo}>Cidade</label>
+              <input type="text" value={form.cidade} onChange={(e) => atualizar('cidade', e.target.value)} placeholder="Cidade" style={campo} />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <div style={{ width: 110 }}>
+              <label style={rotulo}>UF</label>
+              <select value={form.uf} onChange={(e) => atualizar('uf', e.target.value)} style={campo}>
+                <option value="">—</option>
+                {UFS.map((u) => (
+                  <option key={u} value={u}>{u}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={rotulo}>CEP</label>
+              <input type="text" value={form.cep} onChange={(e) => atualizar('cep', e.target.value)} placeholder="00000-000" style={campo} />
+            </div>
+          </div>
+
+          <label style={rotulo}>Nome do pai</label>
+          <input type="text" value={form.nome_pai} onChange={(e) => atualizar('nome_pai', e.target.value)} placeholder="Nome do pai (opcional)" style={campo} />
+
+          <label style={rotulo}>Nome da mãe</label>
+          <input type="text" value={form.nome_mae} onChange={(e) => atualizar('nome_mae', e.target.value)} placeholder="Nome da mãe (opcional)" style={campo} />
 
           <label style={rotulo}>Situação</label>
           <select value={form.situacao} onChange={(e) => atualizar('situacao', e.target.value)} style={campo}>
