@@ -44,7 +44,7 @@ export default function EditarMembro() {
             data_nascimento: data.data_nascimento || '',
             data_batismo: data.data_batismo || '',
             data_recebimento: data.data_recebimento || '',
-            situacao: data.situacao || 'ativo',
+            situacao: data.situacao || 'membro',
             observacoes: data.observacoes || '',
           })
         }
@@ -163,30 +163,39 @@ export default function EditarMembro() {
         <form onSubmit={salvar} style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', border: '1px solid #E4DED2' }}>
           <label style={rotulo}>Nome *</label>
           <input type="text" value={form.nome} onChange={(e) => atualizar('nome', e.target.value)} placeholder="Nome completo" required style={campo} />
+
           <label style={rotulo}>E-mail</label>
           <input type="email" value={form.email} onChange={(e) => atualizar('email', e.target.value)} placeholder="email@exemplo.com" style={campo} />
+
           <label style={rotulo}>Celular</label>
           <input type="text" value={form.celular} onChange={(e) => atualizar('celular', formatarCelular(e.target.value))} placeholder="(00) 00000-0000" style={campo} />
+
           <label style={rotulo}>Sexo *</label>
           <select value={form.sexo} onChange={(e) => atualizar('sexo', e.target.value)} required style={campo}>
             <option value="">— Selecione —</option>
             <option value="masculino">Masculino</option>
             <option value="feminino">Feminino</option>
           </select>
+
           <label style={rotulo}>Data de nascimento *</label>
           <input type="date" value={form.data_nascimento} onChange={(e) => atualizar('data_nascimento', e.target.value)} required style={campo} />
+
           <label style={rotulo}>Data de batismo</label>
           <input type="date" value={form.data_batismo} onChange={(e) => atualizar('data_batismo', e.target.value)} style={campo} />
+
           <label style={rotulo}>Data de recebimento</label>
           <input type="date" value={form.data_recebimento} onChange={(e) => atualizar('data_recebimento', e.target.value)} style={campo} />
+
           <label style={rotulo}>Situação</label>
           <select value={form.situacao} onChange={(e) => atualizar('situacao', e.target.value)} style={campo}>
-            <option value="ativo">Ativo</option>
+            <option value="membro">Membro</option>
             <option value="congregado">Congregado</option>
             <option value="visitante">Visitante</option>
           </select>
+
           <label style={rotulo}>Observações</label>
           <textarea value={form.observacoes} onChange={(e) => atualizar('observacoes', e.target.value)} rows={3} placeholder="Anotações opcionais" style={campo} />
+
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: 4 }}>
             <button type="submit" disabled={carregando} style={{ flex: 1, padding: '12px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
               {carregando ? 'Salvando...' : 'Salvar alterações'}
