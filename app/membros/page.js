@@ -162,7 +162,7 @@ export default function MembrosPage() {
     }
   }
 
-  function exportar() {
+    function exportar() {
     const dados = filtrados.map((m) => {
       const idade = calcularIdade(m.data_nascimento)
       return {
@@ -175,9 +175,22 @@ export default function MembrosPage() {
         'Data de Nascimento': formatarData(m.data_nascimento),
         'Data de Batismo': formatarData(m.data_batismo),
         'Data de Recebimento': formatarData(m.data_recebimento),
+        Endereço: m.endereco || '',
+        Bairro: m.bairro || '',
+        Cidade: m.cidade || '',
+        UF: m.uf || '',
+        CEP: m.cep || '',
+        'Nome do Pai': m.nome_pai || '',
+        'Nome da Mãe': m.nome_mae || '',
         Situacao: SITUACAO_ROTULO[m.situacao] || m.situacao,
         Observações: m.observacoes || '',
       }
+    })
+    const ws = XLSX.utils.json_to_sheet(dados)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Membros')
+    XLSX.writeFile(wb, 'membros_berit.xlsx')
+  }
     })
     const ws = XLSX.utils.json_to_sheet(dados)
     const wb = XLSX.utils.book_new()
