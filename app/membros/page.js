@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../../lib/supabase'
 import { getPerfil } from '../../lib/perfil'
+
 function formatarCelular(valor) {
   const d = (valor || '').replace(/\D/g, '').slice(0, 11)
   if (d.length <= 2) return d
@@ -10,12 +11,14 @@ function formatarCelular(valor) {
   if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
 }
+
 function formatarData(valor) {
   if (!valor) return ''
   const partes = valor.split('-')
   if (partes.length !== 3) return valor
   return `${partes[2]}/${partes[1]}/${partes[0]}`
 }
+
 function calcularIdade(dataNascimento) {
   if (!dataNascimento) return null
   const nasc = new Date(dataNascimento + 'T00:00:00')
@@ -25,6 +28,7 @@ function calcularIdade(dataNascimento) {
   if (m < 0 || (m === 0 && hoje.getDate() < nasc.getDate())) idade--
   return idade
 }
+
 function faixaEtaria(idade) {
   if (idade === null || idade === undefined) return 'sem-data'
   if (idade <= 11) return 'crianca'
@@ -33,6 +37,7 @@ function faixaEtaria(idade) {
   if (idade <= 59) return 'adulto'
   return 'anciao'
 }
+
 const FAIXA_ROTULO = {
   crianca: 'Criança',
   adolescente: 'Adolescente',
@@ -41,6 +46,7 @@ const FAIXA_ROTULO = {
   anciao: 'Ancião',
   'sem-data': '',
 }
+
 const FAIXAS = [
   { valor: '', rotulo: 'Todas as idades' },
   { valor: 'crianca', rotulo: 'Crianças (0 a 11)' },
@@ -49,23 +55,27 @@ const FAIXAS = [
   { valor: 'adulto', rotulo: 'Adultos (36 a 59)' },
   { valor: 'anciao', rotulo: 'Anciãos (60+)' },
 ]
+
 const SITUACOES = [
   { valor: '', rotulo: 'Todas as situações' },
   { valor: 'membro', rotulo: 'Membros' },
   { valor: 'congregado', rotulo: 'Congregados' },
   { valor: 'visitante', rotulo: 'Visitantes' },
 ]
+
 const SITUACAO_ROTULO = {
   membro: 'Membro',
   congregado: 'Congregado',
   visitante: 'Visitante',
   inativo: 'Inativo',
 }
+
 const CORES_SITUACAO = {
   membro: { bg: '#EAF4EE', cor: '#4C8C6E' },
   congregado: { bg: '#E8F0FA', cor: '#1F3A5F' },
   visitante: { bg: '#FFF8E1', cor: '#B7791F' },
 }
+
 const MOTIVOS = [
   'Falecido',
   'Abandono',
@@ -74,6 +84,7 @@ const MOTIVOS = [
   'Mudança de cidade',
   'Outros',
 ]
+
 export default function MembrosPage() {
   const [perfilAtual, setPerfilAtual] = useState(null)
   const [verificando, setVerificando] = useState(true)
@@ -89,9 +100,11 @@ export default function MembrosPage() {
   const [excluindo, setExcluindo] = useState(null)
   const [consultando, setConsultando] = useState(null)
   const [salvando, setSalvando] = useState(false)
+
   const podeVer = perfilAtual && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(perfilAtual.perfil)
   const podeEditar = perfilAtual && ['admin_master', 'secretaria'].includes(perfilAtual.perfil)
   const ehSomenteLeitura = perfilAtual && ['tesouraria', 'conselho_fiscal'].includes(perfilAtual.perfil)
+
   async function carregar() {
     setCarregando(true)
     const { data, error } = await supabase
@@ -106,6 +119,7 @@ export default function MembrosPage() {
     }
     setCarregando(false)
   }
+
   useEffect(() => {
     getPerfil().then((p) => {
       setPerfilAtual(p)
@@ -113,6 +127,7 @@ export default function MembrosPage() {
       if (p && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(p.perfil)) carregar()
     })
   }, [])
+
   async function confirmarInativacao() {
     if (!inativando) return
     setSalvando(true)
@@ -133,6 +148,7 @@ export default function MembrosPage() {
       carregar()
     }
   }
+
   async function confirmarExclusao() {
     if (!excluindo) return
     setSalvando(true)
@@ -145,6 +161,7 @@ export default function MembrosPage() {
       carregar()
     }
   }
+
   function exportar() {
     const dados = filtrados.map((m) => {
       const idade = calcularIdade(m.data_nascimento)
@@ -167,6 +184,7 @@ export default function MembrosPage() {
     XLSX.utils.book_append_sheet(wb, ws, 'Membros')
     XLSX.writeFile(wb, 'membros_berit.xlsx')
   }
+
   const filtrados = membros.filter((m) => {
     const texto = busca.trim().toLowerCase()
     const nomeOk = !texto ||
@@ -178,7 +196,9 @@ export default function MembrosPage() {
     const situacaoOk = !situacao || (m.situacao || '') === situacao
     return nomeOk && faixaOk && sexoOk && situacaoOk
   })
+
   const rotuloSexo = (s) => s === 'masculino' ? 'Masculino' : s === 'feminino' ? 'Feminino' : '—'
+
   if (verificando) {
     return (
       <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -188,6 +208,7 @@ export default function MembrosPage() {
       </main>
     )
   }
+
   if (!perfilAtual || !podeVer) {
     return (
       <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -209,6 +230,7 @@ export default function MembrosPage() {
       </main>
     )
   }
+
   return (
     <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
       <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -288,13 +310,12 @@ export default function MembrosPage() {
           </div>
         ) : (
           <div style={{ background: '#FFFFFF', borderRadius: 12, border: '1px solid #E4DED2', overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 780 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 700 }}>
               <thead>
                 <tr style={{ background: '#F5F0E6', color: '#1F3A5F', textAlign: 'left' }}>
                   <th style={{ padding: '12px 16px' }}>Nome</th>
                   <th style={{ padding: '12px 16px' }}>Idade</th>
                   <th style={{ padding: '12px 16px' }}>Sexo</th>
-                  <th style={{ padding: '12px 16px' }}>E-mail</th>
                   <th style={{ padding: '12px 16px' }}>Celular</th>
                   <th style={{ padding: '12px 16px' }}>Situação</th>
                   <th style={{ padding: '12px 16px', textAlign: 'right' }}>Ações</th>
@@ -316,7 +337,6 @@ export default function MembrosPage() {
                       </td>
                       <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{idade === null ? '—' : `${idade} anos`}</td>
                       <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{rotuloSexo(m.sexo)}</td>
-                      <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{m.email || '—'}</td>
                       <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{formatarCelular(m.celular) || '—'}</td>
                       <td style={{ padding: '12px 16px' }}>
                         <span style={{ background: cores.bg, color: cores.cor, padding: '4px 10px', borderRadius: 999, fontSize: 12 }}>
