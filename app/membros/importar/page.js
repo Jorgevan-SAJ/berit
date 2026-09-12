@@ -12,6 +12,13 @@ const CAMPOS = [
   { chave: 'data_batismo', rotulo: 'Data de batismo' },
   { chave: 'data_recebimento', rotulo: 'Data de recebimento' },
   { chave: 'situacao', rotulo: 'Situação' },
+  { chave: 'endereco', rotulo: 'Endereço' },
+  { chave: 'bairro', rotulo: 'Bairro' },
+  { chave: 'cidade', rotulo: 'Cidade' },
+  { chave: 'uf', rotulo: 'UF' },
+  { chave: 'cep', rotulo: 'CEP' },
+  { chave: 'nome_pai', rotulo: 'Nome do pai' },
+  { chave: 'nome_mae', rotulo: 'Nome da mãe' },
   { chave: 'observacoes', rotulo: 'Observações' },
 ]
 
@@ -23,6 +30,13 @@ const SUGESTOES = {
   data_batismo: ['datadebatismo', 'batismo', 'databatismo', 'data de batismo'],
   data_recebimento: ['dataderecebimento', 'recebimento', 'datarecebimento', 'data de recebimento'],
   situacao: ['situacao', 'status', 'condicao'],
+  endereco: ['endereco', 'endereço', 'rua', 'logradouro'],
+  bairro: ['bairro'],
+  cidade: ['cidade', 'municipio', 'município'],
+  uf: ['uf', 'estado'],
+  cep: ['cep'],
+  nome_pai: ['nomedopai', 'pai', 'nome do pai'],
+  nome_mae: ['nomedamae', 'mae', 'nome da mãe', 'mãe'],
   observacoes: ['observacoes', 'observacao', 'obs', 'notas'],
 }
 
@@ -186,6 +200,13 @@ export default function ImportarMembros() {
         data_batismo: converterData(d.data_batismo),
         data_recebimento: converterData(d.data_recebimento),
         situacao: normalizarSituacao(d.situacao),
+        endereco: (d.endereco || '').toString().trim() || null,
+        bairro: (d.bairro || '').toString().trim() || null,
+        cidade: (d.cidade || '').toString().trim() || null,
+        uf: (d.uf || '').toString().trim().toUpperCase().slice(0, 2) || null,
+        cep: (d.cep || '').toString().replace(/\D/g, '').slice(0, 8) || null,
+        nome_pai: (d.nome_pai || '').toString().trim() || null,
+        nome_mae: (d.nome_mae || '').toString().trim() || null,
         observacoes: (d.observacoes || '').toString().trim() || null,
       }])
       if (error) {
