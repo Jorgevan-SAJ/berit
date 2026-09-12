@@ -7,6 +7,8 @@ export default function AreaPage() {
   const [carregando, setCarregando] = useState(true)
   const [usuario, setUsuario] = useState(null)
   const [perfil, setPerfil] = useState(null)
+  const [pendentes, setPendentes] = useState(0)
+  const [toastVisivel, setToastVisivel] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
@@ -17,9 +19,29 @@ export default function AreaPage() {
         const p = await getPerfil()
         setPerfil(p)
         setCarregando(false)
+        if (p && ['admin_master', 'tesouraria'].includes(p.perfil)) {
+          const { count } = await supabase
+            .from('solicitacoes_alteracao')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'pendente')
+            .neq('solicitado_por', data.session.user.id)
+          setPendentes(count || 0)
+        }
       }
     })
   }, [])
+
+  useEffect(() => {
+    if (pendentes > 0 && !toastVisivel) {
+      const jaVisto = typeof window !== 'undefined' && window.sessionStorage.getItem('berit_aviso_pendencia_visto') === '1'
+      if (!jaVisto) {
+        setToastVisivel(true)
+        window.sessionStorage.setItem('berit_aviso_pendencia_visto', '1')
+        const t = setTimeout(() => setToastVisivel(false), 8000)
+        return () => clearTimeout(t)
+      }
+    }
+  }, [pendentes, toastVisivel])
 
   if (carregando) {
     return (
@@ -63,6 +85,25 @@ export default function AreaPage() {
           </button>
         </div>
       </header>
+      {toastVisivel && pendentes > 0 && (
+        <div
+          onClick={() => { window.location.href = '/financas/auditoria' }}
+          style={{ position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 50, maxWidth: 560, width: 'calc(100% - 2rem)', background: '#1F3A5F', color: '#FFFFFF', borderRadius: 10, padding: '14px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.25)', cursor: 'pointer', fontSize: 13, lineHeight: 1.5 }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+            <span>
+              ⚠️ <strong>Existem {pendentes} pendência(s) a confirmar na auditoria.</strong>{' '}
+              Acesse Finanças e em seguida Auditoria para aprovar ou recusar as alterações.
+            </span>
+            <button
+              onClick={(e) => { e.stopPropagation(); setToastVisivel(false) }}
+              style={{ background: 'none', border: 'none', color: '#FFFFFF', fontSize: 16, cursor: 'pointer', lineHeight: 1 }}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Área da Igreja</h1>
         <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 2rem' }}>
@@ -95,6 +136,16 @@ export default function AreaPage() {
             <a href="/financas" style={card}>
               <div style={cardTitulo}>Finanças</div>
               {ehConselhoFiscal && <span style={seloLeitura}>Somente leitura</span>}
+              {pendentes > 0 && (
+                <span
+                  role="link"
+                  tabIndex={0}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = '/financas/auditoria' }}
+                  style={{ display: 'inline-block', background: '#FDF3E3', color: '#B26A00', padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700, marginBottom: 6, cursor: 'pointer' }}
+                >
+                  {pendentes} pendência(s) a confirmar →
+                </span>
+              )}
               <p style={cardTexto}>
                 {ehConselhoFiscal
                   ? 'Consulta de lançamentos, relatórios e auditoria — modo somente leitura.'
