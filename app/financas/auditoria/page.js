@@ -1,198 +1,287 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { supabase } from '../../lib/supabase'
-import { getPerfil, perfilLabel } from '../../lib/perfil'
+import { supabase } from '../../../lib/supabase'
+import { getPerfil } from '../../../lib/perfil'
 
-export default function AreaPage() {
+function formatarMoeda(v) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
+}
+
+function formatarData(iso) {
+  if (!iso) return ''
+  const [a, m, d] = iso.split('-')
+  return `${d}/${m}/${a}`
+}
+
+function formatarDataHora(ts) {
+  if (!ts) return ''
+  const d = new Date(ts)
+  return `${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+}
+
+const CAMPOS = [
+  { k: 'tipo', r: 'Tipo' },
+  { k: 'descricao', r: 'Descrição' },
+  { k: 'valor', r: 'Valor' },
+  { k: 'categoria_id', r: 'Categoria' },
+  { k: 'data_lancamento', r: 'Data' },
+  { k: 'forma_pagamento', r: 'Forma de pagamento' },
+  { k: 'membro_id', r: 'Membro' },
+  { k: 'observacoes', r: 'Observações' },
+]
+
+export default function AuditoriaPage() {
+  const [perfilAtual, setPerfilAtual] = useState(null)
+  const [verificando, setVerificando] = useState(true)
+  const [solicitacoes, setSolicitacoes] = useState([])
+  const [historico, setHistorico] = useState([])
+  const [categorias, setCategorias] = useState([])
+  const [membros, setMembros] = useState([])
+  const [usuarios, setUsuarios] = useState([])
   const [carregando, setCarregando] = useState(true)
-  const [usuario, setUsuario] = useState(null)
-  const [perfil, setPerfil] = useState(null)
-  const [pendentes, setPendentes] = useState(0)
-  const [toastVisivel, setToastVisivel] = useState(false)
+  const [erro, setErro] = useState('')
+  const [aviso, setAviso] = useState('')
+  const [processandoId, setProcessandoId] = useState(null)
+
+  // Permissões por perfil
+  const podeVerAuditoria = perfilAtual && ['admin_master', 'tesouraria', 'conselho_fiscal'].includes(perfilAtual.perfil)
+  const podeAgirAuditoria = perfilAtual && ['admin_master', 'tesouraria'].includes(perfilAtual.perfil)
+  const ehConselhoFiscal = perfilAtual && perfilAtual.perfil === 'conselho_fiscal'
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!data.session) {
-        window.location.href = '/login'
-      } else {
-        setUsuario(data.session.user)
-        const p = await getPerfil()
-        setPerfil(p)
-        setCarregando(false)
-        if (p && ['admin_master', 'tesouraria'].includes(p.perfil)) {
-          const { count } = await supabase
-            .from('solicitacoes_alteracao')
-            .select('id', { count: 'exact', head: true })
-            .eq('status', 'pendente')
-            .neq('solicitado_por', data.session.user.id)
-          setPendentes(count || 0)
-        }
-      }
+    getPerfil().then((p) => {
+      setPerfilAtual(p)
+      setVerificando(false)
+      if (p && ['admin_master', 'tesouraria', 'conselho_fiscal'].includes(p.perfil)) carregarDados()
     })
   }, [])
 
-  useEffect(() => {
-    if (pendentes > 0 && !toastVisivel) {
-      const jaVisto = typeof window !== 'undefined' && window.sessionStorage.getItem('berit_aviso_pendencia_visto') === '1'
-      if (!jaVisto) {
-        setToastVisivel(true)
-        window.sessionStorage.setItem('berit_aviso_pendencia_visto', '1')
-        const t = setTimeout(() => setToastVisivel(false), 8000)
-        return () => clearTimeout(t)
-      }
-    }
-  }, [pendentes, toastVisivel])
+  async function carregarDados() {
+    setCarregando(true)
+    const [pend, hist, cat, mem, usr] = await Promise.all([
+      supabase.from('solicitacoes_alteracao').select('*').eq('status', 'pendente').order('solicitado_em', { ascending: true }),
+      supabase.from('solicitacoes_alteracao').select('*').in('status', ['aprovada', 'rejeitada']).order('analisado_em', { ascending: false }).limit(10),
+      supabase.from('categorias').select('*').order('nome'),
+      supabase.from('membros').select('id, nome').order('nome'),
+      supabase.from('v_usuarios').select('id, email').order('email'),
+    ])
+    setSolicitacoes(pend.data || [])
+    setHistorico(hist.data || [])
+    setCategorias(cat.data || [])
+    setMembros(mem.data || [])
+    setUsuarios(usr.data || [])
+    if (pend.error || hist.error || cat.error || mem.error || usr.error) setErro('Não foi possível carregar as solicitações.')
+    setCarregando(false)
+  }
 
-  if (carregando) {
+  const emailUsuario = (id) => {
+    const u = usuarios.find((x) => x.id === id)
+    return u ? u.email : '—'
+  }
+
+  const nomeCategoria = (id) => {
+    const c = categorias.find((x) => x.id === id)
+    return c ? c.nome : '—'
+  }
+
+  const nomeMembro = (id) => {
+    if (!id) return ''
+    const m = membros.find((x) => x.id === id)
+    return m ? m.nome : '—'
+  }
+
+  function formatarValor(campo, valor) {
+    if (valor === null || valor === undefined || valor === '') return '—'
+    if (campo === 'valor') return formatarMoeda(valor)
+    if (campo === 'data_lancamento') return formatarData(valor)
+    if (campo === 'categoria_id') return nomeCategoria(valor)
+    if (campo === 'membro_id') return nomeMembro(valor)
+    if (campo === 'tipo') return valor === 'entrada' ? 'Entrada' : 'Saída'
+    if (campo === 'forma_pagamento') return valor
+    return String(valor)
+  }
+
+  function camposAlterados(sol) {
+    const orig = sol.dados_originais || {}
+    const novo = sol.dados_novos || {}
+    return CAMPOS.filter((c) => String(orig[c.k] || '') !== String(novo[c.k] || ''))
+  }
+
+  async function analisar(sol, aprovar) {
+    setErro('')
+    setAviso('')
+    setProcessandoId(sol.id)
+    const { error } = await supabase.rpc('analisar_alteracao', { p_solicitacao: sol.id, p_aprovar: aprovar })
+    setProcessandoId(null)
+    if (error) {
+      setErro(error.message || 'Não foi possível concluir a análise.')
+    } else {
+      setAviso(aprovar ? 'Alteração aprovada. O lançamento recebeu a nota permanente de alteração.' : 'Alteração rejeitada. Os valores originais foram restaurados.')
+      carregarDados()
+    }
+  }
+
+  const estilo = {
+    main: { minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" },
+    header: { background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+    linkLogo: { fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF', textDecoration: 'none' },
+    botaoVoltar: { background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' },
+    card: { background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', border: '1px solid #E4DED2' },
+  }
+
+  if (verificando) {
     return (
-      <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
-        <div style={{ fontSize: 14, color: '#8A8A8A' }}>Carregando...</div>
+      <main style={estilo.main}>
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem', textAlign: 'center', fontSize: 14, color: '#8A8A8A' }}>
+          Verificando permissões...
+        </div>
       </main>
     )
   }
 
-  const card = {
-    background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', border: '1px solid #E4DED2',
-    boxShadow: '0 2px 12px rgba(31,58,95,0.06)', textDecoration: 'none', display: 'block',
+  if (!perfilAtual || !podeVerAuditoria) {
+    return (
+      <main style={estilo.main}>
+        <header style={estilo.header}>
+          <a href="/area" style={estilo.linkLogo}>Berit</a>
+          <a href="/financas" style={estilo.botaoVoltar}>Voltar</a>
+        </header>
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem', textAlign: 'center' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#1F3A5F', marginBottom: 8 }}>Acesso restrito</div>
+          <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 16px' }}>
+            Esta área é exclusiva dos perfis <strong>Administrador</strong>, <strong>Tesouraria</strong> e <strong>Conselho Fiscal</strong>.
+          </p>
+          <a href="/financas" style={{ color: '#1F3A5F', fontSize: 14 }}>Voltar para Finanças</a>
+        </div>
+      </main>
+    )
   }
-  const cardTitulo = { fontSize: 16, fontWeight: 600, color: '#1F3A5F', marginBottom: 6 }
-  const cardTexto = { fontSize: 13, color: '#8A8A8A', margin: 0 }
-
-  const ehAdmin = perfil && perfil.perfil === 'admin_master'
-  const ehConselhoFiscal = perfil && perfil.perfil === 'conselho_fiscal'
-  const ehSomenteLeitura = perfil && ['tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
-  const podeFinancas = perfil && ['admin_master', 'tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
-  const podeMembros = perfil && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
-  const podeAgenda = perfil && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
-  const seloLeitura = { display: 'inline-block', background: '#E8F0FA', color: '#1F3A5F', padding: '2px 8px', borderRadius: 999, fontSize: 11, marginBottom: 6 }
 
   return (
-    <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
-      <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em' }}>Berit</div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <a
-            href="/ajuda"
-            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}
-          >
-            Ajuda
-          </a>
-          <button
-            onClick={async () => { await supabase.auth.signOut(); window.location.href = '/login' }}
-            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}
-          >
-            Sair
-          </button>
-        </div>
+    <main style={estilo.main}>
+      <header style={estilo.header}>
+        <a href="/area" style={estilo.linkLogo}>Berit</a>
+        <a href="/financas" style={estilo.botaoVoltar}>Voltar</a>
       </header>
-      {toastVisivel && pendentes > 0 && (
-        <div
-          onClick={() => { window.location.href = '/financas/auditoria' }}
-          style={{ position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 50, maxWidth: 560, width: 'calc(100% - 2rem)', background: '#1F3A5F', color: '#FFFFFF', borderRadius: 10, padding: '14px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.25)', cursor: 'pointer', fontSize: 13, lineHeight: 1.5 }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-            <span>
-              ⚠️ <strong>Existem {pendentes} pendência(s) a confirmar na auditoria.</strong>{' '}
-              Acesse Finanças e em seguida Auditoria para aprovar ou recusar as alterações.
-            </span>
-            <button
-              onClick={(e) => { e.stopPropagation(); setToastVisivel(false) }}
-              style={{ background: 'none', border: 'none', color: '#FFFFFF', fontSize: 16, cursor: 'pointer', lineHeight: 1 }}
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem 1.5rem' }}>
-        <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Área da Igreja</h1>
-        <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 2rem' }}>
-          Bem-vindo{perfil?.nome ? `, ${perfil.nome}` : usuario?.email ? `, ${usuario.email}` : ''}
-          {perfil ? ` · Perfil: ${perfilLabel(perfil.perfil)}` : ''} — gestão simples para igrejas.
-          {ehConselhoFiscal && (
-            <span style={{ display: 'block', marginTop: 6, color: '#4C8C6E' }}>
-              🔍 Acesso de consulta em todos os módulos, em modo somente leitura (fiscalização).
-            </span>
-          )}
+      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '2rem 1.5rem' }}>
+        <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Central de Auditoria</h1>
+        <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 1.5rem' }}>
+          Conferência das alterações feitas em lançamentos consolidados.
+          {ehConselhoFiscal && ' Visualização em modo somente leitura — Conselho Fiscal.'}
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-          {podeMembros ? (
-            <a href="/membros" style={card}>
-              <div style={cardTitulo}>Membros</div>
-              {ehSomenteLeitura && <span style={seloLeitura}>Somente leitura</span>}
-              <p style={cardTexto}>
-                {ehSomenteLeitura
-                  ? 'Consulta do rol de membros — sem cadastro ou edição.'
-                  : 'Cadastro e gestão do rol de membros. Clique para acessar.'}
-              </p>
-            </a>
-          ) : (
-            <div style={{ ...card, opacity: 0.6 }}>
-              <div style={cardTitulo}>Membros</div>
-              <p style={cardTexto}>Acesso restrito.</p>
-            </div>
-          )}
-          {podeFinancas ? (
-            <a href="/financas" style={card}>
-              <div style={cardTitulo}>Finanças</div>
-              {ehConselhoFiscal && <span style={seloLeitura}>Somente leitura</span>}
-              {pendentes > 0 && (
-                <span
-                  role="link"
-                  tabIndex={0}
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = '/financas/auditoria' }}
-                  style={{ display: 'inline-block', background: '#FDF3E3', color: '#B26A00', padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700, marginBottom: 6, cursor: 'pointer' }}
-                >
-                  {pendentes} pendência(s) a confirmar →
-                </span>
-              )}
-              <p style={cardTexto}>
-                {ehConselhoFiscal
-                  ? 'Consulta de lançamentos, relatórios e auditoria — modo somente leitura.'
-                  : 'Entradas, saídas e relatório de dizimistas. Clique para acessar.'}
-              </p>
-            </a>
-          ) : (
-            <div style={{ ...card, opacity: 0.6 }}>
-              <div style={cardTitulo}>Finanças</div>
-              <p style={cardTexto}>Acesso restrito ao perfil Tesouraria.</p>
-            </div>
-          )}
-          {ehAdmin && (
-            <a href="/acessos" style={card}>
-              <div style={cardTitulo}>Perfis de Acesso</div>
-              <p style={cardTexto}>Crie usuários e controle as permissões da plataforma.</p>
-            </a>
-          )}
-          {podeAgenda ? (
-            <a href="/agenda" style={card}>
-              <div style={cardTitulo}>Agenda</div>
-              {ehSomenteLeitura && <span style={seloLeitura}>Somente leitura</span>}
-              <p style={cardTexto}>
-                {ehSomenteLeitura
-                  ? 'Consulta de programações e eventos — sem cadastro ou edição.'
-                  : 'Programações e eventos da igreja. Clique para acessar.'}
-              </p>
-            </a>
-          ) : (
-            <div style={{ ...card, opacity: 0.6 }}>
-              <div style={cardTitulo}>Agenda</div>
-              <p style={cardTexto}>Acesso restrito.</p>
-            </div>
-          )}
-          <div style={card}>
-            <div style={cardTitulo}>Diretório Público</div>
-            <p style={cardTexto}>Busca de igrejas perto de você. Disponível na Fase 3.</p>
+        <div style={{ background: '#E8F0FA', color: '#1F3A5F', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
+          Quando um lançamento consolidado é alterado, a mudança é aplicada na hora e fica <strong>aguardando a conferência de outro usuário com perfil financeiro</strong> (Administrador confere o que o Tesoureiro alterou, e vice-versa). <strong>Ninguém pode conferir a própria alteração.</strong> Aprovando, o lançamento ganha a nota permanente "Esse lançamento foi alterado em dd/mm/aaaa". Rejeitando, os valores originais são restaurados.
+        </div>
+        {erro && (
+          <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>
+        )}
+        {aviso && (
+          <div style={{ background: '#EAF4EE', color: '#4C8C6E', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{aviso}</div>
+        )}
+        <div style={{ ...estilo.card, marginBottom: '1.5rem' }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 12 }}>
+            Aguardando conferência ({solicitacoes.length})
           </div>
+          {carregando ? (
+            <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '1.5rem' }}>Carregando...</div>
+          ) : solicitacoes.length === 0 ? (
+            <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '1.5rem' }}>Nenhuma alteração aguardando conferência. 🎉</div>
+          ) : (
+            solicitacoes.map((sol) => {
+              const alterados = camposAlterados(sol)
+              const novo = sol.dados_novos || {}
+              return (
+                <div key={sol.id} style={{ border: '1px solid #E4DED2', borderRadius: 12, padding: '1rem 1.25rem', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: 10 }}>
+                    <span style={{ background: '#FDF3E3', color: '#B26A00', padding: '4px 10px', borderRadius: 999, fontSize: 12, fontWeight: 600 }}>
+                      Aguardando conferência
+                    </span>
+                    <span style={{ fontSize: 12, color: '#8A8A8A' }}>
+                      Solicitada por <strong style={{ color: '#2E2E2E' }}>{emailUsuario(sol.solicitado_por)}</strong> em {formatarDataHora(sol.solicitado_em)}
+                    </span>
+                  </div>
+                  {alterados.length === 0 ? (
+                    <div style={{ fontSize: 13, color: '#5A5A5A' }}>Alteração nos dados do lançamento.</div>
+                  ) : (
+                    <div style={{ display: 'grid', gap: '0.35rem', marginBottom: 10 }}>
+                      {alterados.map((c) => (
+                        <div key={c.k} style={{ fontSize: 13, color: '#5A5A5A' }}>
+                          <strong style={{ color: '#1F3A5F' }}>{c.r}:</strong>{' '}
+                          <span style={{ textDecoration: 'line-through', color: '#B71C1C' }}>
+                            {formatarValor(c.k, (sol.dados_originais || {})[c.k])}
+                          </span>{' '}
+                          →{' '}
+                          <span style={{ color: '#4C8C6E', fontWeight: 600 }}>
+                            {formatarValor(c.k, novo[c.k])}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ fontSize: 12, color: '#8A8A8A', marginBottom: 12 }}>
+                    Valor após alteração: <strong style={{ color: '#2E2E2E' }}>{formatarMoeda(novo.valor)}</strong> · Descrição: {novo.descricao || '—'}
+                  </div>
+                  {podeAgirAuditoria && (
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => analisar(sol, true)}
+                        disabled={processandoId === sol.id}
+                        style={{ padding: '10px 16px', background: '#4C8C6E', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        {processandoId === sol.id ? 'Processando...' : 'Aprovar alteração'}
+                      </button>
+                      <button
+                        onClick={() => analisar(sol, false)}
+                        disabled={processandoId === sol.id}
+                        style={{ padding: '10px 16px', background: '#B71C1C', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Rejeitar e restaurar originais
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })
+          )}
+        </div>
+        <div style={estilo.card}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 12 }}>Últimas análises</div>
+          {historico.length === 0 ? (
+            <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '1rem' }}>Nenhuma análise realizada ainda.</div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 760 }}>
+                <thead>
+                  <tr style={{ background: '#F5F0E6', color: '#1F3A5F', textAlign: 'left' }}>
+                    <th style={{ padding: '10px 12px' }}>Status</th>
+                    <th style={{ padding: '10px 12px' }}>Descrição</th>
+                    <th style={{ padding: '10px 12px', textAlign: 'right' }}>Valor</th>
+                    <th style={{ padding: '10px 12px' }}>Solicitada por</th>
+                    <th style={{ padding: '10px 12px' }}>Analisada por</th>
+                    <th style={{ padding: '10px 12px' }}>Analisada em</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historico.map((h) => (
+                    <tr key={h.id} style={{ borderTop: '1px solid #F0EAE0' }}>
+                      <td style={{ padding: '10px 12px' }}>
+                        <span style={{ background: h.status === 'aprovada' ? '#EAF4EE' : '#FDECEC', color: h.status === 'aprovada' ? '#4C8C6E' : '#B71C1C', padding: '3px 8px', borderRadius: 999, fontSize: 11 }}>
+                          {h.status === 'aprovada' ? 'Aprovada' : 'Rejeitada'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 12px', color: '#5A5A5A' }}>{(h.dados_novos || {}).descricao || 'Lançamento'}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: '#2E2E2E' }}>{formatarMoeda((h.dados_novos || {}).valor)}</td>
+                      <td style={{ padding: '10px 12px', color: '#5A5A5A' }}>{emailUsuario(h.solicitado_por)}</td>
+                      <td style={{ padding: '10px 12px', color: '#5A5A5A' }}>{emailUsuario(h.analisado_por)}</td>
+                      <td style={{ padding: '10px 12px', color: '#5A5A5A' }}>{formatarDataHora(h.analisado_em)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
-      <footer style={{ textAlign: 'center', padding: '1.5rem', fontSize: 12, color: '#8A8A8A' }}>
-        <a href="/recuperar-acesso" style={{ color: '#8A8A8A', textDecoration: 'underline' }}>Recuperar acesso de administrador</a>
-        <span style={{ margin: '0 8px' }}>·</span>
-        <a href="mailto:beritinovacoes@gmail.com?subject=Contato%20Berit" style={{ color: '#8A8A8A', textDecoration: 'underline' }}>Fale conosco</a>
-        <span style={{ margin: '0 8px' }}>·</span>
-        Berit — Gestão simples para igrejas
-      </footer>
     </main>
   )
 }
