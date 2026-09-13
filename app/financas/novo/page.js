@@ -33,10 +33,10 @@ export default function NovoFinancas() {
     })
   }, [])
 
-  async function carregarOpcoes() {
+    async function carregarOpcoes() {
     const [cat, mem] = await Promise.all([
       supabase.from('categorias').select('*').order('nome'),
-      supabase.from('membros').select('id, nome').in('situacao', ['ativo', 'congregado']).order('nome'),
+      supabase.from('membros').select('id, nome').in('situacao', ['membro', 'congregado']).order('nome'),
     ])
     setCategorias(cat.data || [])
     setMembros(mem.data || [])
@@ -45,7 +45,6 @@ export default function NovoFinancas() {
       setForm((f) => ({ ...f, categoria_id: iniciais[0].id }))
     }
   }
-
   function mudarTipo(tipo) {
     const iniciais = categorias.filter((c) => c.tipo === tipo)
     setForm({
