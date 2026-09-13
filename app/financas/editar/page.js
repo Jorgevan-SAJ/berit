@@ -37,7 +37,7 @@ export default function EditarFinancas() {
     const [lanc, cat, mem] = await Promise.all([
       supabase.from('lancamentos').select('*').eq('id', id).single(),
       supabase.from('categorias').select('*').order('nome'),
-      supabase.from('membros').select('id, nome').in('situacao', ['ativo', 'congregado']).order('nome'),
+      supabase.from('membros').select('id, nome').in('situacao', ['membro', 'congregado', 'visitante']).order('nome'),
     ])
     setCategorias(cat.data || [])
     setMembros(mem.data || [])
