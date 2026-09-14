@@ -2,6 +2,45 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getPerfil, perfilLabel } from '../../lib/perfil'
+const DIAS_SEMANA_CURTO = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+const ABAS_ANIVERSARIO = [
+  { v: 'hoje', r: 'Hoje' },
+  { v: 'semana', r: 'Esta semana' },
+  { v: 'mes', r: 'Este mês' },
+]
+const ROTULOS_EVENTO = {
+  culto: { r: 'Culto', cor: '#1F3A5F', bg: '#E8F0FA' },
+  ensaio: { r: 'Ensaio', cor: '#4C8C6E', bg: '#EAF4EE' },
+  reuniao: { r: 'Reunião', cor: '#B26A00', bg: '#FDF3E3' },
+  evento: { r: 'Evento', cor: '#B71C1C', bg: '#FDECEC' },
+  campanha: { r: 'Campanha', cor: '#7B4FA6', bg: '#F3EAFB' },
+  outro: { r: 'Outro', cor: '#5A5A5A', bg: '#F0EAE0' },
+}
+// ALTERAÇÃO 1 — função para formatar o CNPJ (13.232.150/0001-34)
+function formatarCnpj(cnpj) {
+  const d = String(cnpj || '').replace(/\D/g, '')
+  if (d.length !== 14) return cnpj
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12, 14)}`
+}
+function partesData(iso) {
+  if (!iso) return null
+  const [a, m, d] = String(iso).split('-').map(Number)
+  if (!a || !m || !d) return null
+  return { ano: a, mes: m, dia: d }
+}
+function rotuloDiaSemana(mes, dia) {
+  const d = new Date(new Date().getFullYear(), mes - 1, dia)
+  return DIAS_SEMANA_CURTO[d.getDay()]
+}
+function montarProximosEventos(eventos, hoje, limite) {
+  const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())
+  const itens = []
+  eventos.forEach((e) => {
+    const hora = e.hora_inicio ? String(e.hora_inicio).slice(0, 5) : ''
+    const base = { id: e.id, titulo: e.titulo, tipo: e.tipo,'use client'
+import { useEffect, useState } from 'react'
+import { supabase } from '../../lib/supabase'
+import { getPerfil, perfilLabel } from '../../lib/perfil'
 
 const DIAS_SEMANA_CURTO = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 const ABAS_ANIVERSARIO = [
