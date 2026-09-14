@@ -18,6 +18,12 @@ const ROTULOS_EVENTO = {
   outro: { r: 'Outro', cor: '#5A5A5A', bg: '#F0EAE0' },
 }
 
+function formatarCnpj(cnpj) {
+  const d = String(cnpj || '').replace(/\D/g, '')
+  if (d.length !== 14) return cnpj
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12, 14)}`
+}
+
 function partesData(iso) {
   if (!iso) return null
   const [a, m, d] = String(iso).split('-').map(Number)
@@ -218,9 +224,14 @@ export default function AreaPage() {
       )}
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Área da Igreja</h1>
-        <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 2rem' }}>
+      <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 2rem' }}>
           Bem-vindo{perfil?.nome ? `, ${perfil.nome}` : usuario?.email ? `, ${usuario.email}` : ''}
           {perfil ? ` · Perfil: ${perfilLabel(perfil.perfil)}` : ''} — gestão simples para igrejas.
+          {igreja?.cnpj && (
+            <span style={{ display: 'block', marginTop: 6 }}>
+              CNPJ: {formatarCnpj(igreja.cnpj)}
+            </span>
+          )}
           {ehConselhoFiscal && (
             <span style={{ display: 'block', marginTop: 6, color: '#4C8C6E' }}>
               🔍 Acesso de consulta em todos os módulos, em modo somente leitura (fiscalização).
