@@ -37,49 +37,6 @@ function montarProximosEventos(eventos, hoje, limite) {
   const itens = []
   eventos.forEach((e) => {
     const hora = e.hora_inicio ? String(e.hora_inicio).slice(0, 5) : ''
-    const base = { id: e.id, titulo: e.titulo, tipo: e.tipo,'use client'
-import { useEffect, useState } from 'react'
-import { supabase } from '../../lib/supabase'
-import { getPerfil, perfilLabel } from '../../lib/perfil'
-
-const DIAS_SEMANA_CURTO = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
-const ABAS_ANIVERSARIO = [
-  { v: 'hoje', r: 'Hoje' },
-  { v: 'semana', r: 'Esta semana' },
-  { v: 'mes', r: 'Este mês' },
-]
-const ROTULOS_EVENTO = {
-  culto: { r: 'Culto', cor: '#1F3A5F', bg: '#E8F0FA' },
-  ensaio: { r: 'Ensaio', cor: '#4C8C6E', bg: '#EAF4EE' },
-  reuniao: { r: 'Reunião', cor: '#B26A00', bg: '#FDF3E3' },
-  evento: { r: 'Evento', cor: '#B71C1C', bg: '#FDECEC' },
-  campanha: { r: 'Campanha', cor: '#7B4FA6', bg: '#F3EAFB' },
-  outro: { r: 'Outro', cor: '#5A5A5A', bg: '#F0EAE0' },
-}
-
-function formatarCnpj(cnpj) {
-  const d = String(cnpj || '').replace(/\D/g, '')
-  if (d.length !== 14) return cnpj
-  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12, 14)}`
-}
-
-function partesData(iso) {
-  if (!iso) return null
-  const [a, m, d] = String(iso).split('-').map(Number)
-  if (!a || !m || !d) return null
-  return { ano: a, mes: m, dia: d }
-}
-
-function rotuloDiaSemana(mes, dia) {
-  const d = new Date(new Date().getFullYear(), mes - 1, dia)
-  return DIAS_SEMANA_CURTO[d.getDay()]
-}
-
-function montarProximosEventos(eventos, hoje, limite) {
-  const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())
-  const itens = []
-  eventos.forEach((e) => {
-    const hora = e.hora_inicio ? String(e.hora_inicio).slice(0, 5) : ''
     const base = { id: e.id, titulo: e.titulo, tipo: e.tipo, local: e.local, hora }
     if (e.tipo_evento === 'permanente') {
       const ds = Number(e.dia_semana)
@@ -98,19 +55,18 @@ function montarProximosEventos(eventos, hoje, limite) {
   itens.sort((a, b) => a.quando - b.quando || a.hora.localeCompare(b.hora))
   return itens.slice(0, limite)
 }
-
 export default function AreaPage() {
   const [carregando, setCarregando] = useState(true)
   const [usuario, setUsuario] = useState(null)
   const [perfil, setPerfil] = useState(null)
   const [pendentes, setPendentes] = useState(0)
   const [toastVisivel, setToastVisivel] = useState(false)
-
   const [carregandoPainel, setCarregandoPainel] = useState(false)
   const [aniversariantes, setAniversariantes] = useState([])
   const [abaAniversario, setAbaAniversario] = useState('hoje')
   const [proximosEventos, setProximosEventos] = useState([])
-
+  // ALTERAÇÃO 2 — estado para guardar os dados da igreja
+  const [igreja, setIgreja] = useState(null)
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) {
@@ -119,6 +75,15 @@ export default function AreaPage() {
         setUsuario(data.session.user)
         const p = await getPerfil()
         setPerfil(p)
+        // ALTERAÇÃO 2 — busca o nome e o CNPJ da igreja do usuário logado
+        if (p) {
+          const { data: ig } = await supabase
+            .from('igrejas')
+            .select('nome, cnpj')
+            .eq('id', p.igreja_id)
+            .maybeSingle()
+          setIgreja(ig)
+        }
         setCarregando(false)
         if (p && ['admin_master', 'tesouraria'].includes(p.perfil)) {
           const { count } = await supabase
@@ -134,7 +99,6 @@ export default function AreaPage() {
       }
     })
   }, [])
-
   async function carregarPainel() {
     setCarregandoPainel(true)
     const hoje = new Date()
@@ -155,7 +119,6 @@ export default function AreaPage() {
     setProximosEventos(montarProximosEventos(ev.data || [], hoje, 5))
     setCarregandoPainel(false)
   }
-
   useEffect(() => {
     if (pendentes > 0 && !toastVisivel) {
       const jaVisto = typeof window !== 'undefined' && window.sessionStorage.getItem('berit_aviso_pendencia_visto') === '1'
@@ -167,7 +130,6 @@ export default function AreaPage() {
       }
     }
   }, [pendentes, toastVisivel])
-
   if (carregando) {
     return (
       <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -175,7 +137,6 @@ export default function AreaPage() {
       </main>
     )
   }
-
   const card = {
     background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', border: '1px solid #E4DED2',
     boxShadow: '0 2px 12px rgba(31,58,95,0.06)', textDecoration: 'none', display: 'block',
@@ -190,7 +151,6 @@ export default function AreaPage() {
   const podeAgenda = perfil && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
   const podePainel = perfil && ['admin_master', 'secretaria'].includes(perfil.perfil)
   const seloLeitura = { display: 'inline-block', background: '#E8F0FA', color: '#1F3A5F', padding: '2px 8px', borderRadius: 999, fontSize: 11, marginBottom: 6 }
-
   const hoje = new Date()
   const chavesSemana = new Set()
   for (let i = 0; i < 7; i++) {
@@ -208,40 +168,39 @@ export default function AreaPage() {
       : abaAniversario === 'semana'
         ? 'Nenhum aniversariante esta semana.'
         : 'Nenhum aniversariante este mês.'
-
   return (
     <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
       <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-  <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em' }}>Berit</div>
-  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-    {perfil?.perfil === 'admin_master' && (
-      <a
-        href="/igrejas/editar"
-        style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}
-      >
-        Configurações da Igreja
-      </a>
-    )}
-    <a
-      href="/conta/alterar-senha"
-      style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}
-    >
-      Alterar senha
-    </a>
-    <a
-      href="/ajuda"
-      style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}
-    >
-      Ajuda
-    </a>
-    <button
-      onClick={async () => { await supabase.auth.signOut(); window.location.href = '/login' }}
-      style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}
-    >
-      Sair
-    </button>
-  </div>
-</header>
+        <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em' }}>Berit</div>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {perfil?.perfil === 'admin_master' && (
+            <a
+              href="/igrejas/editar"
+              style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}
+            >
+              Configurações da Igreja
+            </a>
+          )}
+          <a
+            href="/conta/alterar-senha"
+            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}
+          >
+            Alterar senha
+          </a>
+          <a
+            href="/ajuda"
+            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}
+          >
+            Ajuda
+          </a>
+          <button
+            onClick={async () => { await supabase.auth.signOut(); window.location.href = '/login' }}
+            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}
+          >
+            Sair
+          </button>
+        </div>
+      </header>
       {toastVisivel && pendentes > 0 && (
         <div
           onClick={() => { window.location.href = '/financas/auditoria' }}
@@ -263,9 +222,10 @@ export default function AreaPage() {
       )}
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Área da Igreja</h1>
-      <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 2rem' }}>
+        <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 2rem' }}>
           Bem-vindo{perfil?.nome ? `, ${perfil.nome}` : usuario?.email ? `, ${usuario.email}` : ''}
           {perfil ? ` · Perfil: ${perfilLabel(perfil.perfil)}` : ''} — gestão simples para igrejas.
+          {/* ALTERAÇÃO 3 — exibe o CNPJ formatado abaixo da saudação */}
           {igreja?.cnpj && (
             <span style={{ display: 'block', marginTop: 6 }}>
               CNPJ: {formatarCnpj(igreja.cnpj)}
@@ -347,7 +307,6 @@ export default function AreaPage() {
             <p style={cardTexto}>Busca de igrejas perto de você. Disponível na Fase 3.</p>
           </div>
         </div>
-
         {podePainel && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem', marginTop: '1.5rem' }}>
             <div style={card}>
@@ -408,7 +367,6 @@ export default function AreaPage() {
                 </div>
               )}
             </div>
-
             <div style={card}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                 <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F' }}>📅 Próximos eventos</div>
