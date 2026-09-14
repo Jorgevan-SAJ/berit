@@ -66,25 +66,23 @@ export default function AreaPage() {
   const [abaAniversario, setAbaAniversario] = useState('hoje')
   const [proximosEventos, setProximosEventos] = useState([])
   // ALTERAÇÃO 2 — estado para guardar os dados da igreja
-  const [igreja, setIgreja] = useState(null)
-  useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!data.session) {
-        window.location.href = '/login'
-      } else {
-        setUsuario(data.session.user)
-        const p = await getPerfil()
+          const p = await getPerfil()
         setPerfil(p)
         // ALTERAÇÃO 2 — busca o nome e o CNPJ da igreja do usuário logado
-        if (p) {
+        const { data: perfilIgreja } = await supabase
+          .from('perfis')
+          .select('igreja_id')
+          .eq('user_id', data.session.user.id)
+          .maybeSingle()
+        if (perfilIgreja?.igreja_id) {
           const { data: ig } = await supabase
             .from('igrejas')
             .select('nome, cnpj')
-            .eq('id', p.igreja_id)
+            .eq('id', perfilIgreja.igreja_id)
             .maybeSingle()
           setIgreja(ig)
         }
-        setCarregando(false)
+  setCarregando(false)
         if (p && ['admin_master', 'tesouraria'].includes(p.perfil)) {
           const { count } = await supabase
             .from('solicitacoes_alteracao')
@@ -222,10 +220,9 @@ export default function AreaPage() {
       )}
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Área da Igreja</h1>
-        <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 2rem' }}>
-          Bem-vindo{perfil?.nome ? `, ${perfil.nome}` : usuario?.email ? `, ${usuario.email}` : ''}
+                <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 2rem' }}>
+          Bem-vindo{igreja?.nome ? `, ${igreja.nome}` : perfil?.nome ? `, ${perfil.nome}` : usuario?.email ? `, ${usuario.email}` : ''}
           {perfil ? ` · Perfil: ${perfilLabel(perfil.perfil)}` : ''} — gestão simples para igrejas.
-          {/* ALTERAÇÃO 3 — exibe o CNPJ formatado abaixo da saudação */}
           {igreja?.cnpj && (
             <span style={{ display: 'block', marginTop: 6 }}>
               CNPJ: {formatarCnpj(igreja.cnpj)}
@@ -237,7 +234,7 @@ export default function AreaPage() {
             </span>
           )}
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
           {podeMembros ? (
             <a href="/membros" style={card}>
               <div style={cardTitulo}>Membros</div>
