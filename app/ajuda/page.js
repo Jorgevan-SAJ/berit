@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-
 const SECOES = [
   {
     modulo: 'Membros',
@@ -45,6 +44,18 @@ const SECOES = [
     ],
   },
   {
+    modulo: 'Configurações da Igreja',
+    icone: '⚙️',
+    itens: [
+      { p: 'O que é a página Configurações da Igreja?', r: 'Reúne os dados cadastrais e os canais de contato da igreja: nome, CNPJ, contato, grupos de WhatsApp e redes sociais. O acesso é exclusivo do perfil Administrador, pelo botão "Configurações da Igreja" no cabeçalho da Área da Igreja.' },
+      { p: 'Onde aparecem o nome e o CNPJ da igreja?', r: 'Assim que você salva, o nome passa a aparecer na saudação da Área da Igreja e o CNPJ logo abaixo, formatado (00.000.000/0000-00), para conferência rápida sem reabrir a tela de edição.' },
+      { p: 'Como cadastrar os grupos de WhatsApp?', r: 'São dois campos separados: um para o grupo de pedidos de oração e outro para o de perguntas e orientações. Cole o link de convite de cada grupo no campo correspondente. São canais distintos, por isso não se usa um campo único.' },
+      { p: 'Como adicionar uma rede social?', r: 'Escolha a rede na lista (Instagram, Facebook, YouTube, TikTok, X ou Outra), cole o link e clique em "Adicionar". Cada rede aparece com uma etiqueta colorida e um botão "Remover" ao lado. Clique em "Remover" para tirar uma rede da lista.' },
+      { p: 'Como sair da página de Configurações?', r: 'Use o botão "Voltar" no topo da página ou aguarde: após salvar com sucesso, a página retorna sozinha à Área da Igreja.' },
+      { p: 'Por que a mensagem de sucesso só aparece às vezes?', r: 'A mensagem verde só é exibida quando o banco confirma a gravação. Se a alteração for recusada por permissão, a tela mostra o erro em vermelho e nenhum dado é salvo — assim você nunca fica com a impressão de que salvou sem ter salvo.' },
+    ],
+  },
+  {
     modulo: 'Agenda',
     icone: '📅',
     itens: [
@@ -55,7 +66,6 @@ const SECOES = [
     ],
   },
 ]
-
 function Item({ p, r }) {
   const [aberto, setAberto] = useState(false)
   return (
@@ -80,7 +90,6 @@ function Item({ p, r }) {
     </div>
   )
 }
-
 export default function AjudaPage() {
   const [busca, setBusca] = useState('')
   const filtradas = SECOES.map((s) => ({
