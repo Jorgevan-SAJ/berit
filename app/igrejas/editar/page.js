@@ -20,6 +20,20 @@ const OPCOES_REDE = [
   'Outra',
 ]
 
+// Cores fixas de cada rede (mesmo padrão de pills usado nos eventos)
+const CORES_REDE = {
+  Instagram: { cor: '#7B4FA6', bg: '#F3EAFB' },
+  Facebook: { cor: '#1F3A5F', bg: '#E8F0FA' },
+  YouTube: { cor: '#B71C1C', bg: '#FDECEC' },
+  TikTok: { cor: '#2E2E2E', bg: '#F0EAE0' },
+  'X (Twitter)': { cor: '#5A5A5A', bg: '#F0EAE0' },
+  Outra: { cor: '#4C8C6E', bg: '#EAF4EE' },
+}
+
+function estiloRede(nome) {
+  return CORES_REDE[nome] || CORES_REDE.Outra
+}
+
 export default function ConfiguracoesIgreja() {
   const router = useRouter()
 
@@ -300,24 +314,40 @@ export default function ConfiguracoesIgreja() {
             <p className="text-sm text-gray-500">Nenhuma rede social cadastrada.</p>
           ) : (
             <ul className="space-y-2">
-              {redes.map((rede, indice) => (
-                <li
-                  key={indice}
-                  className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                >
-                  <div className="min-w-0">
-                    <div className="font-medium text-gray-700">{rede.nome}</div>
-                    <div className="text-gray-500 truncate">{rede.url}</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removerRede(indice)}
-                    className="text-red-600 text-sm whitespace-nowrap"
+              {redes.map((rede, indice) => {
+                const estilo = estiloRede(rede.nome)
+                return (
+                  <li
+                    key={indice}
+                    className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg px-3 py-2 text-sm"
                   >
-                    Remover
-                  </button>
-                </li>
-              ))}
+                    <div className="min-w-0">
+                      <span
+                        style={{
+                          display: 'inline-block',
+                          background: estilo.bg,
+                          color: estilo.cor,
+                          padding: '3px 10px',
+                          borderRadius: 999,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          marginBottom: 4,
+                        }}
+                      >
+                        {rede.nome}
+                      </span>
+                      <div className="text-gray-500 truncate">{rede.url}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removerRede(indice)}
+                      className="text-red-600 text-sm whitespace-nowrap"
+                    >
+                      Remover
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
           )}
         </div>
