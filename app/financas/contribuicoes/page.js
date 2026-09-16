@@ -1,19 +1,25 @@
 'use client'
-
 import { useEffect, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { getPerfil } from '../../../lib/perfil'
 import { formatarMoeda, gerarExcelContribuicoes, gerarPDFContribuicoes } from '../../../lib/relatorios'
 
+// P6 — rótulo padronizado: "Membro" (antes "Ativo")
 const SITUACOES = [
-  { v: 'ativo', r: 'Ativo' },
+  { v: 'membro', r: 'Membro' },
   { v: 'congregado', r: 'Congregado' },
   { v: 'visitante', r: 'Visitante' },
   { v: 'inativo', r: 'Inativo' },
 ]
 
+// P6 — normaliza valores legados de situação para o padrão "membro"
+function normalizarSituacao(v) {
+  if (v === 'ativo' || v === 'membro ativo' || v === 'membro(a)' || v === 'membro') return 'membro'
+  return v
+}
+
 function rotuloSituacao(v) {
-  const s = SITUACOES.find((x) => x.v === v)
+  const s = SITUACOES.find((x) => x.v === normalizarSituacao(v))
   return s ? s.r : v || '—'
 }
 
@@ -93,7 +99,8 @@ export default function ContribuicoesPage() {
   })
 
   const filtrados = dados.filter((d) => {
-    const sitOk = !filtroSituacao || d.situacao === filtroSituacao
+    // P6 — filtro usa a normalização para casar valores legados
+    const sitOk = !filtroSituacao || normalizarSituacao(d.situacao) === filtroSituacao
     const clOk = !filtroClassificacao || d.classificacao === filtroClassificacao
     return sitOk && clOk
   })
@@ -156,21 +163,17 @@ export default function ContribuicoesPage() {
         <a href="/area" style={estilo.linkLogo}>Berit</a>
         <a href="/financas" style={estilo.botaoVoltar}>Voltar</a>
       </header>
-
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Contribuições dos Membros</h1>
         <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 1.5rem' }}>
           Comportamento dos membros em relação às contribuições — classificação automática por meses de entrega no ano.
         </p>
-
         <div style={{ background: '#E8F0FA', color: '#1F3A5F', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.6 }}>
           <strong>Critério:</strong> contagem de <strong>meses distintos</strong> no ano em que o membro teve pelo menos um lançamento de entrada vinculado. Todos os membros entram na análise. <strong>0 meses</strong> = Não Ofertante · <strong>1 a 5 meses</strong> (até 49%) = Ofertante Esporádico · <strong>6 a 8 meses</strong> (50% a 75%) = Ofertante Frequente · <strong>9 a 12 meses</strong> (acima de 75%) = Dizimista. O sistema considera apenas os números de entregas, independentemente dos motivos.
         </div>
-
         {erro && (
           <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>
         )}
-
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
           <div style={{ ...estilo.card, textAlign: 'center' }}>
             <div style={{ fontSize: 13, color: '#8A8A8A', marginBottom: 4 }}>Dizimistas</div>
@@ -189,7 +192,6 @@ export default function ContribuicoesPage() {
             <div style={{ fontSize: 22, fontWeight: 700, color: '#8A8A8A' }}>{totaisResumo.naoOfertantes}</div>
           </div>
         </div>
-
         <div style={{ ...estilo.card, marginBottom: '1.5rem' }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 12 }}>Filtros e exportação</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0 1rem', marginBottom: 16 }}>
@@ -232,7 +234,6 @@ export default function ContribuicoesPage() {
             </button>
           </div>
         </div>
-
         <div style={estilo.card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: 12 }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F' }}>Membros analisados ({filtrados.length})</div>
