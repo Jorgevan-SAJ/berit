@@ -226,7 +226,7 @@ export default function AreaPage() {
         <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Área da Igreja</h1>
         <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 2rem' }}>
           Bem-vindo{igreja?.nome ? `, ${igreja.nome}` : perfil?.nome ? `, ${perfil.nome}` : usuario?.email ? `, ${usuario.email}` : ''}
-          {perfil ? ` · Perfil: ${perfilLabel(perfil.perfil)}` : ''} — gestão simples para igrejas.
+          {perfil ? ` · Perfil: ${perfilLabel(perfil.perfil)}` : ''} — Gestão Simples Para Igrejas.
           {igreja?.cnpj && (
             <span style={{ display: 'block', marginTop: 6 }}>
               CNPJ: {formatarCnpj(igreja.cnpj)}
@@ -423,7 +423,7 @@ export default function AreaPage() {
         <span style={{ margin: '0 8px' }}>·</span>
         <a href="mailto:beritinovacoes@gmail.com?subject=Contato%20Berit" style={{ color: '#8A8A8A', textDecoration: 'underline' }}>Fale conosco</a>
         <span style={{ margin: '0 8px' }}>·</span>
-        Berit — Gestão simples para igrejas
+        Berit — Gestão Simples Para Igrejas
       </footer>
     </main>
   )
