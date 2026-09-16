@@ -249,4 +249,60 @@ export default function ContribuicoesPage() {
             </button>
             <button
               onClick={() => gerarExcelContribuicoes(filtrados, `berit_contribuicoes_${ano}.xlsx`)}
-             
+              style={{ padding: '12px 20px', background: '#4C8C6E', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+            >
+              📊 Baixar Excel
+            </button>
+          </div>
+        </div>
+        <div style={estilo.card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: 12 }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F' }}>Membros analisados ({filtrados.length})</div>
+            <div style={{ fontSize: 13, color: '#5A5A5A' }}>Ano de referência: {ano}</div>
+          </div>
+          {carregando ? (
+            <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '1.5rem' }}>Carregando...</div>
+          ) : filtrados.length === 0 ? (
+            <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '1.5rem' }}>
+              Nenhum membro encontrado com os filtros atuais.
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 720 }}>
+                <thead>
+                  <tr style={{ background: '#F5F0E6', color: '#1F3A5F', textAlign: 'left' }}>
+                    <th style={{ padding: '10px 12px' }}>Nome</th>
+                    <th style={{ padding: '10px 12px' }}>Idade</th>
+                    <th style={{ padding: '10px 12px' }}>Situação</th>
+                    <th style={{ padding: '10px 12px', textAlign: 'center' }}>Meses com contribuição</th>
+                    <th style={{ padding: '10px 12px', textAlign: 'right' }}>Total ({ano})</th>
+                    <th style={{ padding: '10px 12px' }}>Classificação</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtrados.map((m) => {
+                    const cor = corClassificacao(m.classificacao)
+                    return (
+                      <tr key={m.id} style={{ borderTop: '1px solid #F0EAE0' }}>
+                        <td style={{ padding: '10px 12px', fontWeight: 600, color: '#2E2E2E' }}>{m.nome}</td>
+                        <td style={{ padding: '10px 12px', color: '#5A5A5A' }}>{m.idade !== null ? `${m.idade} anos` : '—'}</td>
+                        <td style={{ padding: '10px 12px', color: '#5A5A5A' }}>{m.situacaoLabel}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center', color: '#5A5A5A' }}>{m.meses} / 12</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700, color: '#2E2E2E' }}>{formatarMoeda(m.total)}</td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <span style={{ background: cor.bg, color: cor.fg, padding: '4px 10px', borderRadius: 999, fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                            {m.classificacaoLabel}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </main>
+  )
+}
