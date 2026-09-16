@@ -20,7 +20,6 @@ const OPCOES_REDE = [
   'Outra',
 ]
 
-// Cores fixas de cada rede (mesmo padrão de pills usado nos eventos)
 const CORES_REDE = {
   Instagram: { cor: '#7B4FA6', bg: '#F3EAFB' },
   Facebook: { cor: '#1F3A5F', bg: '#E8F0FA' },
@@ -37,6 +36,10 @@ function estiloRede(nome) {
 export default function ConfiguracoesIgreja() {
   const router = useRouter()
 
+  const [perfil, setPerfil] = useState(null)
+  const [ehAdmin, setEhAdmin] = useState(false)
+  const [carregando, setCarregando] = useState(true)
+
   const [form, setForm] = useState({
     nome: '',
     cnpj: '',
@@ -48,10 +51,15 @@ export default function ConfiguracoesIgreja() {
   const [redeNome, setRedeNome] = useState('Instagram')
   const [redeUrl, setRedeUrl] = useState('')
   const [plano, setPlano] = useState(null)
-  const [carregando, setCarregando] = useState(true)
   const [salvando, setSalvando] = useState(false)
   const [msg, setMsg] = useState('')
   const [erro, setErro] = useState('')
+
+  const [novaSenha, setNovaSenha] = useState('')
+  const [confirmarSenha, setConfirmarSenha] = useState('')
+  const [alterandoSenha, setAlterandoSenha] = useState(false)
+  const [msgSenha, setMsgSenha] = useState('')
+  const [erroSenha, setErroSenha] = useState('')
 
   useEffect(() => {
     carregar()
@@ -65,39 +73,39 @@ export default function ConfiguracoesIgreja() {
       return
     }
 
-    const { data: perfil } = await supabase
+    const { data: p } = await supabase
       .from('perfis')
       .select('igreja_id, perfil')
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (!perfil) {
+    if (!p) {
       setCarregando(false)
       return
     }
 
-    if (perfil.perfil !== 'admin_master') {
-      setErro('Apenas o Administrador pode editar os dados da igreja.')
-      setCarregando(false)
-      return
-    }
+    setPerfil(p)
+    const admin = p.perfil === 'admin_master'
+    setEhAdmin(admin)
 
-    const { data: igreja } = await supabase
-      .from('igrejas')
-      .select('*')
-      .eq('id', perfil.igreja_id)
-      .maybeSingle()
+    if (admin) {
+      const { data: igreja } = await supabase
+        .from('igrejas')
+        .select('*')
+        .eq('id', p.igreja_id)
+        .maybeSingle()
 
-    if (igreja) {
-      setForm({
-        nome: igreja.nome || '',
-        cnpj: igreja.cnpj || '',
-        contato: igreja.contato || '',
-        whatsapp_oracoes: igreja.whatsapp_oracoes || '',
-        whatsapp_orientacoes: igreja.whatsapp_orientacoes || '',
-      })
-      setRedes(Array.isArray(igreja.redes_sociais_lista) ? igreja.redes_sociais_lista : [])
-      setPlano(igreja)
+      if (igreja) {
+        setForm({
+          nome: igreja.nome || '',
+          cnpj: igreja.cnpj || '',
+          contato: igreja.contato || '',
+          whatsapp_oracoes: igreja.whatsapp_oracoes || '',
+          whatsapp_orientacoes: igreja.whatsapp_orientacoes || '',
+        })
+        setRedes(Array.isArray(igreja.redes_sociais_lista) ? igreja.redes_sociais_lista : [])
+        setPlano(igreja)
+      }
     }
 
     setCarregando(false)
@@ -131,33 +139,37 @@ export default function ConfiguracoesIgreja() {
       return
     }
 
-    const { data: perfil, error: erroPerfil } = await supabase
+    const { data: perfilAtual, error: erroPerfil } = await supabase
       .from('perfis')
       .select('igreja_id, perfil')
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (erroPerfil || !perfil) {
+    if (erroPerfil || !perfilAtual) {
       setSalvando(false)
       setErro('Não foi possível identificar sua igreja.')
       return
     }
 
-    if (perfil.perfil !== 'admin_master') {
+    if (perfilAtual.perfil !== 'admin_master') {
       setSalvando(false)
       setErro('Apenas o Administrador pode editar os dados da igreja.')
       return
     }
 
     const dadosParaSalvar = {
-      ...form,
+      nome: form.nome,
+      cnpj: form.cnpj,
+      contato: form.contato,
+      whatsapp_oracoes: form.whatsapp_oracoes,
+      whatsapp_orientacoes: form.whatsapp_orientacoes,
       redes_sociais_lista: redes,
     }
 
     const { data: atualizada, error } = await supabase
       .from('igrejas')
       .update(dadosParaSalvar)
-      .eq('id', perfil.igreja_id)
+      .eq('id', perfilAtual.igreja_id)
       .select('id, nome, cnpj, contato, whatsapp_oracoes, whatsapp_orientacoes, redes_sociais_lista')
       .maybeSingle()
 
@@ -173,11 +185,47 @@ export default function ConfiguracoesIgreja() {
       return
     }
 
+    const whatsappOk =
+      String(atualizada.whatsapp_oracoes || '') === String(form.whatsapp_oracoes || '') &&
+      String(atualizada.whatsapp_orientacoes || '') === String(form.whatsapp_orientacoes || '')
+
+    if (!whatsappOk) {
+      setErro('Atenção: os grupos de WhatsApp não foram gravados no banco. Confirme que as colunas whatsapp_oracoes e whatsapp_orientacoes existem e tente salvar novamente.')
+      return
+    }
+
     setMsg('Dados da igreja atualizados com sucesso.')
     setTimeout(() => router.push('/area'), 1200)
   }
 
+  async function alterarSenha(e) {
+    e.preventDefault()
+    setMsgSenha('')
+    setErroSenha('')
+    if (novaSenha.length < 6) {
+      setErroSenha('A nova senha deve ter pelo menos 6 caracteres.')
+      return
+    }
+    if (novaSenha !== confirmarSenha) {
+      setErroSenha('As senhas não coincidem.')
+      return
+    }
+    setAlterandoSenha(true)
+    const { error } = await supabase.auth.updateUser({ password: novaSenha })
+    setAlterandoSenha(false)
+    if (error) {
+      setErroSenha('Erro ao alterar senha: ' + error.message)
+      return
+    }
+    setMsgSenha('Senha alterada com sucesso.')
+    setNovaSenha('')
+    setConfirmarSenha('')
+  }
+
   if (carregando) return <div className="p-8">Carregando...</div>
+
+  const inputClasse = 'w-full border border-gray-300 rounded-lg px-3 py-2'
+  const rotuloClasse = 'block text-sm font-medium text-gray-700 mb-1'
 
   return (
     <div className="max-w-2xl mx-auto p-6">
@@ -191,175 +239,218 @@ export default function ConfiguracoesIgreja() {
 
       <h1 className="text-2xl font-bold mb-6">Configurações da Igreja</h1>
 
-      {plano && (
-        <div className="bg-gray-50 border rounded-lg p-4 mb-6 text-sm">
-          <p>
-            <strong>Plano atual:</strong>{' '}
-            {plano.vitalicio
-              ? 'Vitalício (acesso total)'
-              : NOMES_PLANOS[plano.plano] || plano.plano}
-          </p>
-          {!plano.vitalicio && plano.trial_termina_em && (
-            <p>
-              <strong>Trial termina em:</strong>{' '}
-              {new Date(plano.trial_termina_em).toLocaleDateString('pt-BR')}
-            </p>
-          )}
-        </div>
-      )}
-
       {msg && <p className="text-green-600 mb-4">{msg}</p>}
       {erro && <p className="text-red-600 mb-4">{erro}</p>}
 
-      <form onSubmit={salvar} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nome da igreja</label>
-          <input
-            type="text"
-            required
-            value={form.nome}
-            onChange={(e) => setForm({ ...form, nome: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">CNPJ</label>
-          <input
-            type="text"
-            value={form.cnpj}
-            onChange={(e) => setForm({ ...form, cnpj: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2"
-            placeholder="Opcional"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Contato</label>
-          <input
-            type="text"
-            value={form.contato}
-            onChange={(e) => setForm({ ...form, contato: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2"
-            placeholder="Telefone ou e-mail de contato"
-          />
-        </div>
-
-        <div className="border-t pt-4">
-          <p className="text-sm font-semibold text-gray-700 mb-3">Grupos de WhatsApp</p>
-
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Pedidos de oração
-              </label>
-              <input
-                type="text"
-                value={form.whatsapp_oracoes}
-                onChange={(e) => setForm({ ...form, whatsapp_oracoes: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                placeholder="https://chat.whatsapp.com/..."
-              />
+      {ehAdmin ? (
+        <form onSubmit={salvar} className="space-y-4">
+          {plano && (
+            <div className="bg-gray-50 border rounded-lg p-4 mb-4 text-sm">
+              <p>
+                <strong>Plano atual:</strong>{' '}
+                {plano.vitalicio
+                  ? 'Vitalício (acesso total)'
+                  : NOMES_PLANOS[plano.plano] || plano.plano}
+              </p>
+              {!plano.vitalicio && plano.trial_termina_em && (
+                <p>
+                  <strong>Trial termina em:</strong>{' '}
+                  {new Date(plano.trial_termina_em).toLocaleDateString('pt-BR')}
+                </p>
+              )}
             </div>
+          )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Perguntas e orientações
-              </label>
-              <input
-                type="text"
-                value={form.whatsapp_orientacoes}
-                onChange={(e) => setForm({ ...form, whatsapp_orientacoes: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2"
-                placeholder="https://chat.whatsapp.com/..."
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="border-t pt-4">
-          <p className="text-sm font-semibold text-gray-700 mb-3">Redes sociais</p>
-
-          <div className="flex flex-col sm:flex-row gap-2 mb-3">
-            <select
-              value={redeNome}
-              onChange={(e) => setRedeNome(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 sm:w-40"
-            >
-              {OPCOES_REDE.map((opcao) => (
-                <option key={opcao} value={opcao}>
-                  {opcao}
-                </option>
-              ))}
-            </select>
-
+          <div>
+            <label className={rotuloClasse}>Nome da igreja</label>
             <input
               type="text"
-              value={redeUrl}
-              onChange={(e) => setRedeUrl(e.target.value)}
-              className="flex-1 border border-gray-300 rounded-lg px-3 py-2"
-              placeholder="Cole aqui o link da rede social"
+              required
+              value={form.nome}
+              onChange={(e) => setForm({ ...form, nome: e.target.value })}
+              className={inputClasse}
             />
-
-            <button
-              type="button"
-              onClick={adicionarRede}
-              className="border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium"
-            >
-              Adicionar
-            </button>
           </div>
 
-          {redes.length === 0 ? (
-            <p className="text-sm text-gray-500">Nenhuma rede social cadastrada.</p>
-          ) : (
-            <ul className="space-y-2">
-              {redes.map((rede, indice) => {
-                const estilo = estiloRede(rede.nome)
-                return (
-                  <li
-                    key={indice}
-                    className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                  >
-                    <div className="min-w-0">
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          background: estilo.bg,
-                          color: estilo.cor,
-                          padding: '3px 10px',
-                          borderRadius: 999,
-                          fontSize: 11,
-                          fontWeight: 700,
-                          marginBottom: 4,
-                        }}
-                      >
-                        {rede.nome}
-                      </span>
-                      <div className="text-gray-500 truncate">{rede.url}</div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removerRede(indice)}
-                      className="text-red-600 text-sm whitespace-nowrap"
-                    >
-                      Remover
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </div>
+          <div>
+            <label className={rotuloClasse}>CNPJ</label>
+            <input
+              type="text"
+              value={form.cnpj}
+              onChange={(e) => setForm({ ...form, cnpj: e.target.value })}
+              className={inputClasse}
+              placeholder="Opcional"
+            />
+          </div>
 
-        <button
-          type="submit"
-          disabled={salvando}
-          className="w-full font-semibold rounded-lg py-2.5 disabled:opacity-50"
-        >
-          {salvando ? 'Salvando...' : 'Salvar alterações'}
-        </button>
-      </form>
+          <div>
+            <label className={rotuloClasse}>Contato</label>
+            <input
+              type="text"
+              value={form.contato}
+              onChange={(e) => setForm({ ...form, contato: e.target.value })}
+              className={inputClasse}
+              placeholder="Telefone ou e-mail de contato"
+            />
+          </div>
+
+          <div className="border-t pt-4">
+            <p className="text-sm font-semibold text-gray-700 mb-3">Grupos de WhatsApp</p>
+
+            <div className="space-y-3">
+              <div>
+                <label className={rotuloClasse}>Pedidos de oração</label>
+                <input
+                  type="text"
+                  value={form.whatsapp_oracoes}
+                  onChange={(e) => setForm({ ...form, whatsapp_oracoes: e.target.value })}
+                  className={inputClasse}
+                  placeholder="https://chat.whatsapp.com/..."
+                />
+              </div>
+
+              <div>
+                <label className={rotuloClasse}>Perguntas e orientações</label>
+                <input
+                  type="text"
+                  value={form.whatsapp_orientacoes}
+                  onChange={(e) => setForm({ ...form, whatsapp_orientacoes: e.target.value })}
+                  className={inputClasse}
+                  placeholder="https://chat.whatsapp.com/..."
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t pt-4">
+            <p className="text-sm font-semibold text-gray-700 mb-3">Redes sociais</p>
+
+            <div className="flex flex-col sm:flex-row gap-2 mb-3">
+              <select
+                value={redeNome}
+                onChange={(e) => setRedeNome(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 sm:w-40"
+              >
+                {OPCOES_REDE.map((opcao) => (
+                  <option key={opcao} value={opcao}>
+                    {opcao}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                type="text"
+                value={redeUrl}
+                onChange={(e) => setRedeUrl(e.target.value)}
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2"
+                placeholder="Cole aqui o link da rede social"
+              />
+
+              <button
+                type="button"
+                onClick={adicionarRede}
+                className="border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium"
+              >
+                Adicionar
+              </button>
+            </div>
+
+            {redes.length === 0 ? (
+              <p className="text-sm text-gray-500">Nenhuma rede social cadastrada.</p>
+            ) : (
+              <ul className="space-y-2">
+                {redes.map((rede, indice) => {
+                  const estilo = estiloRede(rede.nome)
+                  return (
+                    <li
+                      key={indice}
+                      className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                    >
+                      <div className="min-w-0">
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            background: estilo.bg,
+                            color: estilo.cor,
+                            padding: '3px 10px',
+                            borderRadius: 999,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            marginBottom: 4,
+                          }}
+                        >
+                          {rede.nome}
+                        </span>
+                        <div className="text-gray-500 truncate">{rede.url}</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removerRede(indice)}
+                        className="text-red-600 text-sm whitespace-nowrap"
+                      >
+                        Remover
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            disabled={salvando}
+            className="w-full font-semibold rounded-lg py-2.5 disabled:opacity-50"
+          >
+            {salvando ? 'Salvando...' : 'Salvar alterações'}
+          </button>
+        </form>
+      ) : (
+        <div className="bg-gray-50 border rounded-lg p-4 mb-6 text-sm text-gray-600">
+          Apenas o Administrador pode editar os dados da igreja. Nesta área, você pode alterar a sua senha de acesso.
+        </div>
+      )}
+
+      <div className="border-t pt-4 mt-6">
+        <p className="text-sm font-semibold text-gray-700 mb-3">Alteração de Senha</p>
+
+        {msgSenha && <p className="text-green-600 mb-4">{msgSenha}</p>}
+        {erroSenha && <p className="text-red-600 mb-4">{erroSenha}</p>}
+
+        <form onSubmit={alterarSenha} className="space-y-3">
+          <div>
+            <label className={rotuloClasse}>Nova senha</label>
+            <input
+              type="password"
+              value={novaSenha}
+              onChange={(e) => setNovaSenha(e.target.value)}
+              className={inputClasse}
+              autoComplete="new-password"
+              required
+            />
+          </div>
+
+          <div>
+            <label className={rotuloClasse}>Confirmar nova senha</label>
+            <input
+              type="password"
+              value={confirmarSenha}
+              onChange={(e) => setConfirmarSenha(e.target.value)}
+              className={inputClasse}
+              autoComplete="new-password"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={alterandoSenha}
+            className="w-full font-semibold rounded-lg py-2.5 disabled:opacity-50"
+          >
+            {alterandoSenha ? 'Alterando...' : 'Alterar senha'}
+          </button>
+        </form>
+      </div>
     </div>
   )
 }
