@@ -53,6 +53,7 @@ const SECOES = [
       { p: 'Como adicionar uma rede social?', r: 'Escolha a rede na lista (Instagram, Facebook, YouTube, TikTok, X ou Outra), cole o link e clique em "Adicionar". Cada rede aparece com uma etiqueta colorida e um botão "Remover" ao lado. Clique em "Remover" para tirar uma rede da lista.' },
       { p: 'Como sair da página de Configurações?', r: 'Use o botão "Voltar" no topo da página ou aguarde: após salvar com sucesso, a página retorna sozinha à Área da Igreja.' },
       { p: 'Por que a mensagem de sucesso só aparece às vezes?', r: 'A mensagem verde só é exibida quando o banco confirma a gravação. Se a alteração for recusada por permissão, a tela mostra o erro em vermelho e nenhum dado é salvo — assim você nunca fica com a impressão de que salvou sem ter salvo.' },
+      { p: 'Como alterar senha?', r: "Se você esqueceu sua senha, na área de acesso informe o e-mail e clique em 'Esqueci a senha'. Se você lembra a senha e deseja alterá-la, vá em Configurações da Igreja e procure a opção Alteração de Senha." },
     ],
   },
   {
