@@ -43,14 +43,26 @@ export default function RelatoriosPage() {
   const podeConsultar = perfilAtual && PERFIS_RELATORIOS.includes(perfilAtual.perfil)
   const ehConselhoFiscal = perfilAtual && perfilAtual.perfil === 'conselho_fiscal'
 
-  useEffect(() => {
-    getPerfil().then((p) => {
-      setPerfilAtual(p)
-      setVerificando(false)
-      if (p && PERFIS_RELATORIOS.includes(p.perfil)) {
-        carregarDados(p.igreja_id)
+    useEffect(() => {
+    async function iniciar() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setVerificando(false)
+        return
       }
-    })
+      const { data: perfil } = await supabase
+        .from('perfis')
+        .select('igreja_id, perfil')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      setPerfilAtual(perfil)
+      setVerificando(false)
+      if (perfil && PERFIS_RELATORIOS.includes(perfil.perfil)) {
+        carregarDados(perfil.igreja_id)
+      }
+    }
+    iniciar()
   }, [])
 
   async function carregarDados(igrejaId) {
