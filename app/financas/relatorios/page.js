@@ -9,12 +9,10 @@ const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julh
 function hojeISO() {
   return new Date().toISOString().slice(0, 10)
 }
-
 function mesAtual() {
   const hoje = new Date()
   return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`
 }
-
 function primeiroDiaDoMes() {
   const hoje = new Date()
   return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-01`
@@ -28,6 +26,8 @@ export default function RelatoriosPage() {
   const [lancamentos, setLancamentos] = useState([])
   const [categorias, setCategorias] = useState([])
   const [membros, setMembros] = useState([])
+  // P3 — CNPJ da igreja para o cabeçalho dos relatórios em PDF
+  const [cnpjIgreja, setCnpjIgreja] = useState('')
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
   const [modo, setModo] = useState('dia')
@@ -48,17 +48,21 @@ export default function RelatoriosPage() {
       setPerfilAtual(p)
       setVerificando(false)
       if (p && PERFIS_RELATORIOS.includes(p.perfil)) {
-        carregarDados()
+        carregarDados(p.igreja_id)
       }
     })
   }, [])
 
-  async function carregarDados() {
+  async function carregarDados(igrejaId) {
     setCarregando(true)
-    const [lanc, cat, mem] = await Promise.all([
+    // P3 — busca o CNPJ da igreja junto com os demais dados
+    const [lanc, cat, mem, igr] = await Promise.all([
       supabase.from('lancamentos').select('*').order('data_lancamento', { ascending: true }),
       supabase.from('categorias').select('*').order('nome'),
       supabase.from('membros').select('id, nome').order('nome'),
+      igrejaId
+        ? supabase.from('igrejas').select('cnpj').eq('id', igrejaId).maybeSingle()
+        : Promise.resolve({ data: null }),
     ])
     if (lanc.error || cat.error || mem.error) {
       setErro('Não foi possível carregar os dados.')
@@ -66,6 +70,7 @@ export default function RelatoriosPage() {
       setLancamentos(lanc.data || [])
       setCategorias(cat.data || [])
       setMembros(mem.data || [])
+      setCnpjIgreja(igr.data?.cnpj || '')
     }
     setCarregando(false)
   }
@@ -74,7 +79,6 @@ export default function RelatoriosPage() {
     const c = categorias.find((x) => x.id === id)
     return c ? c.nome : '—'
   }
-
   const nomeMembro = (id) => {
     const m = membros.find((x) => x.id === id)
     return m ? m.nome : ''
@@ -129,6 +133,7 @@ export default function RelatoriosPage() {
       totais,
       assinaturas,
       nomeArquivo: `berit_relatorio_${modo}_${tipoRel}.pdf`,
+      cnpj: cnpjIgreja, // P3 — CNPJ no cabeçalho do PDF
     })
   }
 
@@ -190,14 +195,11 @@ export default function RelatoriosPage() {
           Gere relatórios do dia, mensais ou por período, em PDF ou Excel, para baixar e/ou imprimir.
           {ehConselhoFiscal && ' Consulta em modo somente leitura — Conselho Fiscal.'}
         </p>
-
         {erro && (
           <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>
         )}
-
         <div style={{ ...estilo.card, marginBottom: '1.5rem' }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 12 }}>Configuração do relatório</div>
-
           <label style={estilo.rotulo}>Período</label>
           <div style={{ display: 'flex', gap: '0.75rem', marginBottom: 16, flexWrap: 'wrap' }}>
             {[
@@ -219,7 +221,6 @@ export default function RelatoriosPage() {
               </button>
             ))}
           </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0 1rem', marginBottom: 16 }}>
             {modo === 'dia' && (
               <div>
@@ -246,7 +247,6 @@ export default function RelatoriosPage() {
               </>
             )}
           </div>
-
           <label style={estilo.rotulo}>Conteúdo</label>
           <div style={{ display: 'flex', gap: '0.75rem', marginBottom: 16, flexWrap: 'wrap' }}>
             {[
@@ -268,7 +268,6 @@ export default function RelatoriosPage() {
               </button>
             ))}
           </div>
-
           {modo === 'dia' && (
             <>
               <label style={estilo.rotulo}>Assinaturas dos representantes (contagem dos dízimos)</label>
@@ -285,7 +284,6 @@ export default function RelatoriosPage() {
               </div>
             </>
           )}
-
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
             <button onClick={gerarPDF} style={{ padding: '12px 20px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
               📄 Baixar PDF
@@ -295,7 +293,6 @@ export default function RelatoriosPage() {
             </button>
           </div>
         </div>
-
         <div style={estilo.card}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: 12 }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F' }}>{tituloRelatorio()}</div>
@@ -303,7 +300,6 @@ export default function RelatoriosPage() {
               {lista.length} lançamento(s) · Entradas {formatarMoeda(totais.entradas)} · Saídas {formatarMoeda(totais.saidas)} · Saldo {formatarMoeda(totais.saldo)}
             </div>
           </div>
-
           {carregando ? (
             <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '1.5rem' }}>Carregando...</div>
           ) : lista.length === 0 ? (
