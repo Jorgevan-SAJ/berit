@@ -2,23 +2,18 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getPerfil } from '../../lib/perfil'
-
 function formatarMoeda(valor) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0)
 }
-
 function formatarData(iso) {
   if (!iso) return ''
   const [a, m, d] = iso.split('-')
   return `${d}/${m}/${a}`
 }
-
 const NOMES_MES_CURTO = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-
 function chaveMes(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
-
 function ultimosMeses(n) {
   const hoje = new Date()
   const lista = []
@@ -28,7 +23,6 @@ function ultimosMeses(n) {
   }
   return lista
 }
-
 function agregarPorMes(lancamentos, meses) {
   const mapa = {}
   meses.forEach((m) => { mapa[m.chave] = { entradas: 0, saidas: 0 } })
@@ -46,14 +40,12 @@ function agregarPorMes(lancamentos, meses) {
     saldo: mapa[m.chave].entradas - mapa[m.chave].saidas,
   }))
 }
-
 function formatarValorCurto(v) {
   const abs = Math.abs(v)
   if (abs >= 1000000) return `${(v / 1000000).toFixed(1).replace('.', ',')}M`
   if (abs >= 1000) return `${Math.round(v / 1000)}k`
   return `${Math.round(v)}`
 }
-
 function GraficoLinhas({ dados }) {
   const W = 560
   const H = 230
@@ -133,7 +125,6 @@ function GraficoLinhas({ dados }) {
     </div>
   )
 }
-
 function GraficoBarras({ dados }) {
   const W = 560
   const H = 230
@@ -190,13 +181,14 @@ function GraficoBarras({ dados }) {
     </div>
   )
 }
-
 export default function FinancasPage() {
   const [perfilAtual, setPerfilAtual] = useState(null)
   const [verificando, setVerificando] = useState(true)
   const [lancamentos, setLancamentos] = useState([])
   const [categorias, setCategorias] = useState([])
   const [membros, setMembros] = useState([])
+  // P3 — dados da igreja (CNPJ para os relatórios em PDF)
+  const [igreja, setIgreja] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
   const [mes, setMes] = useState(() => {
@@ -208,23 +200,25 @@ export default function FinancasPage() {
   const [excluindo, setExcluindo] = useState(null)
   const [consultando, setConsultando] = useState(null)
   const [salvando, setSalvando] = useState(false)
-
   useEffect(() => {
     getPerfil().then((p) => {
       setPerfilAtual(p)
       setVerificando(false)
       if (p && ['admin_master', 'tesouraria', 'conselho_fiscal'].includes(p.perfil)) {
-        carregarDados()
+        carregarDados(p.igreja_id)
       }
     })
   }, [])
-
-  async function carregarDados() {
+  async function carregarDados(igrejaId) {
     setCarregando(true)
-    const [lanc, cat, mem] = await Promise.all([
+    // P3 — inclui a busca do CNPJ da igreja junto com os demais dados
+    const [lanc, cat, mem, igr] = await Promise.all([
       supabase.from('lancamentos').select('*').order('data_lancamento', { ascending: false }),
       supabase.from('categorias').select('*').order('nome'),
       supabase.from('membros').select('id, nome').order('nome'),
+      igrejaId
+        ? supabase.from('igrejas').select('cnpj').eq('id', igrejaId).maybeSingle()
+        : Promise.resolve({ data: null }),
     ])
     if (lanc.error || cat.error || mem.error) {
       setErro('Não foi possível carregar os dados financeiros.')
@@ -232,38 +226,32 @@ export default function FinancasPage() {
       setLancamentos(lanc.data || [])
       setCategorias(cat.data || [])
       setMembros(mem.data || [])
+      setIgreja(igr.data || null)
     }
     setCarregando(false)
   }
-
   const nomeCategoria = (id) => {
     const c = categorias.find((x) => x.id === id)
     return c ? c.nome : '—'
   }
-
   const nomeMembro = (id) => {
     const m = membros.find((x) => x.id === id)
     return m ? m.nome : ''
   }
-
   const filtrados = lancamentos.filter((l) => {
     const mesOk = !mes || (l.data_lancamento || '').startsWith(mes)
     const tipoOk = !tipo || l.tipo === tipo
     const catOk = !categoria || l.categoria_id === categoria
     return mesOk && tipoOk && catOk
   })
-
   const totalEntradas = filtrados.filter((l) => l.tipo === 'entrada').reduce((s, l) => s + Number(l.valor), 0)
   const totalSaidas = filtrados.filter((l) => l.tipo === 'saida').reduce((s, l) => s + Number(l.valor), 0)
   const saldo = totalEntradas - totalSaidas
-
   const dadosGrafico = agregarPorMes(lancamentos, ultimosMeses(6))
-
   // Permissões por perfil
   const podeLancar = perfilAtual && perfilAtual.perfil === 'tesouraria'
   const podeConferir = perfilAtual && ['admin_master', 'tesouraria'].includes(perfilAtual.perfil)
   const ehConselhoFiscal = perfilAtual && perfilAtual.perfil === 'conselho_fiscal'
-
   async function confirmarExclusao() {
     if (!excluindo) return
     setSalvando(true)
@@ -273,10 +261,9 @@ export default function FinancasPage() {
       setErro('Não foi possível excluir o lançamento. Lançamentos consolidados não podem ser excluídos.')
     } else {
       setExcluindo(null)
-      carregarDados()
+      carregarDados(perfilAtual?.igreja_id)
     }
   }
-
   const estilo = {
     main: { minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" },
     header: { background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
@@ -285,7 +272,6 @@ export default function FinancasPage() {
     card: { background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', border: '1px solid #E4DED2' },
     campo: { padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', fontFamily: 'inherit', width: '100%' },
   }
-
   if (verificando) {
     return (
       <main style={estilo.main}>
@@ -295,7 +281,6 @@ export default function FinancasPage() {
       </main>
     )
   }
-
   if (!perfilAtual || !['admin_master', 'tesouraria', 'conselho_fiscal'].includes(perfilAtual.perfil)) {
     return (
       <main style={estilo.main}>
@@ -313,7 +298,6 @@ export default function FinancasPage() {
       </main>
     )
   }
-
   return (
     <main style={estilo.main}>
       <header style={estilo.header}>
