@@ -5,6 +5,11 @@ import { getPerfil } from '../../../lib/perfil'
 
 const FORMAS_PAGAMENTO = ['Dinheiro', 'PIX', 'Transferência', 'Cartão', 'Cheque', 'Outro']
 
+// P8 — situações que podem ser vinculadas a um lançamento de entrada
+const SITUACOES_VINCULAVEIS = ['membro', 'congregado', 'visitante']
+// P8 — motivos de inativação que mantêm o vínculo (disciplina e outros)
+const MOTIVOS_INATIVOS_VINCULAVEIS = ['disciplina', 'outros']
+
 export default function NovoFinancas() {
   const [perfilAtual, setPerfilAtual] = useState(null)
   const [verificando, setVerificando] = useState(true)
@@ -33,18 +38,31 @@ export default function NovoFinancas() {
     })
   }, [])
 
-      async function carregarOpcoes() {
+  async function carregarOpcoes() {
     const [cat, mem] = await Promise.all([
       supabase.from('categorias').select('*').order('nome'),
-      supabase.from('membros').select('id, nome').in('situacao', ['membro', 'congregado', 'visitante']).order('nome'),
+      // P8 — busca também o motivo de inativação para liberar disciplina/outros
+      supabase.from('membros').select('id, nome, situacao, motivo_inativacao').order('nome'),
     ])
     setCategorias(cat.data || [])
-    setMembros(mem.data || [])
+
+    // P8 — membros ativos (membro, congregado, visitante) + inativos por disciplina/outros
+    const lista = (mem.data || []).filter((m) => {
+      if (SITUACOES_VINCULAVEIS.includes(m.situacao)) return true
+      if (m.situacao === 'inativo') {
+        const motivo = String(m.motivo_inativacao || '').toLowerCase()
+        return MOTIVOS_INATIVOS_VINCULAVEIS.includes(motivo)
+      }
+      return false
+    })
+    setMembros(lista)
+
     const iniciais = (cat.data || []).filter((c) => c.tipo === 'entrada')
     if (iniciais.length > 0) {
       setForm((f) => ({ ...f, categoria_id: iniciais[0].id }))
     }
   }
+
   function mudarTipo(tipo) {
     const iniciais = categorias.filter((c) => c.tipo === tipo)
     setForm({
@@ -53,6 +71,15 @@ export default function NovoFinancas() {
       categoria_id: iniciais.length > 0 ? iniciais[0].id : '',
       membro_id: '',
     })
+  }
+
+  // P8 — rótulo do membro no seletor, com contexto quando inativo
+  function rotuloMembro(m) {
+    if (m.situacao === 'inativo') {
+      const motivo = String(m.motivo_inativacao || 'outros').toLowerCase()
+      return `${m.nome} (inativo — ${motivo})`
+    }
+    return m.nome
   }
 
   async function salvar(e) {
@@ -130,15 +157,12 @@ export default function NovoFinancas() {
         <a href="/area" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF', textDecoration: 'none' }}>Berit</a>
         <a href="/financas" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}>Voltar</a>
       </header>
-
       <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Novo lançamento</h1>
         <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 1.5rem' }}>Registre uma entrada ou saída financeira.</p>
-
         {erro && (
           <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>
         )}
-
         <form onSubmit={salvar} style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', border: '1px solid #E4DED2' }}>
           <label style={rotulo}>Tipo</label>
           <div style={{ display: 'flex', gap: '0.75rem', marginBottom: 16 }}>
@@ -167,27 +191,22 @@ export default function NovoFinancas() {
               Saída
             </button>
           </div>
-
           <label style={rotulo}>Categoria</label>
           <select value={form.categoria_id} onChange={(e) => setForm({ ...form, categoria_id: e.target.value })} style={campo}>
             {categorias.filter((c) => c.tipo === form.tipo).map((c) => (
               <option key={c.id} value={c.id}>{c.nome}</option>
             ))}
           </select>
-
           {form.tipo === 'saida' && (
             <>
               <label style={rotulo}>Descrição</label>
               <input type="text" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} placeholder="ex.: Conta de luz" style={campo} />
             </>
           )}
-
           <label style={rotulo}>Valor (R$) *</label>
           <input type="text" inputMode="decimal" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} placeholder="0,00" required style={campo} />
-
           <label style={rotulo}>Data</label>
           <input type="date" value={form.data_lancamento} onChange={(e) => setForm({ ...form, data_lancamento: e.target.value })} style={campo} />
-
           <label style={rotulo}>Forma de pagamento</label>
           <select value={form.forma_pagamento} onChange={(e) => setForm({ ...form, forma_pagamento: e.target.value })} style={campo}>
             <option value="">— Selecione —</option>
@@ -195,22 +214,19 @@ export default function NovoFinancas() {
               <option key={f} value={f}>{f}</option>
             ))}
           </select>
-
           {form.tipo === 'entrada' && (
             <>
               <label style={rotulo}>Membro (para dízimos e ofertas)</label>
               <select value={form.membro_id} onChange={(e) => setForm({ ...form, membro_id: e.target.value })} style={campo}>
                 <option value="">— Não vinculado —</option>
                 {membros.map((m) => (
-                  <option key={m.id} value={m.id}>{m.nome}</option>
+                  <option key={m.id} value={m.id}>{rotuloMembro(m)}</option>
                 ))}
               </select>
             </>
           )}
-
           <label style={rotulo}>Observações</label>
           <textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} rows={3} placeholder="Anotações opcionais" style={campo} />
-
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: 4 }}>
             <button type="submit" disabled={carregando} style={{ flex: 1, padding: '12px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
               {carregando ? 'Salvando...' : 'Salvar lançamento'}
