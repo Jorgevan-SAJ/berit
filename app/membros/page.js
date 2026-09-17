@@ -265,7 +265,12 @@ export default function MembrosPage() {
             )}
             {podeEditar && (
               <a href="/membros/importar" style={{ background: '#FFFFFF', color: '#1F3A5F', border: '1px solid #1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
-                Importar dados
+                Importar dados 
+                  <a
+                  href="/membros/autocadastros"
+                  style={{ background: '#FFFFFF', color: '#1F3A5F', border: '1px solid #1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}
+                  >
+                  Autocadastro
               </a>
             )}
             {podeEditar && (
