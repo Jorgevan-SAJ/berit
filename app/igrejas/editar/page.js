@@ -81,17 +81,16 @@ export default function ConfiguracoesIgreja() {
     carregar()
   }, [])
 
-  function pendenciaPublicacao() {
+    function pendenciaPublicacao() {
     const faltando = []
     if (!form.nome.trim()) faltando.push('Nome da igreja')
     if (!form.cidade.trim()) faltando.push('Cidade')
     if (!form.uf.trim()) faltando.push('UF')
-    if (!form.contato.trim()) faltando.push('Contato')
     const temCanal =
       form.whatsapp_oracoes.trim() ||
       form.whatsapp_orientacoes.trim() ||
       redes.length > 0
-    if (!temCanal) faltando.push('ao menos um canal (WhatsApp ou rede social)')
+    if (!temCanal) faltando.push('ao menos um canal de acolhimento (WhatsApp de orações, WhatsApp de orientações ou rede social)')
     return faltando
   }
 
@@ -381,15 +380,18 @@ export default function ConfiguracoesIgreja() {
             />
           </div>
 
-          <div>
-            <label className={rotuloClasse}>Contato</label>
+                    <div>
+            <label className={rotuloClasse}>Contato (opcional)</label>
             <input
               type="text"
               value={form.contato}
               onChange={(e) => setForm({ ...form, contato: e.target.value })}
               className={inputClasse}
-              placeholder="Telefone ou e-mail de contato"
+              placeholder="Telefone ou e-mail, ex.: (11) 99999-9999"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Não é obrigatório, mas recomendado: é o que aparece na página pública para os visitantes entrarem em contato.
+            </p>
           </div>
 
           <div className="border-t pt-4">
@@ -490,9 +492,10 @@ export default function ConfiguracoesIgreja() {
           </div>
 
           <div className="border-t pt-4">
-            <p className="text-sm font-semibold text-gray-700 mb-1">Presença pública e Diretório</p>
-            <p className="text-xs text-gray-500 mb-3">
-              Controle a exibição da igreja no diretório público. O selo de verificado aparece após a confirmação dos dados.
+                        <p className="text-xs text-gray-500 mb-3">
+              Para publicar a igreja no diretório é obrigatório: <strong>Cidade</strong>, {' '}
+              <strong>UF</strong> e ao menos um canal de acolhimento (WhatsApp de orações, WhatsApp de orientações ou rede social).
+              Os demais campos são opcionais.
             </p>
 
             {msgPublico && <p className="text-green-600 mb-3 text-sm">{msgPublico}</p>}
