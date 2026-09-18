@@ -1,8 +1,12 @@
 'use client'
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { supabase } from '../../lib/supabase'
+import { useSearchParams } from 'next/navigation'
 
-export default function LoginPage() {
+function LoginForm() {
+  const searchParams = useSearchParams()
+  const voltar = searchParams.get('voltar') || '/area'
+
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [mostrarSenha, setMostrarSenha] = useState(false)
@@ -27,7 +31,7 @@ export default function LoginPage() {
     if (error) {
       setErro('E-mail ou senha inválidos. Verifique e tente novamente.')
     } else {
-      window.location.href = '/area'
+      window.location.href = voltar
     }
   }
 
@@ -91,6 +95,12 @@ export default function LoginPage() {
   return (
     <main style={estilo.main}>
       <div style={estilo.card}>
+        <a
+          href="/igrejas"
+          style={{ display: 'inline-block', marginBottom: 16, color: '#1F3A5F', fontSize: 13, textDecoration: 'none', fontWeight: 600 }}
+        >
+          ← Voltar ao diretório
+        </a>
         <div style={estilo.logo}>Berit</div>
         <p style={estilo.subtitulo}>Acesse a área da igreja</p>
         {erro && (
@@ -154,5 +164,13 @@ export default function LoginPage() {
         </form>
       </div>
     </main>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FAF6EF', color: '#8A8A8A', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>Carregando...</div>}>
+      <LoginForm />
+    </Suspense>
   )
 }
