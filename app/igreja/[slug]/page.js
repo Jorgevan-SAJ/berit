@@ -115,7 +115,7 @@ export default function PaginaPublicaIgreja() {
           <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '2rem', border: '1px solid #E4DED2' }}>
             <div style={{ fontSize: 18, fontWeight: 700, color: '#B71C1C', marginBottom: 8 }}>Igreja não encontrada</div>
             <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 16px' }}>{erro || 'Esta igreja não está publicada no diretório.'}</p>
-            <a href="/igrejas" style={{ color: '#1F3A5F', fontSize: 14 }}>← Voltar para o diretório</a>
+            <a href="/igrejas" style={{ color: '#1F3A5F', fontSize: 14 }}>← Voltar ao diretório</a>
           </div>
         </div>
       </main>
@@ -127,36 +127,46 @@ export default function PaginaPublicaIgreja() {
   const cnpjFormatado = formatarCNPJ(igreja.cnpj)
   const temWhatsOracoes = !!igreja.whatsapp_oracoes
   const temWhatsOrientacoes = !!igreja.whatsapp_orientacoes
+  const enderecoCompleto = `${igreja.endereco_publico || ''}${igreja.cidade ? `, ${igreja.cidade}` : ''}${igreja.uf ? ` - ${igreja.uf}` : ''}`
+  const enderecoComunidade = (igreja.aguarda_confirmacao || (igreja.origem === 'indicacao' && !igreja.publico_verificado)) && igreja.endereco_publico
 
   return (
     <main style={estilo.main}>
       <header style={estilo.header}>
         <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <a href="/igrejas" style={estilo.logo}>Berit</a>
-          <a href="/igrejas" style={{ color: '#FFFFFF', fontSize: 13, textDecoration: 'none' }}>Diretório</a>
+          <a href="/igrejas" style={{ color: '#FFFFFF', fontSize: 13, textDecoration: 'none' }}>Voltar ao Diretório</a>
         </div>
       </header>
 
-            {igreja.aguarda_confirmacao && (
-        <div style={{ maxWidth: 900, margin: '0 auto', padding: '1rem 1.5rem 0' }}>
-          <div style={{ background: '#FDF3E3', border: '1px solid #F0D9A8', borderRadius: 10, padding: '12px 14px' }}>
-            <p style={{ margin: 0, fontSize: 13, color: '#7A5A1E', lineHeight: 1.6 }}>
-              Esta igreja foi cadastrada pela comunidade e ainda aguarda a confirmacao dos responsaveis. As informacoes podem nao estar completas.
-            </p>
+      <div style={estilo.hero}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <h1 style={{ margin: '0 0 8px', fontSize: 28 }}>{igreja.nome}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14 }}>
+              {igreja.cidade || ''}{igreja.cidade && igreja.uf ? `, ${igreja.uf}` : igreja.uf || ''}
+            </span>
+            {igreja.publico_verificado && <SeloVerificado />}
           </div>
         </div>
-      )}
-      {igreja.origem === 'indicacao' && !igreja.aguarda_confirmacao && igreja.publico_verificado && (
-        <div style={{ maxWidth: 900, margin: '0 auto', padding: '1rem 1.5rem 0' }}>
-          <div style={{ background: '#EAF4EE', border: '1px solid #C9E3D4', borderRadius: 10, padding: '12px 14px' }}>
-            <p style={{ margin: 0, fontSize: 13, color: '#4C8C6E', lineHeight: 1.6 }}>
-              Cadastro validado pela comunidade Berit. Os dados institucionais (redes sociais, contato, horarios de cultos) serao completados quando a igreja aderir ao Berit.
-            </p>
-          </div>
-        </div>
-      )}
+      </div>
 
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '1.5rem' }}>
+        {igreja.aguarda_confirmacao && (
+          <div style={{ background: '#FDF3E3', border: '1px solid #F0D9A8', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
+            <p style={{ margin: 0, fontSize: 13, color: '#7A5A1E', lineHeight: 1.6 }}>
+              Esta igreja foi cadastrada pela comunidade e ainda aguarda a confirmação dos responsáveis. As informações podem não estar completas.
+            </p>
+          </div>
+        )}
+        {igreja.origem === 'indicacao' && !igreja.aguarda_confirmacao && igreja.publico_verificado && (
+          <div style={{ background: '#EAF4EE', border: '1px solid #C9E3D4', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
+            <p style={{ margin: 0, fontSize: 13, color: '#4C8C6E', lineHeight: 1.6 }}>
+              Cadastro validado pela comunidade Berit. Os dados institucionais (redes sociais, contato, horários de cultos) serão completados quando a igreja aderir ao Berit.
+            </p>
+          </div>
+        )}
+
         {igreja.lead_publico && (
           <div style={{ ...estilo.card, background: '#FDF3E3', borderColor: '#F0D9A8' }}>
             <p style={{ margin: 0, fontSize: 15, color: '#7A5A1E', lineHeight: 1.6 }}>{igreja.lead_publico}</p>
@@ -214,14 +224,27 @@ export default function PaginaPublicaIgreja() {
             <div style={{ display: 'grid', gap: '0.4rem', fontSize: 14, color: '#5A5A5A' }}>
               {igreja.endereco_publico && (
                 <div>
-                  📍 {igreja.endereco_publico}
-                  {igreja.cidade && `, ${igreja.cidade}${igreja.uf ? ` - ${igreja.uf}` : ''}`}
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(enderecoCompleto)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: '#1F3A5F', textDecoration: 'underline' }}
+                  >
+                    📍 {igreja.endereco_publico}
+                    {igreja.cidade && `, ${igreja.cidade}${igreja.uf ? ` - ${igreja.uf}` : ''}`}
+                  </a>
+                  <div style={{ fontSize: 12, color: '#8A8A8A', marginTop: 4 }}>Clique para abrir no Google Maps e traçar a rota.</div>
                 </div>
               )}
               {igreja.contato && <div>📞 {igreja.contato}</div>}
               {igreja.email && <div>✉️ {igreja.email}</div>}
               {cnpjFormatado && <div>CNPJ: {cnpjFormatado}</div>}
             </div>
+            {enderecoComunidade && (
+              <div style={{ background: '#FDF3E3', border: '1px solid #F0D9A8', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#7A5A1E', marginTop: 12, lineHeight: 1.5 }}>
+                ⚠️ Este endereço foi cadastrado pela comunidade e não passou por verificação do Berit. Antes de se deslocar, confirme a localização por outros meios e evite ir a locais desconhecidos.
+              </div>
+            )}
           </div>
         )}
 
