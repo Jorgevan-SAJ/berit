@@ -137,17 +137,24 @@ export default function PaginaPublicaIgreja() {
         </div>
       </header>
 
-      <div style={estilo.hero}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <h1 style={{ margin: '0 0 8px', fontSize: 28 }}>{igreja.nome}</h1>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14 }}>
-              {igreja.cidade || ''}{igreja.cidade && igreja.uf ? `, ${igreja.uf}` : igreja.uf || ''}
-            </span>
-            {igreja.publico_verificado && <SeloVerificado />}
+            {igreja.aguarda_confirmacao && (
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: '1rem 1.5rem 0' }}>
+          <div style={{ background: '#FDF3E3', border: '1px solid #F0D9A8', borderRadius: 10, padding: '12px 14px' }}>
+            <p style={{ margin: 0, fontSize: 13, color: '#7A5A1E', lineHeight: 1.6 }}>
+              Esta igreja foi cadastrada pela comunidade e ainda aguarda a confirmacao dos responsaveis. As informacoes podem nao estar completas.
+            </p>
           </div>
         </div>
-      </div>
+      )}
+      {igreja.origem === 'indicacao' && !igreja.aguarda_confirmacao && igreja.publico_verificado && (
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: '1rem 1.5rem 0' }}>
+          <div style={{ background: '#EAF4EE', border: '1px solid #C9E3D4', borderRadius: 10, padding: '12px 14px' }}>
+            <p style={{ margin: 0, fontSize: 13, color: '#4C8C6E', lineHeight: 1.6 }}>
+              Cadastro validado pela comunidade Berit. Os dados institucionais (redes sociais, contato, horarios de cultos) serao completados quando a igreja aderir ao Berit.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '1.5rem' }}>
         {igreja.lead_publico && (
