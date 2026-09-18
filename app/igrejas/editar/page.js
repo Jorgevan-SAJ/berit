@@ -30,7 +30,7 @@ const CORES_REDE = {
 
 const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 
-const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
+const UFS = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO']
 
 function estiloRede(nome) {
   return CORES_REDE[nome] || CORES_REDE.Outra
@@ -81,7 +81,6 @@ export default function ConfiguracoesIgreja() {
     carregar()
   }, [])
 
-  // P9/Fase 3 — Bloco B: lista do que falta para publicar
   function pendenciaPublicacao() {
     const faltando = []
     if (!form.nome.trim()) faltando.push('Nome da igreja')
@@ -239,7 +238,6 @@ export default function ConfiguracoesIgreja() {
       return
     }
 
-    // Bloco B: se o opt-in estiver ligado, exige dados mínimos
     if (form.publico_visivel) {
       const pend = pendenciaPublicacao()
       if (pend.length > 0) {
@@ -269,7 +267,7 @@ export default function ConfiguracoesIgreja() {
       .from('igrejas')
       .update(dadosParaSalvar)
       .eq('id', perfilAtual.igreja_id)
-      .select('id, nome, cnpj, contato, whatsapp_oracoes, whatsapp_orientacoes, redes_sociais_lista')
+      .select('id, nome, cnpj, contato, whatsapp_oracoes, whatsapp_orientacoes, redes_sociais_lista, publico_visivel, slug')
       .maybeSingle()
     setSalvando(false)
 
@@ -288,6 +286,10 @@ export default function ConfiguracoesIgreja() {
     if (!whatsappOk) {
       setErro('Atenção: os grupos de WhatsApp não foram gravados no banco. Confirme que as colunas whatsapp_oracoes e whatsapp_orientacoes existem e tente salvar novamente.')
       return
+    }
+
+    if (atualizada.slug && !form.slug) {
+      setForm((f) => ({ ...f, slug: atualizada.slug }))
     }
 
     setMsg('Dados da igreja atualizados com sucesso.')
@@ -332,9 +334,12 @@ export default function ConfiguracoesIgreja() {
       >
         ← Voltar
       </button>
+
       <h1 className="text-2xl font-bold mb-6">Configurações da Igreja</h1>
+
       {msg && <p className="text-green-600 mb-4">{msg}</p>}
       {erro && <p className="text-red-600 mb-4">{erro}</p>}
+
       {ehAdmin ? (
         <form onSubmit={salvar} className="space-y-4">
           {plano && (
@@ -353,6 +358,7 @@ export default function ConfiguracoesIgreja() {
               )}
             </div>
           )}
+
           <div>
             <label className={rotuloClasse}>Nome da igreja</label>
             <input
@@ -363,6 +369,7 @@ export default function ConfiguracoesIgreja() {
               className={inputClasse}
             />
           </div>
+
           <div>
             <label className={rotuloClasse}>CNPJ</label>
             <input
@@ -373,6 +380,7 @@ export default function ConfiguracoesIgreja() {
               placeholder="Opcional"
             />
           </div>
+
           <div>
             <label className={rotuloClasse}>Contato</label>
             <input
@@ -382,4 +390,343 @@ export default function ConfiguracoesIgreja() {
               className={inputClasse}
               placeholder="Telefone ou e-mail de contato"
             />
-         
+          </div>
+
+          <div className="border-t pt-4">
+            <p className="text-sm font-semibold text-gray-700 mb-3">Grupos de WhatsApp</p>
+            <div className="space-y-3">
+              <div>
+                <label className={rotuloClasse}>Pedidos de oração</label>
+                <input
+                  type="text"
+                  value={form.whatsapp_oracoes}
+                  onChange={(e) => setForm({ ...form, whatsapp_oracoes: e.target.value })}
+                  className={inputClasse}
+                  placeholder="https://chat.whatsapp.com/..."
+                />
+              </div>
+              <div>
+                <label className={rotuloClasse}>Perguntas e orientações</label>
+                <input
+                  type="text"
+                  value={form.whatsapp_orientacoes}
+                  onChange={(e) => setForm({ ...form, whatsapp_orientacoes: e.target.value })}
+                  className={inputClasse}
+                  placeholder="https://chat.whatsapp.com/..."
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t pt-4">
+            <p className="text-sm font-semibold text-gray-700 mb-3">Redes sociais</p>
+            <div className="flex flex-col sm:flex-row gap-2 mb-3">
+              <select
+                value={redeNome}
+                onChange={(e) => setRedeNome(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 sm:w-40"
+              >
+                {OPCOES_REDE.map((opcao) => (
+                  <option key={opcao} value={opcao}>
+                    {opcao}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={redeUrl}
+                onChange={(e) => setRedeUrl(e.target.value)}
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2"
+                placeholder="Cole aqui o link da rede social"
+              />
+              <button
+                type="button"
+                onClick={adicionarRede}
+                className="border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium"
+              >
+                Adicionar
+              </button>
+            </div>
+            {redes.length === 0 ? (
+              <p className="text-sm text-gray-500">Nenhuma rede social cadastrada.</p>
+            ) : (
+              <ul className="space-y-2">
+                {redes.map((rede, indice) => {
+                  const estilo = estiloRede(rede.nome)
+                  return (
+                    <li
+                      key={indice}
+                      className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                    >
+                      <div className="min-w-0">
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            background: estilo.bg,
+                            color: estilo.cor,
+                            padding: '3px 10px',
+                            borderRadius: 999,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            marginBottom: 4,
+                          }}
+                        >
+                          {rede.nome}
+                        </span>
+                        <div className="text-gray-500 truncate">{rede.url}</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removerRede(indice)}
+                        className="text-red-600 text-sm whitespace-nowrap"
+                      >
+                        Remover
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+
+          <div className="border-t pt-4">
+            <p className="text-sm font-semibold text-gray-700 mb-1">Presença pública e Diretório</p>
+            <p className="text-xs text-gray-500 mb-3">
+              Controle a exibição da igreja no diretório público. O selo de verificado aparece após a confirmação dos dados.
+            </p>
+
+            {msgPublico && <p className="text-green-600 mb-3 text-sm">{msgPublico}</p>}
+            {erroPublico && <p className="text-red-600 mb-3 text-sm">{erroPublico}</p>}
+
+            <label className="flex items-center gap-2 mb-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.publico_visivel}
+                onChange={(e) => setForm({ ...form, publico_visivel: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                Incluir esta igreja no diretório público
+              </span>
+            </label>
+
+            {pend.length > 0 && (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+                Para publicar, preencha: {pend.join(', ')}.
+              </p>
+            )}
+
+            <div className="space-y-3">
+              <div>
+                <label className={rotuloClasse}>Sobre a igreja</label>
+                <textarea
+                  value={form.sobre}
+                  onChange={(e) => setForm({ ...form, sobre: e.target.value })}
+                  className={inputClasse}
+                  rows={3}
+                  placeholder="Apresentação curta exibida no diretório e na página pública"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className={rotuloClasse}>Cidade *</label>
+                  <input
+                    type="text"
+                    value={form.cidade}
+                    onChange={(e) => setForm({ ...form, cidade: e.target.value })}
+                    className={inputClasse}
+                    placeholder="Cidade sede"
+                  />
+                </div>
+                <div>
+                  <label className={rotuloClasse}>UF *</label>
+                  <select
+                    value={form.uf}
+                    onChange={(e) => setForm({ ...form, uf: e.target.value })}
+                    className={inputClasse}
+                  >
+                    <option value="">—</option>
+                    {UFS.map((u) => (
+                      <option key={u} value={u}>{u}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className={rotuloClasse}>Endereço público</label>
+                <input
+                  type="text"
+                  value={form.endereco_publico}
+                  onChange={(e) => setForm({ ...form, endereco_publico: e.target.value })}
+                  className={inputClasse}
+                  placeholder="Opcional"
+                />
+              </div>
+
+              <div>
+                <label className={rotuloClasse}>Mensagem de acolhimento</label>
+                <input
+                  type="text"
+                  value={form.lead_publico}
+                  onChange={(e) => setForm({ ...form, lead_publico: e.target.value })}
+                  className={inputClasse}
+                  placeholder="Opcional, ex.: Sejam bem-vindos!"
+                />
+              </div>
+
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-1">Horários de cultos</p>
+                <div className="flex flex-col sm:flex-row gap-2 mb-2">
+                  <select
+                    value={novoCulto.dia}
+                    onChange={(e) => setNovoCulto({ ...novoCulto, dia: e.target.value })}
+                    className="border border-gray-300 rounded-lg px-3 py-2 sm:w-36"
+                  >
+                    {DIAS_SEMANA.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="time"
+                    value={novoCulto.horario}
+                    onChange={(e) => setNovoCulto({ ...novoCulto, horario: e.target.value })}
+                    className="border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                  <input
+                    type="text"
+                    value={novoCulto.nome}
+                    onChange={(e) => setNovoCulto({ ...novoCulto, nome: e.target.value })}
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2"
+                    placeholder="Nome do culto (opcional)"
+                  />
+                  <button
+                    type="button"
+                    onClick={adicionarCulto}
+                    className="border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium"
+                  >
+                    Adicionar
+                  </button>
+                </div>
+                {horariosCultos.length === 0 ? (
+                  <p className="text-sm text-gray-500">Nenhum horário cadastrado.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {horariosCultos.map((c, i) => (
+                      <li
+                        key={i}
+                        className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                      >
+                        <span>
+                          <strong>{c.dia}</strong> às {c.horario}
+                          {c.nome ? ` · ${c.nome}` : ''}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removerCulto(i)}
+                          className="text-red-600 text-sm"
+                        >
+                          Remover
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            {form.slug && (
+              <div className="bg-gray-50 border rounded-lg p-3 mt-4 text-sm">
+                <p className="text-xs text-gray-500 mb-1">Link público da igreja:</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    readOnly
+                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/igreja/${form.slug}`}
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-xs bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={copiarLinkPublico}
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-xs"
+                  >
+                    Copiar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4 flex items-center gap-3 flex-wrap">
+              <button
+                type="button"
+                onClick={confirmarPublico}
+                disabled={confirmandoPublico || pend.length > 0 || !form.publico_visivel}
+                className="border border-green-600 text-green-700 rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-40"
+              >
+                {confirmandoPublico
+                  ? 'Confirmando...'
+                  : form.publico_verificado
+                    ? 'Dados públicos confirmados'
+                    : 'Confirmar dados públicos'}
+              </button>
+              {form.publico_verificado && (
+                <span className="text-xs text-green-700">✓ Selo de verificado ativo no portal.</span>
+              )}
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={salvando}
+            className="w-full font-semibold rounded-lg py-2.5 disabled:opacity-50"
+          >
+            {salvando ? 'Salvando...' : 'Salvar alterações'}
+          </button>
+        </form>
+      ) : (
+        <div className="bg-gray-50 border rounded-lg p-4 mb-6 text-sm text-gray-600">
+          Apenas o Administrador pode editar os dados da igreja. Nesta área, você pode alterar a sua senha de acesso.
+        </div>
+      )}
+
+      <div className="border-t pt-4 mt-6">
+        <p className="text-sm font-semibold text-gray-700 mb-3">Alteração de Senha</p>
+
+        {msgSenha && <p className="text-green-600 mb-4">{msgSenha}</p>}
+        {erroSenha && <p className="text-red-600 mb-4">{erroSenha}</p>}
+
+        <form onSubmit={alterarSenha} className="space-y-3">
+          <div>
+            <label className={rotuloClasse}>Nova senha</label>
+            <input
+              type="password"
+              value={novaSenha}
+              onChange={(e) => setNovaSenha(e.target.value)}
+              className={inputClasse}
+              autoComplete="new-password"
+              required
+            />
+          </div>
+          <div>
+            <label className={rotuloClasse}>Confirmar nova senha</label>
+            <input
+              type="password"
+              value={confirmarSenha}
+              onChange={(e) => setConfirmarSenha(e.target.value)}
+              className={inputClasse}
+              autoComplete="new-password"
+              required
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={alterandoSenha}
+            className="w-full font-semibold rounded-lg py-2.5 disabled:opacity-50"
+          >
+            {alterandoSenha ? 'Alterando...' : 'Alterar senha'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
