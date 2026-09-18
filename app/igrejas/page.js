@@ -40,8 +40,10 @@ export default function DiretorioIgrejas() {
   const [uf, setUf] = useState('')
   const [erro, setErro] = useState('')
 
+  const [usuario, setUsuario] = useState(null)
+
   const [mostrarForm, setMostrarForm] = useState(false)
-  const [form, setForm] = useState({ nome: '', cidade: '', uf: '', contato: '', observacoes: '' })
+  const [form, setForm] = useState({ nome: '', cidade: '', uf: '', endereco: '', contato: '', observacoes: '' })
   const [enviando, setEnviando] = useState(false)
   const [msgForm, setMsgForm] = useState('')
   const [erroForm, setErroForm] = useState('')
@@ -54,7 +56,7 @@ export default function DiretorioIgrejas() {
       p_uf: u || null,
     })
     if (error || !data || !data.ok) {
-      setErro('Nao foi possivel carregar o diretorio de igrejas. Tente novamente em instantes.')
+      setErro('Não foi possível carregar o diretório de igrejas. Tente novamente em instantes.')
       setIgrejas([])
     } else {
       setIgrejas(data.igrejas || [])
@@ -62,7 +64,17 @@ export default function DiretorioIgrejas() {
     setCarregando(false)
   }
 
-  useEffect(() => { buscar('', '') }, [])
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) setUsuario(data.user)
+    })
+    buscar('', '')
+  }, [])
+
+  async function sair() {
+    await supabase.auth.signOut()
+    setUsuario(null)
+  }
 
   function aplicar(e) {
     e.preventDefault()
@@ -79,17 +91,18 @@ export default function DiretorioIgrejas() {
         nome: form.nome.trim(),
         cidade: form.cidade.trim(),
         uf: form.uf,
+        endereco_publico: form.endereco.trim(),
         contato: form.contato.trim(),
         observacoes: form.observacoes.trim(),
       },
     })
     setEnviando(false)
     if (error || !data || !data.ok) {
-      setErroForm(data?.mensagem || 'Nao foi possivel cadastrar a igreja. Tente novamente.')
+      setErroForm(data?.mensagem || 'Não foi possível cadastrar a igreja. Tente novamente.')
       return
     }
     setMsgForm(data.mensagem)
-    setForm({ nome: '', cidade: '', uf: '', contato: '', observacoes: '' })
+    setForm({ nome: '', cidade: '', uf: '', endereco: '', contato: '', observacoes: '' })
     setMostrarForm(false)
     buscar('', '')
   }
@@ -99,18 +112,28 @@ export default function DiretorioIgrejas() {
       <header style={estilo.header}>
         <div style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <a href="/igrejas" style={estilo.logo}>Berit</a>
-          <a href="/login" style={{ color: '#FFFFFF', fontSize: 13, textDecoration: 'none' }}>Entrar</a>
+          {usuario ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12 }}>{usuario.email}</span>
+              <button onClick={sair} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.6)', color: '#FFFFFF', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer' }}>Sair</button>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'right' }}>
+              <a href="/login?voltar=/igrejas" style={{ color: '#FFFFFF', fontSize: 13, textDecoration: 'none', fontWeight: 700 }}>Acessar Área da Igreja</a>
+              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 2 }}>restrito para usuário cadastrado pela igreja</div>
+            </div>
+          )}
         </div>
       </header>
 
       <div style={estilo.hero}>
         <h1 style={{ margin: '0 0 8px', fontSize: 28 }}>Encontre uma igreja</h1>
         <p style={{ margin: 0, color: 'rgba(255,255,255,0.85)', fontSize: 14 }}>
-          Diretorio de congregacoes cadastradas na plataforma Berit.
+          Diretório de congregações cadastradas na plataforma Berit.
         </p>
         <div style={{ marginTop: 20 }}>
           <button onClick={() => { setMostrarForm(!mostrarForm); setMsgForm(''); setErroForm('') }} style={{ ...estilo.botao, background: 'transparent', border: '1px solid rgba(255,255,255,0.6)', color: '#FFFFFF' }}>
-            {mostrarForm ? 'Fechar formulario' : 'Sua igreja nao esta aqui? Cadastre-a'}
+            {mostrarForm ? 'Fechar formulário' : 'Sua igreja não está aqui? Cadastre-a'}
           </button>
         </div>
       </div>
@@ -120,7 +143,7 @@ export default function DiretorioIgrejas() {
           <div style={{ background: '#FFFFFF', borderRadius: 12, border: '1px solid #E4DED2', padding: '1.25rem', marginBottom: '1.5rem' }}>
             <h2 style={{ fontSize: 16, color: '#1F3A5F', margin: '0 0 4px' }}>Indicar uma igreja</h2>
             <p style={{ fontSize: 13, color: '#8A8A8A', margin: '0 0 16px', lineHeight: 1.5 }}>
-              A igreja entrara no diretorio imediatamente. Se os dados forem confirmados por um indicador confiavel, ela ja nasce validada; caso contrario, ficara marcada como aguardando confirmacao.
+              A igreja entrará no diretório imediatamente. Se os dados forem confirmados por um indicador confiável, ela já nasce validada; caso contrário, ficará marcada como aguardando confirmação.
             </p>
             {msgForm && <div style={{ background: '#EAF4EE', color: '#4C8C6E', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{msgForm}</div>}
             {erroForm && <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erroForm}</div>}
@@ -133,8 +156,12 @@ export default function DiretorioIgrejas() {
                   {UFS.map((u) => <option key={u} value={u}>{u}</option>)}
                 </select>
               </div>
+              <input type="text" value={form.endereco} onChange={(e) => setForm({ ...form, endereco: e.target.value })} placeholder="Endereço (opcional)" style={{ ...estilo.campo, marginBottom: 12, width: '100%' }} />
               <input type="text" value={form.contato} onChange={(e) => setForm({ ...form, contato: e.target.value })} placeholder="Contato (opcional)" style={{ ...estilo.campo, marginBottom: 12, width: '100%' }} />
-              <input type="text" value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} placeholder="Observacoes (opcional)" style={{ ...estilo.campo, marginBottom: 12, width: '100%' }} />
+              <input type="text" value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} placeholder="Observações (opcional)" style={{ ...estilo.campo, marginBottom: 12, width: '100%' }} />
+              <div style={{ background: '#FDF3E3', border: '1px solid #F0D9A8', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#7A5A1E', marginBottom: 12, lineHeight: 1.5 }}>
+                ⚠️ Endereços cadastrados pela comunidade não passam por verificação do Berit. Antes de se deslocar, confirme a localização por outros meios e evite ir a locais desconhecidos.
+              </div>
               <button type="submit" disabled={enviando} style={{ ...estilo.botao, opacity: enviando ? 0.6 : 1 }}>
                 {enviando ? 'Cadastrando...' : 'Cadastrar igreja'}
               </button>
@@ -183,7 +210,7 @@ export default function DiretorioIgrejas() {
                   </p>
                 )}
                 <a href={`/igreja/${ig.slug}`} style={{ marginTop: 'auto', background: '#1F3A5F', color: '#FFFFFF', textAlign: 'center', padding: '10px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-                  Ver pagina
+                  Ver página
                 </a>
               </div>
             ))}
@@ -192,7 +219,7 @@ export default function DiretorioIgrejas() {
       </div>
 
       <footer style={{ borderTop: '1px solid #E4DED2', padding: '1.5rem', textAlign: 'center', fontSize: 12, color: '#8A8A8A' }}>
-        Berit, Gestao simples para igrejas
+        Berit, Gestão simples para igrejas
       </footer>
     </main>
   )
