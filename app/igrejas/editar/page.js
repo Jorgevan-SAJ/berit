@@ -70,6 +70,9 @@ export default function ConfiguracoesIgreja() {
   const [msgPublico, setMsgPublico] = useState('')
   const [erroPublico, setErroPublico] = useState('')
   const [confirmandoPublico, setConfirmandoPublico] = useState(false)
+  const [igrejaOrigemIndicacao, setIgrejaOrigemIndicacao] = useState(false)
+  const [igrejaAguardaConfirmacao, setIgrejaAguardaConfirmacao] = useState(false)
+  const [confirmandoIndicacao, setConfirmandoIndicacao] = useState(false)
 
   const [novaSenha, setNovaSenha] = useState('')
   const [confirmarSenha, setConfirmarSenha] = useState('')
@@ -139,6 +142,8 @@ export default function ConfiguracoesIgreja() {
         setHorariosCultos(Array.isArray(igreja.horarios_cultos) ? igreja.horarios_cultos : [])
         setRedes(Array.isArray(igreja.redes_sociais_lista) ? igreja.redes_sociais_lista : [])
         setPlano(igreja)
+        setIgrejaOrigemIndicacao(igreja.origem === 'indicacao')
+        setIgrejaAguardaConfirmacao(!!igreja.aguarda_confirmacao)
       }
     }
     setCarregando(false)
@@ -207,6 +212,21 @@ export default function ConfiguracoesIgreja() {
     }
     setForm({ ...form, publico_verificado: true })
     setMsgPublico('Dados públicos confirmados. O selo de verificado agora aparece no portal.')
+      async function confirmarIndicacao() {
+    setConfirmandoIndicacao(true)
+    setMsgPublico('')
+    setErroPublico('')
+    const { error } = await supabase
+      .from('igrejas')
+      .update({ aguarda_confirmacao: false })
+      .eq('id', perfil.igreja_id)
+    setConfirmandoIndicacao(false)
+    if (error) {
+      setErroPublico('Nao foi possivel confirmar o cadastro: ' + error.message)
+      return
+    }
+    setIgrejaAguardaConfirmacao(false)
+    setMsgPublico('Cadastro confirmado. Esta igreja agora aparece como confirmada no diretorio. Preencha os dados publicos e ative o selo quando quiser.')
   }
 
   async function salvar(e) {
@@ -512,6 +532,22 @@ export default function ConfiguracoesIgreja() {
                 Incluir esta igreja no diretório público
               </span>
             </label>
+                         {igrejaOrigemIndicacao && igrejaAguardaConfirmacao && (
+              <div style={{ background: '#FDF3E3', border: '1px solid #F0D9A8', borderRadius: 8, padding: '12px', marginBottom: 12 }}>
+                <p style={{ fontSize: 13, color: '#7A5A1E', margin: '0 0 8px', lineHeight: 1.5 }}>
+                  Esta igreja foi cadastrada no diretorio pela comunidade e esta marcada como aguardando confirmacao.
+                  Se voce e responsavel por ela, confirme o cadastro.
+                </p>
+                <button
+                  type="button"
+                  onClick={confirmarIndicacao}
+                  disabled={confirmandoIndicacao}
+                  style={{ background: '#D9A441', color: '#1F3A5F', border: 'none', borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {confirmandoIndicacao ? 'Confirmando...' : 'Confirmar esta igreja como responsavel'}
+                </button>
+              </div>
+            )}
 
             {pend.length > 0 && (
               <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
