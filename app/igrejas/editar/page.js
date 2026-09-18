@@ -29,7 +29,6 @@ const CORES_REDE = {
 }
 
 const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
-
 const UFS = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO']
 
 function estiloRede(nome) {
@@ -41,7 +40,6 @@ export default function ConfiguracoesIgreja() {
   const [perfil, setPerfil] = useState(null)
   const [ehAdmin, setEhAdmin] = useState(false)
   const [carregando, setCarregando] = useState(true)
-
   const [form, setForm] = useState({
     nome: '',
     cnpj: '',
@@ -73,7 +71,6 @@ export default function ConfiguracoesIgreja() {
   const [igrejaOrigemIndicacao, setIgrejaOrigemIndicacao] = useState(false)
   const [igrejaAguardaConfirmacao, setIgrejaAguardaConfirmacao] = useState(false)
   const [confirmandoIndicacao, setConfirmandoIndicacao] = useState(false)
-
   const [novaSenha, setNovaSenha] = useState('')
   const [confirmarSenha, setConfirmarSenha] = useState('')
   const [alterandoSenha, setAlterandoSenha] = useState(false)
@@ -84,7 +81,7 @@ export default function ConfiguracoesIgreja() {
     carregar()
   }, [])
 
-    function pendenciaPublicacao() {
+  function pendenciaPublicacao() {
     const faltando = []
     if (!form.nome.trim()) faltando.push('Nome da igreja')
     if (!form.cidade.trim()) faltando.push('Cidade')
@@ -212,7 +209,9 @@ export default function ConfiguracoesIgreja() {
     }
     setForm({ ...form, publico_verificado: true })
     setMsgPublico('Dados públicos confirmados. O selo de verificado agora aparece no portal.')
-      async function confirmarIndicacao() {
+  }
+
+  async function confirmarIndicacao() {
     setConfirmandoIndicacao(true)
     setMsgPublico('')
     setErroPublico('')
@@ -234,7 +233,6 @@ export default function ConfiguracoesIgreja() {
     setSalvando(true)
     setMsg('')
     setErro('')
-
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       setSalvando(false)
@@ -256,7 +254,6 @@ export default function ConfiguracoesIgreja() {
       setErro('Apenas o Administrador pode editar os dados da igreja.')
       return
     }
-
     if (form.publico_visivel) {
       const pend = pendenciaPublicacao()
       if (pend.length > 0) {
@@ -265,7 +262,6 @@ export default function ConfiguracoesIgreja() {
         return
       }
     }
-
     const dadosParaSalvar = {
       nome: form.nome,
       cnpj: form.cnpj,
@@ -281,7 +277,6 @@ export default function ConfiguracoesIgreja() {
       publico_visivel: form.publico_visivel,
       horarios_cultos: horariosCultos,
     }
-
     const { data: atualizada, error } = await supabase
       .from('igrejas')
       .update(dadosParaSalvar)
@@ -289,7 +284,6 @@ export default function ConfiguracoesIgreja() {
       .select('id, nome, cnpj, contato, whatsapp_oracoes, whatsapp_orientacoes, redes_sociais_lista, publico_visivel, slug')
       .maybeSingle()
     setSalvando(false)
-
     if (error) {
       setErro('Erro ao salvar: ' + error.message)
       return
@@ -298,7 +292,6 @@ export default function ConfiguracoesIgreja() {
       setErro('O banco recusou a alteração (permissão de gravação). Nenhum dado foi salvo.')
       return
     }
-
     const whatsappOk =
       String(atualizada.whatsapp_oracoes || '') === String(form.whatsapp_oracoes || '') &&
       String(atualizada.whatsapp_orientacoes || '') === String(form.whatsapp_orientacoes || '')
@@ -306,11 +299,9 @@ export default function ConfiguracoesIgreja() {
       setErro('Atenção: os grupos de WhatsApp não foram gravados no banco. Confirme que as colunas whatsapp_oracoes e whatsapp_orientacoes existem e tente salvar novamente.')
       return
     }
-
     if (atualizada.slug && !form.slug) {
       setForm((f) => ({ ...f, slug: atualizada.slug }))
     }
-
     setMsg('Dados da igreja atualizados com sucesso.')
     setTimeout(() => router.push('/area'), 1200)
   }
@@ -340,6 +331,7 @@ export default function ConfiguracoesIgreja() {
   }
 
   if (carregando) return <div className="p-8">Carregando...</div>
+
   const inputClasse = 'w-full border border-gray-300 rounded-lg px-3 py-2'
   const rotuloClasse = 'block text-sm font-medium text-gray-700 mb-1'
   const pend = pendenciaPublicacao()
@@ -353,12 +345,9 @@ export default function ConfiguracoesIgreja() {
       >
         ← Voltar
       </button>
-
       <h1 className="text-2xl font-bold mb-6">Configurações da Igreja</h1>
-
       {msg && <p className="text-green-600 mb-4">{msg}</p>}
       {erro && <p className="text-red-600 mb-4">{erro}</p>}
-
       {ehAdmin ? (
         <form onSubmit={salvar} className="space-y-4">
           {plano && (
@@ -377,7 +366,6 @@ export default function ConfiguracoesIgreja() {
               )}
             </div>
           )}
-
           <div>
             <label className={rotuloClasse}>Nome da igreja</label>
             <input
@@ -388,7 +376,6 @@ export default function ConfiguracoesIgreja() {
               className={inputClasse}
             />
           </div>
-
           <div>
             <label className={rotuloClasse}>CNPJ</label>
             <input
@@ -399,8 +386,7 @@ export default function ConfiguracoesIgreja() {
               placeholder="Opcional"
             />
           </div>
-
-                    <div>
+          <div>
             <label className={rotuloClasse}>Contato (opcional)</label>
             <input
               type="text"
@@ -413,7 +399,6 @@ export default function ConfiguracoesIgreja() {
               Não é obrigatório, mas recomendado: é o que aparece na página pública para os visitantes entrarem em contato.
             </p>
           </div>
-
           <div className="border-t pt-4">
             <p className="text-sm font-semibold text-gray-700 mb-3">Grupos de WhatsApp</p>
             <div className="space-y-3">
@@ -439,7 +424,6 @@ export default function ConfiguracoesIgreja() {
               </div>
             </div>
           </div>
-
           <div className="border-t pt-4">
             <p className="text-sm font-semibold text-gray-700 mb-3">Redes sociais</p>
             <div className="flex flex-col sm:flex-row gap-2 mb-3">
@@ -510,17 +494,14 @@ export default function ConfiguracoesIgreja() {
               </ul>
             )}
           </div>
-
           <div className="border-t pt-4">
-                        <p className="text-xs text-gray-500 mb-3">
+            <p className="text-xs text-gray-500 mb-3">
               Para publicar a igreja no diretório é obrigatório: <strong>Cidade</strong>, {' '}
               <strong>UF</strong> e ao menos um canal de acolhimento (WhatsApp de orações, WhatsApp de orientações ou rede social).
               Os demais campos são opcionais.
             </p>
-
             {msgPublico && <p className="text-green-600 mb-3 text-sm">{msgPublico}</p>}
             {erroPublico && <p className="text-red-600 mb-3 text-sm">{erroPublico}</p>}
-
             <label className="flex items-center gap-2 mb-3 cursor-pointer">
               <input
                 type="checkbox"
@@ -532,7 +513,7 @@ export default function ConfiguracoesIgreja() {
                 Incluir esta igreja no diretório público
               </span>
             </label>
-                         {igrejaOrigemIndicacao && igrejaAguardaConfirmacao && (
+            {igrejaOrigemIndicacao && igrejaAguardaConfirmacao && (
               <div style={{ background: '#FDF3E3', border: '1px solid #F0D9A8', borderRadius: 8, padding: '12px', marginBottom: 12 }}>
                 <p style={{ fontSize: 13, color: '#7A5A1E', margin: '0 0 8px', lineHeight: 1.5 }}>
                   Esta igreja foi cadastrada no diretorio pela comunidade e esta marcada como aguardando confirmacao.
@@ -548,13 +529,11 @@ export default function ConfiguracoesIgreja() {
                 </button>
               </div>
             )}
-
             {pend.length > 0 && (
               <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
                 Para publicar, preencha: {pend.join(', ')}.
               </p>
             )}
-
             <div className="space-y-3">
               <div>
                 <label className={rotuloClasse}>Sobre a igreja</label>
@@ -566,7 +545,6 @@ export default function ConfiguracoesIgreja() {
                   placeholder="Apresentação curta exibida no diretório e na página pública"
                 />
               </div>
-
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
                   <label className={rotuloClasse}>Cidade *</label>
@@ -592,7 +570,6 @@ export default function ConfiguracoesIgreja() {
                   </select>
                 </div>
               </div>
-
               <div>
                 <label className={rotuloClasse}>Endereço público</label>
                 <input
@@ -603,7 +580,6 @@ export default function ConfiguracoesIgreja() {
                   placeholder="Opcional"
                 />
               </div>
-
               <div>
                 <label className={rotuloClasse}>Mensagem de acolhimento</label>
                 <input
@@ -614,7 +590,6 @@ export default function ConfiguracoesIgreja() {
                   placeholder="Opcional, ex.: Sejam bem-vindos!"
                 />
               </div>
-
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-1">Horários de cultos</p>
                 <div className="flex flex-col sm:flex-row gap-2 mb-2">
@@ -674,7 +649,6 @@ export default function ConfiguracoesIgreja() {
                 )}
               </div>
             </div>
-
             {form.slug && (
               <div className="bg-gray-50 border rounded-lg p-3 mt-4 text-sm">
                 <p className="text-xs text-gray-500 mb-1">Link público da igreja:</p>
@@ -694,7 +668,6 @@ export default function ConfiguracoesIgreja() {
                 </div>
               </div>
             )}
-
             <div className="mt-4 flex items-center gap-3 flex-wrap">
               <button
                 type="button"
@@ -713,7 +686,6 @@ export default function ConfiguracoesIgreja() {
               )}
             </div>
           </div>
-
           <button
             type="submit"
             disabled={salvando}
@@ -727,13 +699,10 @@ export default function ConfiguracoesIgreja() {
           Apenas o Administrador pode editar os dados da igreja. Nesta área, você pode alterar a sua senha de acesso.
         </div>
       )}
-
       <div className="border-t pt-4 mt-6">
         <p className="text-sm font-semibold text-gray-700 mb-3">Alteração de Senha</p>
-
         {msgSenha && <p className="text-green-600 mb-4">{msgSenha}</p>}
         {erroSenha && <p className="text-red-600 mb-4">{erroSenha}</p>}
-
         <form onSubmit={alterarSenha} className="space-y-3">
           <div>
             <label className={rotuloClasse}>Nova senha</label>
