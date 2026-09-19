@@ -113,20 +113,18 @@ export default function DiretorioIgrejas() {
       <header style={estilo.header}>
         <div style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <a href="/igrejas" style={estilo.logo}>Berit</a>
-          {usuario ? (
-           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ textAlign: 'right' }}>
-                <a
-                  href="/area"
-                  style={{ display: 'inline-block', background: '#D9A441', color: '#1F3A5F', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}
-                >
-                  Acessar sua Igreja
-                </a>
-                <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 4 }}>
-                  {usuario.email}
-                </div>
+                    {usuario ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+              <a
+                href="/area"
+                style={{ display: 'inline-block', background: '#D9A441', color: '#1F3A5F', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}
+              >
+                Acessar sua Igreja
+              </a>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>{usuario.email}</span>
+                <button onClick={sair} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.6)', color: '#FFFFFF', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer' }}>Sair</button>
               </div>
-              <button onClick={sair} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.6)', color: '#FFFFFF', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer' }}>Sair</button>
             </div>
           ) : (
             <div style={{ textAlign: 'right' }}>
