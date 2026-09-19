@@ -152,12 +152,19 @@ export default function PaginaPublicaIgreja() {
       </div>
 
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '1.5rem' }}>
-        {igreja.aguarda_confirmacao && (
+      {igreja.aguarda_confirmacao && (
           <div style={{ background: '#FDF3E3', border: '1px solid #F0D9A8', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
             <p style={{ margin: 0, fontSize: 13, color: '#7A5A1E', lineHeight: 1.6 }}>
               Esta igreja foi cadastrada pela comunidade e ainda aguarda a confirmação dos responsáveis. As informações podem não estar completas.
             </p>
+            <a
+              href={`mailto:beritinovacoes@gmail.com?subject=${encodeURIComponent('Denúncia de igreja inexistente no diretório')}&body=${encodeURIComponent(`Igreja: ${igreja.nome}\nPágina: ${typeof window !== 'undefined' ? window.location.href : ''}\n\nGostaria de informar que esta igreja não existe ou foi cadastrada indevidamente.`)}`}
+              style={{ display: 'inline-block', marginTop: 8, fontSize: 12, color: '#7A5A1E', textDecoration: 'underline', fontWeight: 600 }}
+            >
+              Esta igreja não existe? Informe ao grupo Berit para retirá-la da lista pública.
+            </a>
           </div>
+        )}
         )}
         {igreja.origem === 'indicacao' && !igreja.aguarda_confirmacao && igreja.publico_verificado && (
           <div style={{ background: '#EAF4EE', border: '1px solid #C9E3D4', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
