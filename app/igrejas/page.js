@@ -10,7 +10,7 @@ const estilo = {
   logo: { fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF', textDecoration: 'none' },
   hero: { background: '#1F3A5F', color: '#FFFFFF', padding: '3rem 1.5rem 2rem', textAlign: 'center' },
   card: { background: '#FFFFFF', borderRadius: 12, border: '1px solid #E4DED2', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' },
-  campo: { padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', fontFamily: 'inherit' },
+  campo: { width: '100%', padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', fontFamily: 'inherit' },
   botao: { padding: '12px 20px', background: '#D9A441', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer' },
 }
 
@@ -43,7 +43,7 @@ export default function DiretorioIgrejas() {
   const [usuario, setUsuario] = useState(null)
 
   const [mostrarForm, setMostrarForm] = useState(false)
-  const [form, setForm] = useState({ nome: '', cidade: '', uf: '', endereco: '', contato: '', observacoes: '' })
+  const [form, setForm] = useState({ nome: '', cidade: '', uf: '', endereco: '', bairro: '', contato: '', observacoes: '' })
   const [enviando, setEnviando] = useState(false)
   const [msgForm, setMsgForm] = useState('')
   const [erroForm, setErroForm] = useState('')
@@ -92,6 +92,7 @@ export default function DiretorioIgrejas() {
         cidade: form.cidade.trim(),
         uf: form.uf,
         endereco_publico: form.endereco.trim(),
+        bairro: form.bairro.trim(),
         contato: form.contato.trim(),
         observacoes: form.observacoes.trim(),
       },
@@ -102,7 +103,7 @@ export default function DiretorioIgrejas() {
       return
     }
     setMsgForm(data.mensagem)
-    setForm({ nome: '', cidade: '', uf: '', endereco: '', contato: '', observacoes: '' })
+    setForm({ nome: '', cidade: '', uf: '', endereco: '', bairro: '', contato: '', observacoes: '' })
     setMostrarForm(false)
     buscar('', '')
   }
@@ -148,17 +149,18 @@ export default function DiretorioIgrejas() {
             {msgForm && <div style={{ background: '#EAF4EE', color: '#4C8C6E', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{msgForm}</div>}
             {erroForm && <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erroForm}</div>}
             <form onSubmit={indicar}>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 0.5fr', gap: '0.75rem', marginBottom: 12 }}>
+              <div style={{ display: 'grid', gap: '0.75rem', marginBottom: 12 }}>
                 <input type="text" required value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Nome da igreja *" style={estilo.campo} />
                 <input type="text" required value={form.cidade} onChange={(e) => setForm({ ...form, cidade: e.target.value })} placeholder="Cidade *" style={estilo.campo} />
                 <select required value={form.uf} onChange={(e) => setForm({ ...form, uf: e.target.value })} style={estilo.campo}>
                   <option value="">UF *</option>
                   {UFS.map((u) => <option key={u} value={u}>{u}</option>)}
                 </select>
+                <input type="text" value={form.endereco} onChange={(e) => setForm({ ...form, endereco: e.target.value })} placeholder="Endereço (rua, número)" style={estilo.campo} />
+                <input type="text" value={form.bairro} onChange={(e) => setForm({ ...form, bairro: e.target.value })} placeholder="Bairro" style={estilo.campo} />
+                <input type="text" value={form.contato} onChange={(e) => setForm({ ...form, contato: e.target.value })} placeholder="Contato (opcional)" style={estilo.campo} />
+                <input type="text" value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} placeholder="Observações (opcional)" style={estilo.campo} />
               </div>
-              <input type="text" value={form.endereco} onChange={(e) => setForm({ ...form, endereco: e.target.value })} placeholder="Endereço (opcional)" style={{ ...estilo.campo, marginBottom: 12, width: '100%' }} />
-              <input type="text" value={form.contato} onChange={(e) => setForm({ ...form, contato: e.target.value })} placeholder="Contato (opcional)" style={{ ...estilo.campo, marginBottom: 12, width: '100%' }} />
-              <input type="text" value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} placeholder="Observações (opcional)" style={{ ...estilo.campo, marginBottom: 12, width: '100%' }} />
               <div style={{ background: '#FDF3E3', border: '1px solid #F0D9A8', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#7A5A1E', marginBottom: 12, lineHeight: 1.5 }}>
                 ⚠️ Endereços cadastrados pela comunidade não passam por verificação do Berit. Antes de se deslocar, confirme a localização por outros meios e evite ir a locais desconhecidos.
               </div>
@@ -204,6 +206,11 @@ export default function DiretorioIgrejas() {
                 <div style={{ fontSize: 13, color: '#8A8A8A' }}>
                   {ig.cidade || ''}{ig.cidade && ig.uf ? `, ${ig.uf}` : ig.uf || ''}
                 </div>
+                {ig.endereco_publico && (
+                  <div style={{ fontSize: 12, color: '#8A8A8A' }}>
+                    📍 {ig.endereco_publico}{ig.bairro ? `, ${ig.bairro}` : ''}
+                  </div>
+                )}
                 {ig.sobre && (
                   <p style={{ margin: 0, fontSize: 13, color: '#5A5A5A', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                     {ig.sobre}
