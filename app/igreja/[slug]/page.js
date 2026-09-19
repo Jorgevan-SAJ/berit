@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
+import ReclamarIgreja from '../ReclamarIgreja'
 
 const DIAS_ORDEM = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 
@@ -169,7 +170,8 @@ export default function PaginaPublicaIgreja() {
           <div style={{ background: '#EAF4EE', border: '1px solid #C9E3D4', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
             <p style={{ margin: 0, fontSize: 13, color: '#4C8C6E', lineHeight: 1.6 }}>
               Cadastro validado pela comunidade Berit. Os dados institucionais (redes sociais, contato, horários de cultos) serão completados quando a igreja aderir ao Berit.
-            </p>
+            <ReclamarIgreja slug={igreja.slug} />  
+          </p>
           </div>
         )}
 
