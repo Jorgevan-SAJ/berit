@@ -74,7 +74,7 @@ export default function DiretorioIgrejas() {
           .select('perfil, indicador_verificado')
           .eq('user_id', data.user.id)
           .maybeSingle()
-        setEhMaster(!!perfil && (perfil.perfil === 'admin_master' || !!perfil.indicador_verificado))
+          setEhMaster(!!perfil && !!perfil.indicador_verificado)
       }
     })
     buscar('', '')
