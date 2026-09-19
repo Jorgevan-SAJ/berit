@@ -127,7 +127,7 @@ export default function PaginaPublicaIgreja() {
   const cnpjFormatado = formatarCNPJ(igreja.cnpj)
   const temWhatsOracoes = !!igreja.whatsapp_oracoes
   const temWhatsOrientacoes = !!igreja.whatsapp_orientacoes
-  const enderecoCompleto = `${igreja.endereco_publico || ''}${igreja.cidade ? `, ${igreja.cidade}` : ''}${igreja.uf ? ` - ${igreja.uf}` : ''}`
+  const enderecoCompleto = `${igreja.endereco_publico || ''}${igreja.bairro ? `, ${igreja.bairro}` : ''}${igreja.cidade ? `, ${igreja.cidade}` : ''}${igreja.uf ? ` - ${igreja.uf}` : ''}`
   const enderecoComunidade = (igreja.aguarda_confirmacao || (igreja.origem === 'indicacao' && !igreja.publico_verificado)) && igreja.endereco_publico
 
   return (
@@ -230,7 +230,7 @@ export default function PaginaPublicaIgreja() {
                     rel="noopener noreferrer"
                     style={{ color: '#1F3A5F', textDecoration: 'underline' }}
                   >
-                    📍 {igreja.endereco_publico}
+                    📍 {igreja.endereco_publico}{igreja.bairro ? `, ${igreja.bairro}` : ''}
                     {igreja.cidade && `, ${igreja.cidade}${igreja.uf ? ` - ${igreja.uf}` : ''}`}
                   </a>
                   <div style={{ fontSize: 12, color: '#8A8A8A', marginTop: 4 }}>Clique para abrir no Google Maps e traçar a rota.</div>
