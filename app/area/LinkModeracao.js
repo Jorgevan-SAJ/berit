@@ -30,16 +30,7 @@ export default function LinkModeracao() {
     return (
       <a
         href="/igrejas/moderacao"
-        style={{
-          display: 'inline-block',
-          background: '#D9A441',
-          color: '#1F3A5F',
-          borderRadius: 8,
-          padding: '10px 16px',
-          fontSize: 13,
-          fontWeight: 700,
-          textDecoration: 'none',
-        }}
+        style={{ background: '#D9A441', color: '#1F3A5F', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none' }}
       >
         Moderação
       </a>
@@ -49,17 +40,7 @@ export default function LinkModeracao() {
   return (
     <span
       title="Disponível apenas para o administrador master"
-      style={{
-        display: 'inline-block',
-        background: '#E4DED2',
-        color: '#9E9E9E',
-        borderRadius: 8,
-        padding: '10px 16px',
-        fontSize: 13,
-        fontWeight: 700,
-        cursor: 'not-allowed',
-        opacity: 0.7,
-      }}
+      style={{ background: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.5)', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'not-allowed', opacity: 0.7 }}
     >
       Moderação
     </span>
