@@ -113,25 +113,20 @@ export default function DiretorioIgrejas() {
       <header style={estilo.header}>
         <div style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <a href="/igrejas" style={estilo.logo}>Berit</a>
-                    {usuario ? (
+                              {usuario ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-              <a
-                href="/area"
-                style={{ display: 'inline-block', background: '#D9A441', color: '#1F3A5F', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}
-              >
-                Acessar sua Igreja
-              </a>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>{usuario.email}</span>
-                <button onClick={sair} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.6)', color: '#FFFFFF', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer' }}>Sair</button>
+                <a
+                  href="/area"
+                  style={{ display: 'inline-block', background: '#D9A441', color: '#1F3A5F', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}
+                >
+                  Acessar sua Igreja
+                </a>
+                <button onClick={sair} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.6)', color: '#FFFFFF', borderRadius: 8, padding: '8px 14px', fontSize: 13, cursor: 'pointer' }}>Sair</button>
               </div>
+              <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>{usuario.email}</span>
             </div>
           ) : (
-            <div style={{ textAlign: 'right' }}>
-              <a href="/login?voltar=/igrejas" style={{ color: '#FFFFFF', fontSize: 13, textDecoration: 'none', fontWeight: 700 }}>Acessar Área da Igreja</a>
-              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 2 }}>restrito para usuário cadastrado pela igreja</div>
-            </div>
-          )}
         </div>
       </header>
 
