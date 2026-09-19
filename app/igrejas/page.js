@@ -113,7 +113,7 @@ export default function DiretorioIgrejas() {
       <header style={estilo.header}>
         <div style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <a href="/igrejas" style={estilo.logo}>Berit</a>
-                              {usuario ? (
+          {usuario ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <a
@@ -127,6 +127,11 @@ export default function DiretorioIgrejas() {
               <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>{usuario.email}</span>
             </div>
           ) : (
+            <div style={{ textAlign: 'right' }}>
+              <a href="/login?voltar=/igrejas" style={{ color: '#FFFFFF', fontSize: 13, textDecoration: 'none', fontWeight: 700 }}>Acessar Área da Igreja</a>
+              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 2 }}>restrito para usuário cadastrado pela igreja</div>
+            </div>
+          )}
         </div>
       </header>
 
