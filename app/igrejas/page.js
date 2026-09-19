@@ -114,8 +114,18 @@ export default function DiretorioIgrejas() {
         <div style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <a href="/igrejas" style={estilo.logo}>Berit</a>
           {usuario ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12 }}>{usuario.email}</span>
+           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ textAlign: 'right' }}>
+                <a
+                  href="/area"
+                  style={{ display: 'inline-block', background: '#D9A441', color: '#1F3A5F', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}
+                >
+                  Acessar sua Igreja
+                </a>
+                <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 4 }}>
+                  {usuario.email}
+                </div>
+              </div>
               <button onClick={sair} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.6)', color: '#FFFFFF', borderRadius: 8, padding: '6px 12px', fontSize: 12, cursor: 'pointer' }}>Sair</button>
             </div>
           ) : (
