@@ -1,13 +1,17 @@
 'use client'
+import LinkModeracao from './LinkModeracao'
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getPerfil, perfilLabel } from '../../lib/perfil'
+
 const DIAS_SEMANA_CURTO = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
 const ABAS_ANIVERSARIO = [
   { v: 'hoje', r: 'Hoje' },
   { v: 'semana', r: 'Esta semana' },
   { v: 'mes', r: 'Este mês' },
 ]
+
 const ROTULOS_EVENTO = {
   culto: { r: 'Culto', cor: '#1F3A5F', bg: '#E8F0FA' },
   ensaio: { r: 'Ensaio', cor: '#4C8C6E', bg: '#EAF4EE' },
@@ -16,21 +20,25 @@ const ROTULOS_EVENTO = {
   campanha: { r: 'Campanha', cor: '#7B4FA6', bg: '#F3EAFB' },
   outro: { r: 'Outro', cor: '#5A5A5A', bg: '#F0EAE0' },
 }
+
 function formatarCnpj(cnpj) {
   const d = String(cnpj || '').replace(/\D/g, '')
   if (d.length !== 14) return cnpj
   return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12, 14)}`
 }
+
 function partesData(iso) {
   if (!iso) return null
   const [a, m, d] = String(iso).split('-').map(Number)
   if (!a || !m || !d) return null
   return { ano: a, mes: m, dia: d }
 }
+
 function rotuloDiaSemana(mes, dia) {
   const d = new Date(new Date().getFullYear(), mes - 1, dia)
   return DIAS_SEMANA_CURTO[d.getDay()]
 }
+
 function montarProximosEventos(eventos, hoje, limite) {
   const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())
   const itens = []
@@ -54,6 +62,7 @@ function montarProximosEventos(eventos, hoje, limite) {
   itens.sort((a, b) => a.quando - b.quando || a.hora.localeCompare(b.hora))
   return itens.slice(0, limite)
 }
+
 export default function AreaPage() {
   const [carregando, setCarregando] = useState(true)
   const [usuario, setUsuario] = useState(null)
@@ -65,6 +74,7 @@ export default function AreaPage() {
   const [abaAniversario, setAbaAniversario] = useState('hoje')
   const [proximosEventos, setProximosEventos] = useState([])
   const [igreja, setIgreja] = useState(null)
+
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) {
@@ -101,6 +111,7 @@ export default function AreaPage() {
       }
     })
   }, [])
+
   async function carregarPainel() {
     setCarregandoPainel(true)
     const hoje = new Date()
@@ -121,6 +132,7 @@ export default function AreaPage() {
     setProximosEventos(montarProximosEventos(ev.data || [], hoje, 5))
     setCarregandoPainel(false)
   }
+
   useEffect(() => {
     if (pendentes > 0 && !toastVisivel) {
       const jaVisto = typeof window !== 'undefined' && window.sessionStorage.getItem('berit_aviso_pendencia_visto') === '1'
@@ -132,6 +144,7 @@ export default function AreaPage() {
       }
     }
   }, [pendentes, toastVisivel])
+
   if (carregando) {
     return (
       <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -139,6 +152,7 @@ export default function AreaPage() {
       </main>
     )
   }
+
   const card = {
     background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', border: '1px solid #E4DED2',
     boxShadow: '0 2px 12px rgba(31,58,95,0.06)', textDecoration: 'none', display: 'block',
@@ -170,12 +184,14 @@ export default function AreaPage() {
       : abaAniversario === 'semana'
         ? 'Nenhum aniversariante esta semana.'
         : 'Nenhum aniversariante este mês.'
+
   return (
     <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
       <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em' }}>Berit</div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    <a
+          <LinkModeracao />
+          <a
             href="/igrejas/editar"
             style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}
           >
