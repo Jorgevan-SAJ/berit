@@ -1,5 +1,4 @@
 'use client'
-import LinkModeracao from './LinkModeracao'
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getPerfil, perfilLabel } from '../../lib/perfil'
@@ -190,7 +189,6 @@ export default function AreaPage() {
       <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em' }}>Berit</div>
         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <LinkModeracao />
           <a
             href="/igrejas/editar"
             style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}
