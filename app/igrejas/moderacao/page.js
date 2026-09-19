@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 
+const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
+
 const estilo = {
   main: { minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" },
   header: { background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem' },
@@ -51,17 +53,24 @@ export default function ModeracaoIgrejas() {
     setSalvandoId(ig.id)
     setMsg('')
     setErro('')
-    const { data, error } = await supabase.rpc('atualizar_endereco_igreja', {
+    const { data, error } = await supabase.rpc('atualizar_igreja_indicada', {
       p_igreja_id: ig.id,
+      p_nome: ig.nome || '',
+      p_cidade: ig.cidade || '',
+      p_uf: ig.uf || '',
       p_endereco: ig.endereco_publico || '',
       p_bairro: ig.bairro || '',
+      p_contato: ig.contato || '',
     })
     setSalvandoId(null)
     if (error || !data || !data.ok) {
       setErro(data?.mensagem || 'Não foi possível salvar.')
       return
     }
-    setMsg(`Endereço de "${ig.nome}" atualizado.`)
+    setMsg(`Dados de "${ig.nome}" atualizados.`)
+    if (data.slug) {
+      setIgrejas(igrejas.map((x) => x.id === ig.id ? { ...x, slug: data.slug } : x))
+    }
   }
 
   async function excluir(ig) {
@@ -96,7 +105,7 @@ export default function ModeracaoIgrejas() {
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '1.5rem' }}>
         <h1 style={{ fontSize: 22, color: '#1F3A5F', margin: '0 0 4px' }}>Moderação de igrejas indicadas</h1>
         <p style={{ fontSize: 13, color: '#8A8A8A', margin: '0 0 20px' }}>
-          Corrija endereços e bairros, ou exclua igrejas duplicadas ou inexistentes. As alterações aparecem na hora no diretório e na página pública.
+          Corrija nome, cidade, UF, endereço, bairro e contato, ou exclua igrejas duplicadas ou inexistentes. As alterações aparecem na hora no diretório e na página pública.
         </p>
 
         {msg && <div style={{ background: '#EAF4EE', color: '#4C8C6E', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{msg}</div>}
@@ -124,6 +133,30 @@ export default function ModeracaoIgrejas() {
               <div style={{ display: 'grid', gap: '0.75rem', marginBottom: 12 }}>
                 <input
                   type="text"
+                  value={ig.nome || ''}
+                  onChange={(e) => alterar(ig.id, 'nome', e.target.value)}
+                  placeholder="Nome da igreja *"
+                  style={estilo.campo}
+                />
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.75rem' }}>
+                  <input
+                    type="text"
+                    value={ig.cidade || ''}
+                    onChange={(e) => alterar(ig.id, 'cidade', e.target.value)}
+                    placeholder="Cidade *"
+                    style={estilo.campo}
+                  />
+                  <select
+                    value={ig.uf || ''}
+                    onChange={(e) => alterar(ig.id, 'uf', e.target.value)}
+                    style={estilo.campo}
+                  >
+                    <option value="">UF *</option>
+                    {UFS.map((u) => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                </div>
+                <input
+                  type="text"
                   value={ig.endereco_publico || ''}
                   onChange={(e) => alterar(ig.id, 'endereco_publico', e.target.value)}
                   placeholder="Endereço (rua, número)"
@@ -136,10 +169,17 @@ export default function ModeracaoIgrejas() {
                   placeholder="Bairro"
                   style={estilo.campo}
                 />
+                <input
+                  type="text"
+                  value={ig.contato || ''}
+                  onChange={(e) => alterar(ig.id, 'contato', e.target.value)}
+                  placeholder="Contato (telefone ou e-mail)"
+                  style={estilo.campo}
+                />
               </div>
               <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                 <button type="button" onClick={() => salvar(ig)} disabled={salvandoId === ig.id} style={{ ...estilo.botao, opacity: salvandoId === ig.id ? 0.6 : 1 }}>
-                  {salvandoId === ig.id ? 'Salvando...' : 'Salvar endereço'}
+                  {salvandoId === ig.id ? 'Salvando...' : 'Salvar alterações'}
                 </button>
                 <button type="button" onClick={() => excluir(ig)} disabled={excluindoId === ig.id} style={{ ...estilo.botaoExcluir, opacity: excluindoId === ig.id ? 0.6 : 1 }}>
                   {excluindoId === ig.id ? 'Excluindo...' : 'Excluir igreja'}
