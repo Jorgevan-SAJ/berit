@@ -41,6 +41,7 @@ export default function DiretorioIgrejas() {
   const [erro, setErro] = useState('')
 
   const [usuario, setUsuario] = useState(null)
+  const [ehMaster, setEhMaster] = useState(false)
 
   const [mostrarForm, setMostrarForm] = useState(false)
   const [form, setForm] = useState({ nome: '', cidade: '', uf: '', endereco: '', bairro: '', contato: '', observacoes: '' })
@@ -65,8 +66,16 @@ export default function DiretorioIgrejas() {
   }
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data?.user) setUsuario(data.user)
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (data?.user) {
+        setUsuario(data.user)
+        const { data: perfil } = await supabase
+          .from('perfis')
+          .select('perfil, indicador_verificado')
+          .eq('user_id', data.user.id)
+          .maybeSingle()
+        setEhMaster(!!perfil && (perfil.perfil === 'admin_master' || !!perfil.indicador_verificado))
+      }
     })
     buscar('', '')
   }, [])
@@ -74,6 +83,7 @@ export default function DiretorioIgrejas() {
   async function sair() {
     await supabase.auth.signOut()
     setUsuario(null)
+    setEhMaster(false)
   }
 
   function aplicar(e) {
@@ -144,6 +154,16 @@ export default function DiretorioIgrejas() {
           <button onClick={() => { setMostrarForm(!mostrarForm); setMsgForm(''); setErroForm('') }} style={{ ...estilo.botao, background: 'transparent', border: '1px solid rgba(255,255,255,0.6)', color: '#FFFFFF' }}>
             {mostrarForm ? 'Fechar formulário' : 'Sua igreja não está aqui? Cadastre-a'}
           </button>
+          {mostrarForm && ehMaster && (
+            <div style={{ marginTop: 14 }}>
+              <a
+                href="/igrejas/moderacao"
+                style={{ color: '#D9A441', fontSize: 13, fontWeight: 700, textDecoration: 'underline' }}
+              >
+                Moderação de igrejas indicadas
+              </a>
+            </div>
+          )}
         </div>
       </div>
 
