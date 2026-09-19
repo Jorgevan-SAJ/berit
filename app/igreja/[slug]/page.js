@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
-import ReclamarIgreja from '../ReclamarIgreja'
 
 const DIAS_ORDEM = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 
@@ -63,6 +62,109 @@ function IconeWhatsApp({ tamanho = 18 }) {
     <svg width={tamanho} height={tamanho} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
     </svg>
+  )
+}
+
+function ReclamarIgreja({ slug }) {
+  const [carregando, setCarregando] = useState(true)
+  const [estado, setEstado] = useState(null)
+  const [enviando, setEnviando] = useState(false)
+  const [msg, setMsg] = useState('')
+  const [erro, setErro] = useState('')
+
+  useEffect(() => {
+    async function verificar() {
+      const { data, error } = await supabase.rpc('verificar_reclamacao', { p_slug: slug })
+      if (!error && data && data.ok) {
+        setEstado(data)
+      }
+      setCarregando(false)
+    }
+    verificar()
+  }, [slug])
+
+  async function reclamar() {
+    setEnviando(true)
+    setMsg('')
+    setErro('')
+    const { data, error } = await supabase.rpc('reclamar_igreja', { p_igreja_id: estado.igreja_id })
+    setEnviando(false)
+    if (error || !data || !data.ok) {
+      setErro(data?.mensagem || 'Não foi possível enviar a solicitação.')
+      return
+    }
+    setMsg(data.mensagem)
+    if (data.automatico) {
+      setEstado({ ...estado, eh_admin_desta: true })
+    } else {
+      setEstado({ ...estado, ja_reclamou: true })
+    }
+  }
+
+  if (carregando) return null
+  if (!estado || !estado.ok) return null
+
+  if (msg) {
+    return (
+      <div style={{ background: '#EAF4EE', border: '1px solid #C9E3D4', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
+        <p style={{ margin: 0, fontSize: 13, color: '#4C8C6E', lineHeight: 1.6 }}>{msg}</p>
+      </div>
+    )
+  }
+
+  if (!estado.logado) {
+    return (
+      <div style={{ background: '#E8F0FA', border: '1px solid #C9D9EC', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
+        <p style={{ margin: 0, fontSize: 13, color: '#1F3A5F', lineHeight: 1.6 }}>
+          Você é Pastor ou Líder desta Igreja?{' '}
+          <a href="/cadastro" style={{ color: '#1F3A5F', fontWeight: 700 }}>
+            Adquira o Berit para gerenciar os dados
+          </a>
+        </p>
+      </div>
+    )
+  }
+
+  if (estado.eh_admin_desta || estado.ja_tem_igreja) return null
+
+  if (estado.igreja_tem_admin) {
+    return (
+      <div style={{ background: '#FDF3E3', border: '1px solid #F0D9A8', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
+        <p style={{ margin: 0, fontSize: 13, color: '#7A5A1E', lineHeight: 1.6 }}>
+          Esta igreja já é administrada por outra pessoa. Para assumir a gestão, contate a{' '}
+          <a href="mailto:beritinovacoes@gmail.com?subject=Assumir%20gest%C3%A3o%20de%20igreja" style={{ color: '#7A5A1E', fontWeight: 700 }}>
+            Equipe Berit
+          </a>.
+        </p>
+      </div>
+    )
+  }
+
+  if (estado.ja_reclamou) {
+    return (
+      <div style={{ background: '#EAF4EE', border: '1px solid #C9E3D4', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
+        <p style={{ margin: 0, fontSize: 13, color: '#4C8C6E', lineHeight: 1.6 }}>
+          Solicitação enviada. Aguardando aprovação do administrador do Berit.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ background: '#E8F0FA', border: '1px solid #C9D9EC', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
+      <p style={{ margin: 0, fontSize: 13, color: '#1F3A5F', lineHeight: 1.6 }}>
+        Esta é a sua igreja? Reclame o cadastro para gerenciar as informações e completar os dados.
+      </p>
+      {erro && <p style={{ margin: '8px 0 0', fontSize: 13, color: '#B71C1C' }}>{erro}</p>}
+      <button
+        type="button"
+        onClick={reclamar}
+        disabled={enviando}
+        style={{ marginTop: 10, background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: enviando ? 0.6 : 1 }}
+      >
+        {enviando ? 'Enviando...' : 'Esta é a minha igreja'}
+      </button>
+    </div>
   )
 }
 
@@ -170,10 +272,11 @@ export default function PaginaPublicaIgreja() {
           <div style={{ background: '#EAF4EE', border: '1px solid #C9E3D4', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
             <p style={{ margin: 0, fontSize: 13, color: '#4C8C6E', lineHeight: 1.6 }}>
               Cadastro validado pela comunidade Berit. Os dados institucionais (redes sociais, contato, horários de cultos) serão completados quando a igreja aderir ao Berit.
-            <ReclamarIgreja slug={igreja.slug} />  
-          </p>
+            </p>
           </div>
         )}
+
+        <ReclamarIgreja slug={igreja.slug} />
 
         {igreja.lead_publico && (
           <div style={{ ...estilo.card, background: '#FDF3E3', borderColor: '#F0D9A8' }}>
