@@ -65,24 +65,36 @@ function IconeWhatsApp({ tamanho = 18 }) {
   )
 }
 
-function ReclamarIgreja({ slug }) {
-  const [carregando, setCarregando] = useState(true)
-  const [estado, setEstado] = useState(null)
-  const [enviando, setEnviando] = useState(false)
-  const [msg, setMsg] = useState('')
-  const [erro, setErro] = useState('')
+function ReclamarIgreja() {
+  const [logado, setLogado] = useState(null)
 
   useEffect(() => {
-    async function verificar() {
-      const { data, error } = await supabase.rpc('verificar_reclamacao', { p_slug: slug })
-      if (!error && data && data.ok) {
-        setEstado(data)
-      }
-      setCarregando(false)
-    }
-    verificar()
-  }, [slug])
+    supabase.auth.getUser().then(({ data }) => setLogado(!!data.user))
+  }, [])
 
+  if (logado === null) return null
+  if (logado) return null
+
+  const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)
+  const linkAdquirir = isAndroid
+    ? 'https://play.google.com/store/apps/details?id=com.berit.app'
+    : '/cadastro'
+
+  return (
+    <div style={{ background: '#E8F0FA', border: '1px solid #C9D9EC', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
+      <p style={{ margin: 0, fontSize: 13, color: '#1F3A5F', lineHeight: 1.6 }}>
+        Você é Pastor ou Líder desta Igreja?{' '}
+        <a href={linkAdquirir} style={{ color: '#1F3A5F', fontWeight: 700 }}>
+          Adquira o Berit agora clicando aqui
+        </a>{' '}
+        para gerenciar os dados, ou{' '}
+        <a href="mailto:beritinovacoes@gmail.com?subject=Quero%20adquirir%20o%20Berit%20para%20minha%20igreja" style={{ color: '#1F3A5F', fontWeight: 700 }}>
+          fale com a Equipe Berit
+        </a>.
+      </p>
+    </div>
+  )
+}
   async function reclamar() {
     setEnviando(true)
     setMsg('')
