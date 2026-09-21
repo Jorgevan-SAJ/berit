@@ -51,6 +51,7 @@ export default function ConfiguracoesIgreja() {
     cidade: '',
     uf: '',
     endereco_publico: '',
+    bairro: '',
     lead_publico: '',
     publico_visivel: false,
     publico_verificado: false,
@@ -88,6 +89,7 @@ export default function ConfiguracoesIgreja() {
   if (!form.cidade.trim()) faltando.push('Cidade')
   if (!form.uf.trim()) faltando.push('UF')
   if (!form.endereco_publico.trim()) faltando.push('Endereço')
+  if (!form.bairro.trim()) faltando.push('Bairro')
   return faltando
 }
 
@@ -127,6 +129,7 @@ export default function ConfiguracoesIgreja() {
           cidade: igreja.cidade || '',
           uf: igreja.uf || '',
           endereco_publico: igreja.endereco_publico || '',
+          bairro: igreja.bairro || '',
           lead_publico: igreja.lead_publico || '',
           publico_visivel: !!igreja.publico_visivel,
           publico_verificado: !!igreja.publico_verificado,
@@ -270,6 +273,7 @@ export default function ConfiguracoesIgreja() {
       cidade: form.cidade,
       uf: form.uf,
       endereco_publico: form.endereco_publico,
+      bairro: form.bairro,
       lead_publico: form.lead_publico,
       publico_visivel: form.publico_visivel,
       horarios_cultos: horariosCultos,
@@ -493,11 +497,11 @@ export default function ConfiguracoesIgreja() {
           </div>
           <div className="border-t pt-4">
             <p className="text-xs text-gray-500 mb-3">
-             Para publicar a igreja no diretório é obrigatório: <strong>Nome da igreja</strong>,{' '}
-            <strong>Cidade</strong>, <strong>UF</strong> e <strong>Endereço</strong>.
+            Para publicar a igreja no diretório é obrigatório: <strong>Nome da igreja</strong>,{' '}
+            <strong>Cidade</strong>, <strong>UF</strong>, <strong>Endereço</strong> e <strong>Bairro</strong>.
             Os demais campos são opcionais.
             </p>
-            {msgPublico && <p className="text-green-600 mb-3 text-sm">{msgPublico}</p>}
+          {msgPublico && <p className="text-green-600 mb-3 text-sm">{msgPublico}</p>}
             {erroPublico && <p className="text-red-600 mb-3 text-sm">{erroPublico}</p>}
             <label className="flex items-center gap-2 mb-3 cursor-pointer">
               <input
