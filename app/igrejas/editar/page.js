@@ -492,9 +492,9 @@ export default function ConfiguracoesIgreja() {
           </div>
           <div className="border-t pt-4">
             <p className="text-xs text-gray-500 mb-3">
-              Para publicar a igreja no diretório é obrigatório: <strong>Cidade</strong>,{' '}
-              <strong>UF</strong>, <strong>Endereço</strong> e ao menos um canal de acolhimento (WhatsApp de orações, WhatsApp de orientações ou rede social).
-              Os demais campos são opcionais.
+             Para publicar a igreja no diretório é obrigatório: <strong>Nome da igreja</strong>,{' '}
+            <strong>Cidade</strong>, <strong>UF</strong> e <strong>Endereço</strong>.
+            Os demais campos são opcionais.
             </p>
             {msgPublico && <p className="text-green-600 mb-3 text-sm">{msgPublico}</p>}
             {erroPublico && <p className="text-red-600 mb-3 text-sm">{erroPublico}</p>}
