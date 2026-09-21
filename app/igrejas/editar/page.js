@@ -83,12 +83,13 @@ export default function ConfiguracoesIgreja() {
   }, [])
 
   function pendenciaPublicacao() {
-    const faltando = []
-    if (!form.nome.trim()) faltando.push('Nome da igreja')
-    if (!form.cidade.trim()) faltando.push('Cidade')
-    if (!form.uf.trim()) faltando.push('UF')
-    if (!form.endereco_publico.trim()) faltando.push('Endereço')
-  }
+  const faltando = []
+  if (!form.nome.trim()) faltando.push('Nome da igreja')
+  if (!form.cidade.trim()) faltando.push('Cidade')
+  if (!form.uf.trim()) faltando.push('UF')
+  if (!form.endereco_publico.trim()) faltando.push('Endereço')
+  return faltando
+}
 
   async function carregar() {
     const { data: { user } } = await supabase.auth.getUser()
