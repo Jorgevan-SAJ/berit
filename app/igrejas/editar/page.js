@@ -582,6 +582,17 @@ export default function ConfiguracoesIgreja() {
                   placeholder="Rua, número, bairro"
                 />
               </div>
+              <div>
+              <label className={rotuloClasse}>Endereço público *</label>
+              <input
+               type="text"
+               required
+               value={form.endereco_publico}
+               onChange={(e) => setForm({ ...form, endereco_publico: e.target.value })}
+               className={inputClasse}
+               placeholder="Rua, número, bairro"
+               />
+               </div>
               {ehAdmin && !perfil?.igreja_id && (
                 <ReclamarDuranteCadastro
                   nome={form.nome}
