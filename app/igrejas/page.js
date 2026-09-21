@@ -81,7 +81,7 @@ export default function DiretorioIgrejas() {
   const [vitrine, setVitrine] = useState([])
   const [pausado, setPausado] = useState(false)
 
-    async function buscar(t, u, c) {
+  async function buscar(t, u, c) {
     setCarregando(true)
     setErro('')
     setModoBusca(!!(t && t.trim()) || !!u || !!(c && c.trim()))
@@ -183,10 +183,11 @@ export default function DiretorioIgrejas() {
     setEhMaster(false)
   }
 
-    function aplicar(e) {
+  function aplicar(e) {
     e.preventDefault()
     buscar(termo.trim(), uf, cidade.trim())
   }
+
   async function indicar(e) {
     e.preventDefault()
     setErroForm('')
@@ -211,7 +212,7 @@ export default function DiretorioIgrejas() {
     setMsgForm(data.mensagem)
     setForm({ nome: '', cidade: '', uf: '', endereco: '', bairro: '', contato: '', observacoes: '' })
     setMostrarForm(false)
-    buscar('', '')
+    buscar('', '', '')
   }
 
   return (
@@ -296,7 +297,7 @@ export default function DiretorioIgrejas() {
             </form>
           </div>
         )}
-                <form onSubmit={aplicar} style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+        <form onSubmit={aplicar} style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
           <input
             type="text"
             value={termo}
@@ -312,12 +313,6 @@ export default function DiretorioIgrejas() {
             style={{ ...estilo.campo, flex: 1, minWidth: 160 }}
           />
           <select value={uf} onChange={(e) => setUf(e.target.value)} style={{ ...estilo.campo, width: 90 }}>
-            <option value="">UF</option>
-            {UFS.map((u) => <option key={u} value={u}>{u}</option>)}
-          </select>
-          <button type="submit" style={estilo.botao}>Buscar</button>
-        </form>          
-              <select value={uf} onChange={(e) => setUf(e.target.value)} style={{ ...estilo.campo, width: 90 }}>
             <option value="">UF</option>
             {UFS.map((u) => <option key={u} value={u}>{u}</option>)}
           </select>
