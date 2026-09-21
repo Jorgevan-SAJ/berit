@@ -2,9 +2,10 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
+import ReclamarDuranteCadastro from '../../cadastro/ReclamarDuranteCadastro'
 
 const NOMES_PLANOS = {
-  trial: 'Trial (60 dias)',
+  trial: 'Trial (30 dias)',
   basico: 'Plano Básico',
   plano2: 'Plano 2',
   plano3: 'Plano 3',
@@ -86,6 +87,7 @@ export default function ConfiguracoesIgreja() {
     if (!form.nome.trim()) faltando.push('Nome da igreja')
     if (!form.cidade.trim()) faltando.push('Cidade')
     if (!form.uf.trim()) faltando.push('UF')
+    if (!form.endereco_publico.trim()) faltando.push('Endereço')
     const temCanal =
       form.whatsapp_oracoes.trim() ||
       form.whatsapp_orientacoes.trim() ||
@@ -496,8 +498,8 @@ export default function ConfiguracoesIgreja() {
           </div>
           <div className="border-t pt-4">
             <p className="text-xs text-gray-500 mb-3">
-              Para publicar a igreja no diretório é obrigatório: <strong>Cidade</strong>, {' '}
-              <strong>UF</strong> e ao menos um canal de acolhimento (WhatsApp de orações, WhatsApp de orientações ou rede social).
+              Para publicar a igreja no diretório é obrigatório: <strong>Cidade</strong>,{' '}
+              <strong>UF</strong>, <strong>Endereço</strong> e ao menos um canal de acolhimento (WhatsApp de orações, WhatsApp de orientações ou rede social).
               Os demais campos são opcionais.
             </p>
             {msgPublico && <p className="text-green-600 mb-3 text-sm">{msgPublico}</p>}
@@ -571,15 +573,28 @@ export default function ConfiguracoesIgreja() {
                 </div>
               </div>
               <div>
-                <label className={rotuloClasse}>Endereço público</label>
+                <label className={rotuloClasse}>Endereço público *</label>
                 <input
                   type="text"
+                  required
                   value={form.endereco_publico}
                   onChange={(e) => setForm({ ...form, endereco_publico: e.target.value })}
                   className={inputClasse}
-                  placeholder="Opcional"
+                  placeholder="Rua, número, bairro"
                 />
               </div>
+              {ehAdmin && !perfil?.igreja_id && (
+                <ReclamarDuranteCadastro
+                  nome={form.nome}
+                  cidade={form.cidade}
+                  uf={form.uf}
+                  endereco={form.endereco_publico}
+                  onVinculada={(ig) => {
+                    setMsg('Igreja vinculada ao seu usuário. Agora você pode gerenciar os dados.')
+                    carregar()
+                  }}
+                />
+              )}
               <div>
                 <label className={rotuloClasse}>Mensagem de acolhimento</label>
                 <input
