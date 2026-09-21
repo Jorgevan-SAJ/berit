@@ -33,25 +33,57 @@ function BadgeComunidade() {
   )
 }
 
+function CardIgreja({ ig }) {
+  return (
+    <div style={estilo.card}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <h2 style={{ margin: 0, fontSize: 17, color: '#1F3A5F' }}>{ig.nome}</h2>
+        {ig.aguarda_confirmacao ? <BadgeComunidade /> : ig.publico_verificado ? <SeloVerificado /> : null}
+      </div>
+      <div style={{ fontSize: 13, color: '#8A8A8A' }}>
+        {ig.cidade || ''}{ig.cidade && ig.uf ? `, ${ig.uf}` : ig.uf || ''}
+      </div>
+      {ig.endereco_publico && (
+        <div style={{ fontSize: 12, color: '#8A8A8A' }}>
+          📍 {ig.endereco_publico}{ig.bairro ? `, ${ig.bairro}` : ''}
+        </div>
+      )}
+      {ig.sobre && (
+        <p style={{ margin: 0, fontSize: 13, color: '#5A5A5A', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+          {ig.sobre}
+        </p>
+      )}
+      <a href={`/igreja/${ig.slug}`} style={{ marginTop: 'auto', background: '#1F3A5F', color: '#FFFFFF', textAlign: 'center', padding: '10px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+        Ver página
+      </a>
+    </div>
+  )
+}
+
 export default function DiretorioIgrejas() {
   const [carregando, setCarregando] = useState(true)
   const [igrejas, setIgrejas] = useState([])
   const [termo, setTermo] = useState('')
   const [uf, setUf] = useState('')
   const [erro, setErro] = useState('')
-
   const [usuario, setUsuario] = useState(null)
   const [ehMaster, setEhMaster] = useState(false)
-
   const [mostrarForm, setMostrarForm] = useState(false)
   const [form, setForm] = useState({ nome: '', cidade: '', uf: '', endereco: '', bairro: '', contato: '', observacoes: '' })
   const [enviando, setEnviando] = useState(false)
   const [msgForm, setMsgForm] = useState('')
   const [erroForm, setErroForm] = useState('')
+  const [modoBusca, setModoBusca] = useState(false)
+  const [localizacao, setLocalizacao] = useState(null)
+  const [fila, setFila] = useState([])
+  const [pos, setPos] = useState(0)
+  const [vitrine, setVitrine] = useState([])
+  const [pausado, setPausado] = useState(false)
 
   async function buscar(t, u) {
     setCarregando(true)
     setErro('')
+    setModoBusca(!!(t && t.trim()) || !!u)
     const { data, error } = await supabase.rpc('buscar_diretorio_igrejas', {
       p_termo: t || null,
       p_uf: u || null,
@@ -65,6 +97,31 @@ export default function DiretorioIgrejas() {
     setCarregando(false)
   }
 
+  async function obterLocalizacao() {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return null
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        async (posicao) => {
+          try {
+            const { latitude, longitude } = posicao.coords
+            const resposta = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&accept-language=pt-BR`,
+              { headers: { 'Accept-Language': 'pt-BR' } }
+            )
+            const dados = await resposta.json()
+            const cidade = dados.address?.city || dados.address?.town || dados.address?.village || ''
+            const estado = dados.address?.state || ''
+            resolve({ cidade, uf: estado })
+          } catch {
+            resolve(null)
+          }
+        },
+        () => resolve(null),
+        { timeout: 6000, maximumAge: 600000 }
+      )
+    })
+  }
+
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       if (data?.user) {
@@ -74,11 +131,49 @@ export default function DiretorioIgrejas() {
           .select('perfil, indicador_verificado')
           .eq('user_id', data.user.id)
           .maybeSingle()
-          setEhMaster(!!perfil && !!perfil.indicador_verificado)
+        setEhMaster(!!perfil && !!perfil.indicador_verificado)
       }
     })
     buscar('', '')
+    obterLocalizacao().then((loc) => setLocalizacao(loc))
   }, [])
+
+  useEffect(() => {
+    if (modoBusca) return
+    let pool = [...igrejas]
+    if (localizacao?.cidade && localizacao?.uf) {
+      const norm = (s) => String(s || '').toLowerCase().trim()
+      const proximas = igrejas.filter(
+        (ig) => norm(ig.cidade) === norm(localizacao.cidade) && String(ig.uf || '').toUpperCase() === localizacao.uf.toUpperCase()
+      )
+      if (proximas.length > 0) {
+        const resto = igrejas.filter((ig) => !proximas.includes(ig))
+        pool = [...proximas, ...resto]
+      }
+    }
+    setFila([...pool].sort(() => Math.random() - 0.5))
+    setPos(0)
+  }, [igrejas, localizacao, modoBusca])
+
+  useEffect(() => {
+    if (fila.length === 0) {
+      setVitrine([])
+      return
+    }
+    const tres = []
+    for (let i = 0; i < 3; i++) {
+      tres.push(fila[(pos + i) % fila.length])
+    }
+    setVitrine(tres)
+  }, [fila, pos])
+
+  useEffect(() => {
+    if (modoBusca || pausado || fila.length <= 3) return
+    const id = setInterval(() => {
+      setPos((p) => (p + 1) % fila.length)
+    }, 2000)
+    return () => clearInterval(id)
+  }, [modoBusca, pausado, fila.length])
 
   async function sair() {
     await supabase.auth.signOut()
@@ -120,6 +215,10 @@ export default function DiretorioIgrejas() {
 
   return (
     <main style={estilo.main}>
+      <style>{`
+        .vitrine-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+        @media (max-width: 820px) { .vitrine-grid { grid-template-columns: 1fr; } }
+      `}</style>
       <header style={estilo.header}>
         <div style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <a href="/igrejas" style={estilo.logo}>Berit</a>
@@ -144,7 +243,6 @@ export default function DiretorioIgrejas() {
           )}
         </div>
       </header>
-
       <div style={estilo.hero}>
         <h1 style={{ margin: '0 0 8px', fontSize: 28 }}>Encontre uma igreja</h1>
         <p style={{ margin: 0, color: 'rgba(255,255,255,0.85)', fontSize: 14 }}>
@@ -166,7 +264,6 @@ export default function DiretorioIgrejas() {
           )}
         </div>
       </div>
-
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '1.5rem' }}>
         {mostrarForm && (
           <div style={{ background: '#FFFFFF', borderRadius: 12, border: '1px solid #E4DED2', padding: '1.25rem', marginBottom: '1.5rem' }}>
@@ -198,7 +295,6 @@ export default function DiretorioIgrejas() {
             </form>
           </div>
         )}
-
         <form onSubmit={aplicar} style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
           <input
             type="text"
@@ -213,9 +309,7 @@ export default function DiretorioIgrejas() {
           </select>
           <button type="submit" style={estilo.botao}>Buscar</button>
         </form>
-
         {erro && <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>}
-
         {carregando ? (
           <div style={{ textAlign: 'center', padding: '3rem 0', color: '#8A8A8A', fontSize: 14 }}>Carregando igrejas...</div>
         ) : igrejas.length === 0 ? (
@@ -223,36 +317,37 @@ export default function DiretorioIgrejas() {
             <p style={{ fontSize: 15, color: '#5A5A5A', margin: '0 0 4px' }}>Nenhuma igreja encontrada.</p>
             <p style={{ fontSize: 13, color: '#8A8A8A', margin: 0 }}>Ajuste o termo de busca ou o filtro de UF e tente novamente.</p>
           </div>
-        ) : (
+        ) : modoBusca ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-            {igrejas.map((ig) => (
-              <div key={ig.slug} style={estilo.card}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <h2 style={{ margin: 0, fontSize: 17, color: '#1F3A5F' }}>{ig.nome}</h2>
-                  {ig.aguarda_confirmacao ? <BadgeComunidade /> : ig.publico_verificado ? <SeloVerificado /> : null}
-                </div>
-                <div style={{ fontSize: 13, color: '#8A8A8A' }}>
-                  {ig.cidade || ''}{ig.cidade && ig.uf ? `, ${ig.uf}` : ig.uf || ''}
-                </div>
-                {ig.endereco_publico && (
-                  <div style={{ fontSize: 12, color: '#8A8A8A' }}>
-                    📍 {ig.endereco_publico}{ig.bairro ? `, ${ig.bairro}` : ''}
-                  </div>
-                )}
-                {ig.sobre && (
-                  <p style={{ margin: 0, fontSize: 13, color: '#5A5A5A', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {ig.sobre}
-                  </p>
-                )}
-                <a href={`/igreja/${ig.slug}`} style={{ marginTop: 'auto', background: '#1F3A5F', color: '#FFFFFF', textAlign: 'center', padding: '10px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-                  Ver página
-                </a>
-              </div>
-            ))}
+            {igrejas.map((ig) => <CardIgreja key={ig.slug} ig={ig} />)}
+          </div>
+        ) : (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              <p style={{ margin: 0, fontSize: 13, color: '#8A8A8A' }}>
+                {localizacao?.cidade
+                  ? `Igrejas próximas de ${localizacao.cidade}${localizacao.uf ? `, ${localizacao.uf}` : ''}`
+                  : 'Mostrando algumas igrejas do diretório'}
+              </p>
+              <p style={{ margin: 0, fontSize: 12, color: '#B26A00' }}>
+                {pausado ? 'Rotação pausada' : 'Rotação automática a cada 2s'}
+              </p>
+            </div>
+            <div
+              className="vitrine-grid"
+              onMouseEnter={() => setPausado(true)}
+              onMouseLeave={() => setPausado(false)}
+              onTouchStart={() => setPausado(true)}
+              onTouchEnd={() => setPausado(false)}
+            >
+              {vitrine.map((ig) => <CardIgreja key={ig.slug} ig={ig} />)}
+            </div>
+            <p style={{ marginTop: '0.75rem', fontSize: 12, color: '#8A8A8A', textAlign: 'center' }}>
+              Use a busca acima para ver todas as igrejas cadastradas.
+            </p>
           </div>
         )}
       </div>
-
       <footer style={{ borderTop: '1px solid #E4DED2', padding: '1.5rem', textAlign: 'center', fontSize: 12, color: '#8A8A8A' }}>
         Berit, Gestão simples para igrejas
       </footer>
