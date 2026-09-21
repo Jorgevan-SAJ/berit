@@ -88,12 +88,6 @@ export default function ConfiguracoesIgreja() {
     if (!form.cidade.trim()) faltando.push('Cidade')
     if (!form.uf.trim()) faltando.push('UF')
     if (!form.endereco_publico.trim()) faltando.push('Endereço')
-    const temCanal =
-      form.whatsapp_oracoes.trim() ||
-      form.whatsapp_orientacoes.trim() ||
-      redes.length > 0
-    if (!temCanal) faltando.push('ao menos um canal de acolhimento (WhatsApp de orações, WhatsApp de orientações ou rede social)')
-    return faltando
   }
 
   async function carregar() {
