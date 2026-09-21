@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
-export default function ReclamarDuranteCadastro({ nome, cidade, onVinculada }) {
+export default function ReclamarDuranteCadastro({ nome, cidade, uf, endereco, onVinculada }) {
   const [buscando, setBuscando] = useState(false)
   const [candidatas, setCandidatas] = useState([])
   const [buscado, setBuscado] = useState(false)
@@ -11,8 +11,8 @@ export default function ReclamarDuranteCadastro({ nome, cidade, onVinculada }) {
   const [processandoId, setProcessandoId] = useState(null)
 
   async function buscar() {
-    if (!nome.trim() || !cidade.trim()) {
-      setErro('Informe o nome e a cidade da igreja para buscar coincidencias.')
+    if (!nome.trim() || !cidade.trim() || !uf.trim() || !endereco.trim()) {
+      setErro('Informe nome, cidade, estado e endereço da igreja para buscar coincidências.')
       return
     }
     setBuscando(true)
@@ -21,6 +21,8 @@ export default function ReclamarDuranteCadastro({ nome, cidade, onVinculada }) {
     const { data, error } = await supabase.rpc('buscar_igrejas_similares', {
       p_nome: nome.trim(),
       p_cidade: cidade.trim(),
+      p_uf: uf.trim(),
+      p_endereco: endereco.trim(),
     })
     setBuscando(false)
     if (error || !data || !data.ok) {
@@ -50,7 +52,7 @@ export default function ReclamarDuranteCadastro({ nome, cidade, onVinculada }) {
   return (
     <div style={{ background: '#E8F0FA', border: '1px solid #C9D9EC', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
       <p style={{ margin: 0, fontSize: 13, color: '#1F3A5F', lineHeight: 1.6 }}>
-        Uma dessas igrejas já cadastradas é a sua? Se você a encontra na lista, selecione-a para assumir a gestão em lugar de criar um cadastro duplicado.
+        Alguma dessas igrejas já cadastradas é a sua? Se você a encontrar na lista, selecione-a para assumir a gestão em vez de criar um cadastro duplicado.
       </p>
       <button
         type="button"
@@ -64,7 +66,7 @@ export default function ReclamarDuranteCadastro({ nome, cidade, onVinculada }) {
       {msg && <p style={{ margin: '8px 0 0', fontSize: 13, color: '#4C8C6E' }}>{msg}</p>}
       {buscado && candidatas.length === 0 && !msg && (
         <p style={{ margin: '8px 0 0', fontSize: 13, color: '#5A5A5A' }}>
-          Não encontramos coincidencias. Você pode continuar e criar o cadastro da igreja.
+          Não encontramos coincidências. Você pode continuar e criar o cadastro da igreja.
         </p>
       )}
       {candidatas.length > 0 && (
@@ -78,15 +80,27 @@ export default function ReclamarDuranteCadastro({ nome, cidade, onVinculada }) {
                   {ig.endereco_publico ? ` · ${ig.endereco_publico}` : ''}
                   {ig.bairro ? `, ${ig.bairro}` : ''}
                 </div>
+                {ig.tem_admin && (
+                  <div style={{ fontSize: 12, color: '#7A5A1E', marginTop: 2 }}>Já possui administrador vinculado</div>
+                )}
               </div>
-              <button
-                type="button"
-                onClick={() => reclamar(ig)}
-                disabled={processandoId === ig.id}
-                style={{ background: '#D9A441', color: '#1F3A5F', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', opacity: processandoId === ig.id ? 0.6 : 1 }}
-              >
-                {processandoId === ig.id ? 'Processando...' : 'Esta é a minha igreja'}
-              </button>
+              {ig.tem_admin ? (
+                <a
+                  href="mailto:beritinovacoes@gmail.com?subject=Assumir%20gest%C3%A3o%20de%20igreja"
+                  style={{ background: '#FDF3E3', color: '#7A5A1E', border: '1px solid #F0D9A8', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}
+                >
+                  Contatar Equipe Berit
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => reclamar(ig)}
+                  disabled={processandoId === ig.id}
+                  style={{ background: '#D9A441', color: '#1F3A5F', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', opacity: processandoId === ig.id ? 0.6 : 1 }}
+                >
+                  {processandoId === ig.id ? 'Processando...' : 'Esta é a minha igreja'}
+                </button>
+              )}
             </div>
           ))}
         </div>
