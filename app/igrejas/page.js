@@ -64,6 +64,7 @@ export default function DiretorioIgrejas() {
   const [carregando, setCarregando] = useState(true)
   const [igrejas, setIgrejas] = useState([])
   const [termo, setTermo] = useState('')
+  const [cidade, setCidade] = useState('')
   const [uf, setUf] = useState('')
   const [erro, setErro] = useState('')
   const [usuario, setUsuario] = useState(null)
@@ -80,13 +81,14 @@ export default function DiretorioIgrejas() {
   const [vitrine, setVitrine] = useState([])
   const [pausado, setPausado] = useState(false)
 
-  async function buscar(t, u) {
+    async function buscar(t, u, c) {
     setCarregando(true)
     setErro('')
-    setModoBusca(!!(t && t.trim()) || !!u)
+    setModoBusca(!!(t && t.trim()) || !!u || !!(c && c.trim()))
     const { data, error } = await supabase.rpc('buscar_diretorio_igrejas', {
       p_termo: t || null,
       p_uf: u || null,
+      p_cidade: c || null,
     })
     if (error || !data || !data.ok) {
       setErro('Não foi possível carregar o diretório de igrejas. Tente novamente em instantes.')
@@ -134,7 +136,7 @@ export default function DiretorioIgrejas() {
         setEhMaster(!!perfil && !!perfil.indicador_verificado)
       }
     })
-    buscar('', '')
+    buscar('', '', '')
     obterLocalizacao().then((loc) => setLocalizacao(loc))
   }, [])
 
@@ -181,11 +183,10 @@ export default function DiretorioIgrejas() {
     setEhMaster(false)
   }
 
-  function aplicar(e) {
+    function aplicar(e) {
     e.preventDefault()
-    buscar(termo.trim(), uf)
+    buscar(termo.trim(), uf, cidade.trim())
   }
-
   async function indicar(e) {
     e.preventDefault()
     setErroForm('')
@@ -295,15 +296,28 @@ export default function DiretorioIgrejas() {
             </form>
           </div>
         )}
-        <form onSubmit={aplicar} style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+                <form onSubmit={aplicar} style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
           <input
             type="text"
             value={termo}
             onChange={(e) => setTermo(e.target.value)}
-            placeholder="Buscar por nome ou cidade..."
-            style={{ ...estilo.campo, flex: 1, minWidth: 220 }}
+            placeholder="Buscar por nome..."
+            style={{ ...estilo.campo, flex: 1, minWidth: 180 }}
+          />
+          <input
+            type="text"
+            value={cidade}
+            onChange={(e) => setCidade(e.target.value)}
+            placeholder="Cidade"
+            style={{ ...estilo.campo, flex: 1, minWidth: 160 }}
           />
           <select value={uf} onChange={(e) => setUf(e.target.value)} style={{ ...estilo.campo, width: 90 }}>
+            <option value="">UF</option>
+            {UFS.map((u) => <option key={u} value={u}>{u}</option>)}
+          </select>
+          <button type="submit" style={estilo.botao}>Buscar</button>
+        </form>          
+              <select value={uf} onChange={(e) => setUf(e.target.value)} style={{ ...estilo.campo, width: 90 }}>
             <option value="">UF</option>
             {UFS.map((u) => <option key={u} value={u}>{u}</option>)}
           </select>
