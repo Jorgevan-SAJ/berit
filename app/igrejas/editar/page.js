@@ -593,18 +593,19 @@ export default function ConfiguracoesIgreja() {
            placeholder="Nome do bairro"
          />
          </div>
-              {ehAdmin && !perfil?.igreja_id && (
-                <ReclamarDuranteCadastro
-                  nome={form.nome}
-                  cidade={form.cidade}
-                  uf={form.uf}
-                  endereco={form.endereco_publico}
-                  onVinculada={(ig) => {
-                    setMsg('Igreja vinculada ao seu usuário. Agora você pode gerenciar os dados.')
-                    carregar()
-                  }}
-                />
-              )}
+          {ehAdmin && (!perfil?.igreja_id || !form.endereco_publico.trim()) && (
+           <ReclamarDuranteCadastro
+            nome={form.nome}
+            cidade={form.cidade}
+            uf={form.uf}
+            endereco={form.endereco_publico}
+            modoAdocao={!!perfil?.igreja_id}
+            onVinculada={(ig) => {
+            setMsg('Igreja vinculada ao seu usuário. Agora você pode gerenciar os dados.')
+            carregar()
+          }}
+         />
+        )}
               <div>
                 <label className={rotuloClasse}>Mensagem de acolhimento</label>
                 <input
