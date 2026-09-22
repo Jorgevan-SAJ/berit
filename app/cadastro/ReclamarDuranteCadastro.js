@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
 
-export default function ReclamarDuranteCadastro({ nome, cidade, uf, endereco, onVinculada }) {
+export default function ReclamarDuranteCadastro({ nome, cidade, uf, endereco, onVinculada, modoAdocao = false }) {
   const [buscando, setBuscando] = useState(false)
   const [candidatas, setCandidatas] = useState([])
   const [buscado, setBuscado] = useState(false)
@@ -37,7 +37,8 @@ export default function ReclamarDuranteCadastro({ nome, cidade, uf, endereco, on
     setProcessandoId(ig.id)
     setErro('')
     setMsg('')
-    const { data, error } = await supabase.rpc('reclamar_igreja', { p_igreja_id: ig.id })
+    const rpc = modoAdocao ? 'adotar_igreja_similar' : 'reclamar_igreja'
+    const { data, error } = await supabase.rpc(rpc, { p_igreja_id: ig.id })
     setProcessandoId(null)
     if (error || !data || !data.ok) {
       setErro(data?.mensagem || 'Não foi possível reclamar a igreja.')
@@ -52,7 +53,9 @@ export default function ReclamarDuranteCadastro({ nome, cidade, uf, endereco, on
   return (
     <div style={{ background: '#E8F0FA', border: '1px solid #C9D9EC', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
       <p style={{ margin: 0, fontSize: 13, color: '#1F3A5F', lineHeight: 1.6 }}>
-        Alguma dessas igrejas já cadastradas é a sua? Se você a encontrar na lista, selecione-a para assumir a gestão em vez de criar um cadastro duplicado.
+        {modoAdocao
+          ? 'Encontramos uma igreja já cadastrada com nome e endereço semelhantes aos que você informou. Se for a sua, selecione-a para assumir a gestão em vez de manter um cadastro duplicado.'
+          : 'Alguma dessas igrejas já cadastradas é a sua? Se você a encontrar na lista, selecione-a para assumir a gestão em vez de criar um cadastro duplicado.'}
       </p>
       <button
         type="button"
@@ -66,7 +69,7 @@ export default function ReclamarDuranteCadastro({ nome, cidade, uf, endereco, on
       {msg && <p style={{ margin: '8px 0 0', fontSize: 13, color: '#4C8C6E' }}>{msg}</p>}
       {buscado && candidatas.length === 0 && !msg && (
         <p style={{ margin: '8px 0 0', fontSize: 13, color: '#5A5A5A' }}>
-          Não encontramos coincidências. Você pode continuar e criar o cadastro da igreja.
+          Não encontramos coincidências. Você pode continuar e manter o cadastro da igreja.
         </p>
       )}
       {candidatas.length > 0 && (
