@@ -114,7 +114,7 @@ export default function MembrosPage() {
       if (p && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(p.perfil)) carregar()
       if (p && ['admin_master', 'secretaria'].includes(p.perfil)) {
         supabase
-          .from('autocadastros')
+          .from('solicitacoes_membros')
           .select('id', { count: 'exact', head: true })
           .eq('status', 'pendente')
           .then(({ count }) => setPendentesAutocadastro(count || 0))
