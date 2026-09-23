@@ -202,7 +202,7 @@ export default function PaginaPublicaIgreja() {
             </a>
           </div>
         )}
-        {igreja.origem === 'indicacao' && !igreja.aguarda_confirmacao && igreja.publico_verificado && (
+                {igreja.origem === 'indicacao' && !igreja.aguarda_confirmacao && igreja.publico_verificado && !temDadosInstitucionais && (
           <div style={{ background: '#EAF4EE', border: '1px solid #C9E3D4', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
             <p style={{ margin: 0, fontSize: 13, color: '#4C8C6E', lineHeight: 1.6 }}>
               Cadastro validado pela comunidade Berit. Os dados institucionais (redes sociais, contato, horários de cultos) serão completados quando a igreja aderir ao Berit.
