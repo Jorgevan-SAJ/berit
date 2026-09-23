@@ -333,7 +333,6 @@ export default function AreaPage() {
             </p>
           </a>
           </div>
-        </div>
         {podePainel && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem', marginTop: '1.5rem' }}>
             <div style={card}>
