@@ -242,6 +242,7 @@ export default function AreaPage() {
         <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 2rem' }}>
           Bem-vindo {perfil?.nome || usuario?.user_metadata?.nome || usuario?.email || ''}.{' '}
           {perfil ? `Perfil ${perfilLabel(perfil.perfil)}.` : ''} Gestão Simples Para Igrejas.
+          </p>
           {igreja?.cnpj && (
             <span style={{ display: 'block', marginTop: 6 }}>
               CNPJ: {formatarCnpj(igreja.cnpj)}
