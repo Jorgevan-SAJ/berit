@@ -4,13 +4,11 @@ import { supabase } from '../../lib/supabase'
 import { getPerfil, perfilLabel } from '../../lib/perfil'
 
 const DIAS_SEMANA_CURTO = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
-
 const ABAS_ANIVERSARIO = [
   { v: 'hoje', r: 'Hoje' },
   { v: 'semana', r: 'Esta semana' },
   { v: 'mes', r: 'Este mês' },
 ]
-
 const ROTULOS_EVENTO = {
   culto: { r: 'Culto', cor: '#1F3A5F', bg: '#E8F0FA' },
   ensaio: { r: 'Ensaio', cor: '#4C8C6E', bg: '#EAF4EE' },
@@ -188,7 +186,7 @@ export default function AreaPage() {
     <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
       <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em' }}>Berit</div>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           <a
             href="/igrejas"
             style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}
@@ -215,6 +213,7 @@ export default function AreaPage() {
           </button>
         </div>
       </header>
+
       {toastVisivel && pendentes > 0 && (
         <div
           onClick={() => { window.location.href = '/financas/auditoria' }}
@@ -234,15 +233,15 @@ export default function AreaPage() {
           </div>
         </div>
       )}
+
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem 1.5rem' }}>
-      <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Área da Igreja</h1>
+        <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Área da Igreja</h1>
         <p style={{ fontSize: 12, color: '#8A8A8A', margin: '0 0 1rem' }}>
           Acesso restrito para usuários cadastrados e autorizados pela administração da igreja.
         </p>
         <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 2rem' }}>
           Bem-vindo {perfil?.nome || usuario?.user_metadata?.nome || usuario?.email || ''}.{' '}
           {perfil ? `Perfil ${perfilLabel(perfil.perfil)}.` : ''} Gestão Simples Para Igrejas.
-          </p>
           {igreja?.cnpj && (
             <span style={{ display: 'block', marginTop: 6 }}>
               CNPJ: {formatarCnpj(igreja.cnpj)}
@@ -254,6 +253,7 @@ export default function AreaPage() {
             </span>
           )}
         </p>
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
           {podeMembros ? (
             <a href="/membros" style={card}>
@@ -271,6 +271,7 @@ export default function AreaPage() {
               <p style={cardTexto}>Acesso restrito.</p>
             </div>
           )}
+
           {podeFinancas ? (
             <a href="/financas" style={card}>
               <div style={cardTitulo}>Finanças</div>
@@ -297,12 +298,14 @@ export default function AreaPage() {
               <p style={cardTexto}>Acesso restrito ao perfil Tesouraria.</p>
             </div>
           )}
+
           {ehAdmin && (
             <a href="/acessos" style={card}>
               <div style={cardTitulo}>Perfis de Acesso</div>
               <p style={cardTexto}>Crie usuários e controle as permissões da plataforma.</p>
             </a>
           )}
+
           {podeAgenda ? (
             <a href="/agenda" style={card}>
               <div style={cardTitulo}>Agenda</div>
@@ -319,7 +322,8 @@ export default function AreaPage() {
               <p style={cardTexto}>Acesso restrito.</p>
             </div>
           )}
-        <a
+
+          <a
             href={igreja?.slug ? `/igreja/${igreja.slug}` : '/igrejas'}
             target="_blank"
             rel="noopener noreferrer"
@@ -332,7 +336,8 @@ export default function AreaPage() {
                 : 'Busca de igrejas perto de você. Clique para acessar o diretório.'}
             </p>
           </a>
-          </div>
+        </div>
+
         {podePainel && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem', marginTop: '1.5rem' }}>
             <div style={card}>
@@ -393,6 +398,7 @@ export default function AreaPage() {
                 </div>
               )}
             </div>
+
             <div style={card}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                 <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F' }}>📅 Próximos eventos</div>
@@ -443,6 +449,7 @@ export default function AreaPage() {
           </div>
         )}
       </div>
+
       <footer style={{ textAlign: 'center', padding: '1.5rem', fontSize: 12, color: '#8A8A8A' }}>
         <a href="/recuperar-acesso" style={{ color: '#8A8A8A', textDecoration: 'underline' }}>Recuperar acesso de administrador</a>
         <span style={{ margin: '0 8px' }}>·</span>
