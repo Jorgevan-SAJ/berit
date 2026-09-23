@@ -160,6 +160,12 @@ export default function PaginaPublicaIgreja() {
   const temWhatsOrientacoes = !!igreja.whatsapp_orientacoes
   const enderecoCompleto = `${igreja.endereco_publico || ''}${igreja.bairro ? `, ${igreja.bairro}` : ''}${igreja.cidade ? `, ${igreja.cidade}` : ''}${igreja.uf ? ` - ${igreja.uf}` : ''}`
   const enderecoComunidade = (igreja.aguarda_confirmacao || (igreja.origem === 'indicacao' && !igreja.publico_verificado)) && igreja.endereco_publico
+  const temDadosInstitucionais =
+    redes.length > 0 ||
+    !!igreja.contato ||
+    !!igreja.whatsapp_oracoes ||
+    !!igreja.whatsapp_orientacoes ||
+    cultos.length > 0
 
   return (
     <main style={estilo.main}>
