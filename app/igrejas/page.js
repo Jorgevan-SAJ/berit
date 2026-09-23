@@ -245,12 +245,21 @@ export default function DiretorioIgrejas() {
           )}
         </div>
       </header>
-      <div style={estilo.hero}>
+            <div style={estilo.hero}>
         <h1 style={{ margin: '0 0 8px', fontSize: 28 }}>Encontre uma igreja</h1>
         <p style={{ margin: 0, color: 'rgba(255,255,255,0.85)', fontSize: 14 }}>
           Diretório de congregações cadastradas na plataforma Berit.
         </p>
-        <div style={{ marginTop: 20 }}>
+        <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          <a
+            href="/cadastro"
+            style={{ display: 'inline-block', background: '#D9A441', color: '#1F3A5F', borderRadius: 8, padding: '12px 24px', fontSize: 15, fontWeight: 700, textDecoration: 'none' }}
+          >
+            Cadastre Sua Igreja
+          </a>
+          <p style={{ margin: 0, color: 'rgba(255,255,255,0.85)', fontSize: 12 }}>
+            Crie sua conta, gerencie os dados da sua igreja e apareça no diretório.
+          </p>
           <button onClick={() => { setMostrarForm(!mostrarForm); setMsgForm(''); setErroForm('') }} style={{ ...estilo.botao, background: 'transparent', border: '1px solid rgba(255,255,255,0.6)', color: '#FFFFFF' }}>
             {mostrarForm ? 'Fechar formulário' : 'Sua igreja não está aqui? Cadastre-a'}
           </button>
