@@ -90,7 +90,7 @@ export default function AreaPage() {
         if (perfilIgreja?.igreja_id) {
           const { data: ig } = await supabase
             .from('igrejas')
-            .select('nome, cnpj')
+            .select('nome, cnpj, slug')
             .eq('id', perfilIgreja.igreja_id)
             .maybeSingle()
           setIgreja(ig)
@@ -188,7 +188,13 @@ export default function AreaPage() {
     <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
       <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em' }}>Berit</div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <a
+            href="/igrejas"
+            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}
+          >
+            Voltar ao Diretório
+          </a>
           <a
             href="/igrejas/editar"
             style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}
@@ -229,10 +235,13 @@ export default function AreaPage() {
         </div>
       )}
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem 1.5rem' }}>
-        <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Área da Igreja</h1>
+      <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Área da Igreja</h1>
+        <p style={{ fontSize: 12, color: '#8A8A8A', margin: '0 0 1rem' }}>
+          Acesso restrito para usuários cadastrados e autorizados pela administração da igreja.
+        </p>
         <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 2rem' }}>
-          Bem-vindo{igreja?.nome ? `, ${igreja.nome}` : perfil?.nome ? `, ${perfil.nome}` : usuario?.email ? `, ${usuario.email}` : ''}
-          {perfil ? ` · Perfil: ${perfilLabel(perfil.perfil)}` : ''} — Gestão Simples Para Igrejas.
+          Bem-vindo {perfil?.nome || usuario?.user_metadata?.nome || usuario?.email || ''}.{' '}
+          {perfil ? `Perfil ${perfilLabel(perfil.perfil)}.` : ''} Gestão Simples Para Igrejas.
           {igreja?.cnpj && (
             <span style={{ display: 'block', marginTop: 6 }}>
               CNPJ: {formatarCnpj(igreja.cnpj)}
@@ -309,9 +318,19 @@ export default function AreaPage() {
               <p style={cardTexto}>Acesso restrito.</p>
             </div>
           )}
-          <div style={card}>
+        <a
+            href={igreja?.slug ? `/igreja/${igreja.slug}` : '/igrejas'}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={card}
+          >
             <div style={cardTitulo}>Diretório Público</div>
-            <p style={cardTexto}>Busca de igrejas perto de você. Disponível na Fase 3.</p>
+            <p style={cardTexto}>
+              {igreja?.slug
+                ? 'Veja a página pública da sua igreja como os visitantes enxergam.'
+                : 'Busca de igrejas perto de você. Clique para acessar o diretório.'}
+            </p>
+          </a>
           </div>
         </div>
         {podePainel && (
