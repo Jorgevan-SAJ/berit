@@ -89,6 +89,7 @@ export default function MembrosPage() {
   const [excluindo, setExcluindo] = useState(null)
   const [consultando, setConsultando] = useState(null)
   const [salvando, setSalvando] = useState(false)
+  const [pendentesAutocadastro, setPendentesAutocadastro] = useState(0)
   const podeVer = perfilAtual && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(perfilAtual.perfil)
   const podeEditar = perfilAtual && ['admin_master', 'secretaria'].includes(perfilAtual.perfil)
   const ehSomenteLeitura = perfilAtual && ['tesouraria', 'conselho_fiscal'].includes(perfilAtual.perfil)
@@ -106,11 +107,18 @@ export default function MembrosPage() {
     }
     setCarregando(false)
   }
-  useEffect(() => {
+    useEffect(() => {
     getPerfil().then((p) => {
       setPerfilAtual(p)
       setVerificando(false)
       if (p && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(p.perfil)) carregar()
+      if (p && ['admin_master', 'secretaria'].includes(p.perfil)) {
+        supabase
+          .from('autocadastros')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'pendente')
+          .then(({ count }) => setPendentesAutocadastro(count || 0))
+      }
     })
   }, [])
   async function confirmarInativacao() {
@@ -227,6 +235,18 @@ export default function MembrosPage() {
         </a>
       </header>
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '2rem 1.5rem' }}>
+              {pendentesAutocadastro > 0 && (
+          <div
+            onClick={() => { window.location.href = '/membros/autocadastros' }}
+            style={{ background: '#FDF3E3', border: '1px solid #F0D9A8', borderRadius: 10, padding: '12px 14px', marginBottom: '1.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}
+          >
+            <span style={{ fontSize: 18 }}>⚠️</span>
+            <span style={{ fontSize: 13, color: '#7A5A1E', lineHeight: 1.5 }}>
+              <strong>{pendentesAutocadastro} cadastro(s) de autocadastro aguardando confirmação.</strong>{' '}
+              Clique aqui para revisar e confirmar.
+            </span>
+          </div>
+        )}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
           <div>
             <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Membros</h1>
@@ -247,8 +267,13 @@ export default function MembrosPage() {
               </a>
             )}
             {podeEditar && (
-              <a href="/membros/autocadastros" style={{ background: '#FFFFFF', color: '#1F3A5F', border: '1px solid #1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+              <a href="/membros/autocadastros" style={{ background: '#FFFFFF', color: '#1F3A5F', border: '1px solid #1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 Autocadastro
+                {pendentesAutocadastro > 0 && (
+                  <span style={{ background: '#B71C1C', color: '#FFFFFF', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>
+                    {pendentesAutocadastro}
+                  </span>
+                )}
               </a>
             )}
             {podeEditar && (
