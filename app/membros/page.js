@@ -189,11 +189,14 @@ export default function MembrosPage() {
       (m.email || '').toLowerCase().includes(texto)
     const idade = calcularIdade(m.data_nascimento)
     const faixaOk = !faixa || faixaEtaria(idade) === faixa
-    const sexoOk = !sexo || (m.sexo || '') === sexo
+    const sexoOk = !sexo || String(m.sexo || '').toLowerCase() === sexo
     const situacaoOk = !situacao || (m.situacao || '') === situacao
     return nomeOk && faixaOk && sexoOk && situacaoOk
   })
-  const rotuloSexo = (s) => s === 'masculino' ? 'Masculino' : s === 'feminino' ? 'Feminino' : '—'
+  const rotuloSexo = (s) => {
+  const v = String(s || '').toLowerCase()
+  return v === 'masculino' ? 'Masculino' : v === 'feminino' ? 'Feminino' : '—'
+}
   if (verificando) {
     return (
       <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
