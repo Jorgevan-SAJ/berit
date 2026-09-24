@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
-
 const PERFIS_MODERADORES = ['admin_master', 'secretaria']
 const SITUACOES_OPCOES = [
   { v: 'membro', r: 'Membro' },
@@ -10,7 +9,6 @@ const SITUACOES_OPCOES = [
   { v: 'visitante', r: 'Visitante' },
 ]
 const ROTULO_SITUACAO = { membro: 'Membro', congregado: 'Congregado', visitante: 'Visitante' }
-
 function normalizar(s) {
   return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 }
@@ -28,7 +26,6 @@ function calcularIdade(nasc) {
   if (m < 0 || (m === 0 && hoje.getDate() < nascDate.getDate())) idade--
   return idade
 }
-
 const estilo = {
   main: { minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" },
   header: { background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
@@ -39,9 +36,9 @@ const estilo = {
   botaoAzul: { padding: '12px 20px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
   botaoVerde: { padding: '10px 16px', background: '#4C8C6E', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' },
   botaoVermelho: { padding: '10px 16px', background: '#FFFFFF', color: '#B71C1C', border: '1px solid #B71C1C', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' },
+  botaoLimpar: { padding: '10px 16px', background: '#FFFFFF', color: '#5A5A5A', border: '1px solid #C9C2B4', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' },
   badge: { display: 'inline-block', padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700 },
 }
-
 export default function AutocadastrosPage() {
   const router = useRouter()
   const [verificando, setVerificando] = useState(true)
@@ -57,9 +54,8 @@ export default function AutocadastrosPage() {
   const [situacoes, setSituacoes] = useState({})
   const [processando, setProcessando] = useState(null)
   const [rejeitando, setRejeitando] = useState(null)
-
+  const [limpando, setLimpando] = useState(null)
   useEffect(() => { iniciar() }, [])
-
   async function iniciar() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -77,7 +73,6 @@ export default function AutocadastrosPage() {
     if (!p || !PERFIS_MODERADORES.includes(p.perfil)) return
     carregarTudo(p.igreja_id)
   }
-
   async function carregarTudo(igrejaId) {
     setCarregando(true)
     const [sol, mem] = await Promise.all([
@@ -97,7 +92,6 @@ export default function AutocadastrosPage() {
     }
     setCarregando(false)
   }
-
   async function gerarLink() {
     setGerando(true)
     setMsg('')
@@ -119,20 +113,17 @@ export default function AutocadastrosPage() {
     }
     setLinkGerado(`${window.location.origin}/autocadastro/${token}`)
   }
-
   function copiarLink() {
     if (!linkGerado) return
     navigator.clipboard?.writeText(linkGerado)
       .then(() => setMsg('Link copiado! Envie ao interessado.'))
       .catch(() => setMsg('Copie o link manualmente.'))
   }
-
   function verificarDuplicado(sol) {
     const emailDup = !!(sol.email && membros.some((m) => m.email && String(m.email).toLowerCase() === String(sol.email).toLowerCase()))
     const nomeDataDup = !!(sol.nome && sol.data_nascimento && membros.some((m) => normalizar(m.nome) === normalizar(sol.nome) && m.data_nascimento === sol.data_nascimento))
     return { emailDup, nomeDataDup }
   }
-
   async function aprovar(sol) {
     const { emailDup } = verificarDuplicado(sol)
     if (emailDup) {
@@ -153,13 +144,11 @@ export default function AutocadastrosPage() {
       celular: sol.celular || null,
       situacao,
     }).select('id').maybeSingle()
-
     if (errInsert || !novoMembro) {
       setProcessando(null)
       setErro('Não foi possível criar o membro. Verifique se os campos obrigatórios foram preenchidos no autocadastro.')
       return
     }
-
     const { error: errUpd } = await supabase.from('solicitacoes_membros').update({
       status: 'aprovado',
       aprovado_por: user?.id || null,
@@ -167,7 +156,6 @@ export default function AutocadastrosPage() {
       membro_criado_id: novoMembro.id,
       situacao_aprovacao: situacao,
     }).eq('id', sol.id)
-
     setProcessando(null)
     if (errUpd) {
       setErro('Membro criado, mas não foi possível atualizar a solicitação.')
@@ -176,7 +164,6 @@ export default function AutocadastrosPage() {
     }
     carregarTudo(perfil.igreja_id)
   }
-
   async function confirmarRejeicao() {
     if (!rejeitando) return
     setProcessando(rejeitando.id)
@@ -198,7 +185,25 @@ export default function AutocadastrosPage() {
     setMsg('Solicitação rejeitada.')
     carregarTudo(perfil.igreja_id)
   }
-
+  async function confirmarLimpeza() {
+    if (!limpando) return
+    setProcessando(limpando.id)
+    setErro('')
+    setMsg('')
+    const nome = limpando.nome
+    const { error } = await supabase
+      .from('solicitacoes_membros')
+      .delete()
+      .eq('id', limpando.id)
+    setProcessando(null)
+    setLimpando(null)
+    if (error) {
+      setErro('Não foi possível limpar os dados da solicitação.')
+      return
+    }
+    setMsg(`Dados de ${nome} removidos da lista de pendências.`)
+    carregarTudo(perfil.igreja_id)
+  }
   if (verificando) {
     return (
       <main style={estilo.main}>
@@ -206,7 +211,6 @@ export default function AutocadastrosPage() {
       </main>
     )
   }
-
   if (!perfil || !PERFIS_MODERADORES.includes(perfil.perfil)) {
     return (
       <main style={estilo.main}>
@@ -224,13 +228,11 @@ export default function AutocadastrosPage() {
       </main>
     )
   }
-
   const corStatus = {
     pendente: { bg: '#FDF3E3', fg: '#B26A00' },
     aprovado: { bg: '#EAF4EE', fg: '#4C8C6E' },
     rejeitado: { bg: '#FDECEC', fg: '#B71C1C' },
   }
-
   return (
     <main style={estilo.main}>
       <header style={estilo.header}>
@@ -242,10 +244,8 @@ export default function AutocadastrosPage() {
         <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 1.5rem' }}>
           Gere links para os interessados preencherem a própria ficha e aprove ou rejeite as solicitações recebidas.
         </p>
-
         {msg && <div style={{ background: '#EAF4EE', color: '#4C8C6E', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{msg}</div>}
         {erro && <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>}
-
         <div style={{ ...estilo.card, marginBottom: '1.5rem' }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 12 }}>Gerar link de autocadastro</div>
           <p style={{ fontSize: 13, color: '#5A5A5A', margin: '0 0 12px', lineHeight: 1.6 }}>
@@ -262,7 +262,6 @@ export default function AutocadastrosPage() {
             </div>
           )}
         </div>
-
         <div style={estilo.card}>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 12 }}>Pendências ({pendentes.length})</div>
           {carregando ? (
@@ -315,13 +314,15 @@ export default function AutocadastrosPage() {
                     <button onClick={() => setRejeitando({ id: s.id, motivo: '' })} disabled={processando === s.id} style={estilo.botaoVermelho}>
                       Rejeitar
                     </button>
+                    <button onClick={() => setLimpando({ id: s.id, nome: s.nome })} disabled={processando === s.id} style={estilo.botaoLimpar}>
+                      Limpar dados
+                    </button>
                   </div>
                 </div>
               )
             })
           )}
         </div>
-
         {historico.length > 0 && (
           <div style={{ ...estilo.card, marginTop: '1.5rem' }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 12 }}>Histórico recente</div>
@@ -358,7 +359,6 @@ export default function AutocadastrosPage() {
           </div>
         )}
       </div>
-
       {rejeitando && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
           <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', maxWidth: 420, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
@@ -378,6 +378,24 @@ export default function AutocadastrosPage() {
                 {processando === rejeitando.id ? 'Rejeitando...' : 'Confirmar rejeição'}
               </button>
               <button onClick={() => setRejeitando(null)} style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {limpando && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+          <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', maxWidth: 420, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#B71C1C', marginBottom: 6 }}>Limpar dados da solicitação</div>
+            <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 12px' }}>
+              Os dados de <strong>{limpando.nome}</strong> serão removidos permanentemente da lista de pendências. Essa ação não pode ser desfeita.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button onClick={confirmarLimpeza} disabled={processando === limpando.id} style={{ flex: 1, padding: '12px', background: '#B71C1C', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                {processando === limpando.id ? 'Limpando...' : 'Confirmar limpeza'}
+              </button>
+              <button onClick={() => setLimpando(null)} style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
                 Cancelar
               </button>
             </div>
