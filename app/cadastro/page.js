@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase'
 const estilo = {
   main: { minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' },
   card: { background: '#FFFFFF', borderRadius: 16, border: '1px solid #E4DED2', padding: '2rem', maxWidth: 480, width: '100%', boxShadow: '0 4px 20px rgba(31,58,95,0.08)' },
+  voltar: { display: 'inline-flex', alignItems: 'center', gap: 6, color: '#1F3A5F', textDecoration: 'none', fontWeight: 700, fontSize: 13, marginBottom: 16 },
   logo: { fontSize: 24, fontWeight: 700, color: '#1F3A5F', textAlign: 'center', margin: '0 0 4px', letterSpacing: '-0.02em' },
   subtitulo: { textAlign: 'center', color: '#8A8A8A', fontSize: 13, margin: '0 0 24px' },
   campo: { width: '100%', padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: 12 },
@@ -82,6 +83,7 @@ export default function CadastroInicial() {
   return (
     <main style={estilo.main}>
       <div style={estilo.card}>
+        <a href="/" style={estilo.voltar}>← Voltar ao Diretório</a>
         <h1 style={estilo.logo}>Berit</h1>
         <p style={estilo.subtitulo}>Adquira o Berit e gerencie os dados da sua igreja</p>
         {msg && <div style={estilo.ok}>{msg}</div>}
