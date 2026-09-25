@@ -120,7 +120,7 @@ export default function EditarFinancas() {
     if (error) {
       setErro(error.message || 'Não foi possível salvar o lançamento. Tente novamente.')
     } else {
-      window.location.href = '/financas'
+    window.location.href = `/financas?aba=${form.aba_id}`
     }
   }
   const campo = {
