@@ -243,6 +243,7 @@ export default function FinancasPage() {
         if (abaValida) return abaValida
         return (atual && listaAbas.some((a) => a.id === atual)) ? atual : (listaAbas[0]?.id || '')
       })
+    }
     setCarregando(false)
   }
   const nomeCategoria = (id) => {
