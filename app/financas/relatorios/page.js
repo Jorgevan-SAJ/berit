@@ -3,9 +3,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { getPerfil } from '../../../lib/perfil'
 import { formatarMoeda, formatarDataBR, gerarExcelRelatorio, gerarPDFRelatorio } from '../../../lib/relatorios'
-
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
-
 function hojeISO() {
   return new Date().toISOString().slice(0, 10)
 }
@@ -17,15 +15,15 @@ function primeiroDiaDoMes() {
   const hoje = new Date()
   return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-01`
 }
-
 const PERFIS_RELATORIOS = ['admin_master', 'tesouraria', 'conselho_fiscal']
-
 export default function RelatoriosPage() {
   const [perfilAtual, setPerfilAtual] = useState(null)
   const [verificando, setVerificando] = useState(true)
   const [lancamentos, setLancamentos] = useState([])
   const [categorias, setCategorias] = useState([])
   const [membros, setMembros] = useState([])
+  const [abas, setAbas] = useState([])
+  const [abaRel, setAbaRel] = useState('') // '' = todas as abas
   // P3 — CNPJ da igreja para o cabeçalho dos relatórios em PDF
   const [cnpjIgreja, setCnpjIgreja] = useState('')
   const [carregando, setCarregando] = useState(true)
@@ -39,10 +37,8 @@ export default function RelatoriosPage() {
   const [assinatura1, setAssinatura1] = useState('')
   const [assinatura2, setAssinatura2] = useState('')
   const [assinatura3, setAssinatura3] = useState('')
-
   const podeConsultar = perfilAtual && PERFIS_RELATORIOS.includes(perfilAtual.perfil)
   const ehConselhoFiscal = perfilAtual && perfilAtual.perfil === 'conselho_fiscal'
-
     useEffect(() => {
     async function iniciar() {
       const { data: { user } } = await supabase.auth.getUser()
@@ -55,7 +51,6 @@ export default function RelatoriosPage() {
         .select('igreja_id, perfil')
         .eq('user_id', user.id)
         .maybeSingle()
-
       setPerfilAtual(perfil)
       setVerificando(false)
       if (perfil && PERFIS_RELATORIOS.includes(perfil.perfil)) {
@@ -64,17 +59,17 @@ export default function RelatoriosPage() {
     }
     iniciar()
   }, [])
-
   async function carregarDados(igrejaId) {
     setCarregando(true)
     // P3 — busca o CNPJ da igreja junto com os demais dados
-    const [lanc, cat, mem, igr] = await Promise.all([
+    const [lanc, cat, mem, igr, abs] = await Promise.all([
       supabase.from('lancamentos').select('*').order('data_lancamento', { ascending: true }),
       supabase.from('categorias').select('*').order('nome'),
       supabase.from('membros').select('id, nome').order('nome'),
       igrejaId
         ? supabase.from('igrejas').select('cnpj').eq('id', igrejaId).maybeSingle()
         : Promise.resolve({ data: null }),
+      supabase.from('financas_abas').select('*').order('ordem'),
     ])
     if (lanc.error || cat.error || mem.error) {
       setErro('Não foi possível carregar os dados.')
@@ -83,10 +78,10 @@ export default function RelatoriosPage() {
       setCategorias(cat.data || [])
       setMembros(mem.data || [])
       setCnpjIgreja(igr.data?.cnpj || '')
+      setAbas(abs.data || [])
     }
     setCarregando(false)
   }
-
   const nomeCategoria = (id) => {
     const c = categorias.find((x) => x.id === id)
     return c ? c.nome : '—'
@@ -95,7 +90,7 @@ export default function RelatoriosPage() {
     const m = membros.find((x) => x.id === id)
     return m ? m.nome : ''
   }
-
+  const nomeAbaSelecionada = abas.find((a) => a.id === abaRel)?.nome || ''
   function filtrar() {
     let lista = lancamentos.filter((l) => {
       const data = l.data_lancamento || ''
@@ -103,6 +98,7 @@ export default function RelatoriosPage() {
       if (modo === 'mes') return data.startsWith(mes)
       return data >= dataInicio && data <= dataFim
     })
+    if (abaRel) lista = lista.filter((l) => l.aba_id === abaRel)
     if (tipoRel === 'entrada') lista = lista.filter((l) => l.tipo === 'entrada')
     if (tipoRel === 'saida') lista = lista.filter((l) => l.tipo === 'saida')
     let saldo = 0
@@ -117,43 +113,39 @@ export default function RelatoriosPage() {
       }
     })
   }
-
   function calcularTotais(lista) {
     const entradas = lista.filter((l) => l.tipo === 'entrada').reduce((s, l) => s + Number(l.valor), 0)
     const saidas = lista.filter((l) => l.tipo === 'saida').reduce((s, l) => s + Number(l.valor), 0)
     return { entradas, saidas, saldo: entradas - saidas }
   }
-
   function tituloRelatorio() {
     const tipo = tipoRel === 'entrada' ? ' — Apenas Entradas' : tipoRel === 'saida' ? ' — Apenas Saídas' : ''
-    if (modo === 'dia') return `Relatório do Dia (${formatarDataBR(dia)})${tipo}`
+    const aba = nomeAbaSelecionada ? ` — ${nomeAbaSelecionada}` : ''
+    if (modo === 'dia') return `Relatório do Dia (${formatarDataBR(dia)})${tipo}${aba}`
     if (modo === 'mes') {
       const [a, m] = mes.split('-')
-      return `Relatório Mensal — ${MESES[Number(m) - 1]} de ${a}${tipo}`
+      return `Relatório Mensal — ${MESES[Number(m) - 1]} de ${a}${tipo}${aba}`
     }
-    return `Relatório por Período (${formatarDataBR(dataInicio)} a ${formatarDataBR(dataFim)})${tipo}`
+    return `Relatório por Período (${formatarDataBR(dataInicio)} a ${formatarDataBR(dataFim)})${tipo}${aba}`
   }
-
   function gerarPDF() {
     const lista = filtrar()
     const totais = calcularTotais(lista)
     const assinaturas = modo === 'dia' ? [assinatura1, assinatura2, assinatura3].filter((a) => a.trim()) : []
     gerarPDFRelatorio({
       titulo: tituloRelatorio(),
-      subtitulo: 'Berit — Finanças e Tesouraria',
+      subtitulo: 'Berit — Finanças e Tesouraria' + (nomeAbaSelecionada ? ` — ${nomeAbaSelecionada}` : ''),
       lancamentos: lista,
       totais,
       assinaturas,
-      nomeArquivo: `berit_relatorio_${modo}_${tipoRel}.pdf`,
+      nomeArquivo: `berit_relatorio_${modo}_${tipoRel}${nomeAbaSelecionada ? '_' + nomeAbaSelecionada.toLowerCase().replace(/\s+/g, '_') : ''}.pdf`,
       cnpj: cnpjIgreja, // P3 — CNPJ no cabeçalho do PDF
     })
   }
-
   function gerarExcel() {
     const lista = filtrar()
-    gerarExcelRelatorio(lista, `berit_relatorio_${modo}_${tipoRel}.xlsx`)
+    gerarExcelRelatorio(lista, `berit_relatorio_${modo}_${tipoRel}${nomeAbaSelecionada ? '_' + nomeAbaSelecionada.toLowerCase().replace(/\s+/g, '_') : ''}.xlsx`)
   }
-
   const estilo = {
     main: { minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" },
     header: { background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
@@ -163,7 +155,6 @@ export default function RelatoriosPage() {
     campo: { padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', fontFamily: 'inherit', width: '100%' },
     rotulo: { fontSize: 13, color: '#2E2E2E', display: 'block', marginBottom: 6 },
   }
-
   if (verificando) {
     return (
       <main style={estilo.main}>
@@ -173,7 +164,6 @@ export default function RelatoriosPage() {
       </main>
     )
   }
-
   if (!perfilAtual || !podeConsultar) {
     return (
       <main style={estilo.main}>
@@ -191,10 +181,8 @@ export default function RelatoriosPage() {
       </main>
     )
   }
-
   const lista = filtrar()
   const totais = calcularTotais(lista)
-
   return (
     <main style={estilo.main}>
       <header style={estilo.header}>
@@ -212,6 +200,13 @@ export default function RelatoriosPage() {
         )}
         <div style={{ ...estilo.card, marginBottom: '1.5rem' }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 12 }}>Configuração do relatório</div>
+          <label style={estilo.rotulo}>Aba / Conta</label>
+          <select value={abaRel} onChange={(e) => setAbaRel(e.target.value)} style={{ ...estilo.campo, marginBottom: 16, maxWidth: 320 }}>
+            <option value="">Todas as abas</option>
+            {abas.map((a) => (
+              <option key={a.id} value={a.id}>{a.nome}</option>
+            ))}
+          </select>
           <label style={estilo.rotulo}>Período</label>
           <div style={{ display: 'flex', gap: '0.75rem', marginBottom: 16, flexWrap: 'wrap' }}>
             {[
