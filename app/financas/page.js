@@ -361,7 +361,7 @@ if (!perfilAtual || !['admin_master', 'tesouraria', 'conselho_fiscal'].includes(
               </a>
             )}
             {podeLancar && (
-              <a href="/financas/novo" style={{ background: '#D9A441', color: '#1F3A5F', padding: '10px 18px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+              <a href={`/financas/novo?aba=${abaAtiva?.id || ''}`} style={{ background: '#D9A441', color: '#1F3A5F', padding: '10px 18px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
                 + Novo lançamento
               </a>
             )}
