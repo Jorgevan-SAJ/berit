@@ -189,6 +189,11 @@ export default function FinancasPage() {
   const [membros, setMembros] = useState([])
   // P3 — dados da igreja (CNPJ para os relatórios em PDF)
   const [igreja, setIgreja] = useState(null)
+  // Abas financeiras (renomeáveis pelo tesoureiro)
+  const [abas, setAbas] = useState([])
+  const [abaAtivaId, setAbaAtivaId] = useState('')
+  const [editandoAba, setEditandoAba] = useState(null) // { id, valor }
+  const [salvandoAba, setSalvandoAba] = useState(false)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
   const [mes, setMes] = useState(() => {
@@ -212,21 +217,25 @@ export default function FinancasPage() {
   async function carregarDados(igrejaId) {
     setCarregando(true)
     // P3 — inclui a busca do CNPJ da igreja junto com os demais dados
-    const [lanc, cat, mem, igr] = await Promise.all([
+    const [lanc, cat, mem, igr, abs] = await Promise.all([
       supabase.from('lancamentos').select('*').order('data_lancamento', { ascending: false }),
       supabase.from('categorias').select('*').order('nome'),
       supabase.from('membros').select('id, nome').order('nome'),
       igrejaId
         ? supabase.from('igrejas').select('cnpj').eq('id', igrejaId).maybeSingle()
         : Promise.resolve({ data: null }),
+      supabase.from('financas_abas').select('*').order('ordem'),
     ])
-    if (lanc.error || cat.error || mem.error) {
+    if (lanc.error || cat.error || mem.error || abs.error) {
       setErro('Não foi possível carregar os dados financeiros.')
     } else {
       setLancamentos(lanc.data || [])
       setCategorias(cat.data || [])
       setMembros(mem.data || [])
       setIgreja(igr.data || null)
+      const listaAbas = abs.data || []
+      setAbas(listaAbas)
+      setAbaAtivaId((atual) => (atual && listaAbas.some((a) => a.id === atual) ? atual : (listaAbas[0]?.id || '')))
     }
     setCarregando(false)
   }
@@ -238,7 +247,10 @@ export default function FinancasPage() {
     const m = membros.find((x) => x.id === id)
     return m ? m.nome : ''
   }
-  const filtrados = lancamentos.filter((l) => {
+  const abaAtiva = abas.find((a) => a.id === abaAtivaId) || abas[0] || null
+  // Lançamentos da aba ativa (lançamentos sem aba ficam na primeira aba, por segurança)
+  const lancamentosDaAba = lancamentos.filter((l) => (l.aba_id || abas[0]?.id) === abaAtiva?.id)
+  const filtrados = lancamentosDaAba.filter((l) => {
     const mesOk = !mes || (l.data_lancamento || '').startsWith(mes)
     const tipoOk = !tipo || l.tipo === tipo
     const catOk = !categoria || l.categoria_id === categoria
@@ -247,11 +259,26 @@ export default function FinancasPage() {
   const totalEntradas = filtrados.filter((l) => l.tipo === 'entrada').reduce((s, l) => s + Number(l.valor), 0)
   const totalSaidas = filtrados.filter((l) => l.tipo === 'saida').reduce((s, l) => s + Number(l.valor), 0)
   const saldo = totalEntradas - totalSaidas
-  const dadosGrafico = agregarPorMes(lancamentos, ultimosMeses(6))
+  const dadosGrafico = agregarPorMes(lancamentosDaAba, ultimosMeses(6))
   // Permissões por perfil
   const podeLancar = perfilAtual && perfilAtual.perfil === 'tesouraria'
   const podeConferir = perfilAtual && ['admin_master', 'tesouraria'].includes(perfilAtual.perfil)
   const ehConselhoFiscal = perfilAtual && perfilAtual.perfil === 'conselho_fiscal'
+  const podeRenomearAba = perfilAtual && ['admin_master', 'tesouraria'].includes(perfilAtual.perfil)
+  async function salvarNomeAba() {
+    if (!editandoAba) return
+    const nome = editandoAba.valor.trim()
+    if (!nome) return
+    setSalvandoAba(true)
+    const { error } = await supabase.from('financas_abas').update({ nome }).eq('id', editandoAba.id)
+    setSalvandoAba(false)
+    if (error) {
+      setErro('Não foi possível renomear a aba.')
+      return
+    }
+    setAbas((atual) => atual.map((a) => (a.id === editandoAba.id ? { ...a, nome } : a)))
+    setEditandoAba(null)
+  }
   async function confirmarExclusao() {
     if (!excluindo) return
     setSalvando(true)
@@ -271,6 +298,8 @@ export default function FinancasPage() {
     botaoVoltar: { background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' },
     card: { background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', border: '1px solid #E4DED2' },
     campo: { padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', fontFamily: 'inherit', width: '100%' },
+    aba: { padding: '10px 18px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', border: '1px solid #E4DED2', background: '#FFFFFF', color: '#1F3A5F' },
+    abaAtiva: { padding: '10px 18px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', border: '1px solid #1F3A5F', background: '#1F3A5F', color: '#FFFFFF' },
   }
   if (verificando) {
     return (
@@ -281,7 +310,7 @@ export default function FinancasPage() {
       </main>
     )
   }
-  if (!perfilAtual || !['admin_master', 'tesouraria', 'conselho_fiscal'].includes(perfilAtual.perfil)) {
+if (!perfilAtual || !['admin_master', 'tesouraria', 'conselho_fiscal'].includes(perfilAtual.perfil)) {
     return (
       <main style={estilo.main}>
         <header style={estilo.header}>
@@ -341,10 +370,53 @@ export default function FinancasPage() {
         {erro && (
           <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>
         )}
+        {/* Barra de abas financeiras */}
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem', alignItems: 'center' }}>
+          {abas.map((a) => (
+            <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              {editandoAba?.id === a.id ? (
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                  <input
+                    value={editandoAba.valor}
+                    onChange={(e) => setEditandoAba({ ...editandoAba, valor: e.target.value })}
+                    onKeyDown={(e) => { if (e.key === 'Enter') salvarNomeAba() }}
+                    autoFocus
+                    style={{ ...estilo.campo, width: 160, padding: '8px 10px' }}
+                    maxLength={40}
+                  />
+                  <button onClick={salvarNomeAba} disabled={salvandoAba} style={{ padding: '8px 10px', background: '#4C8C6E', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 12, cursor: 'pointer' }}>
+                    ✓
+                  </button>
+                  <button onClick={() => setEditandoAba(null)} style={{ padding: '8px 10px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 12, cursor: 'pointer' }}>
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setAbaAtivaId(a.id)}
+                    style={a.id === abaAtiva?.id ? estilo.abaAtiva : estilo.aba}
+                  >
+                    {a.nome}
+                  </button>
+                  {podeRenomearAba && (
+                    <button
+                      onClick={() => setEditandoAba({ id: a.id, valor: a.nome })}
+                      title="Renomear aba"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#8A8A8A', padding: 2 }}
+                    >
+                      ✏️
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
+        </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
           <div style={{ ...estilo.card, borderLeft: '4px solid #1F3A5F' }}>
             <div style={{ fontSize: 13, color: '#8A8A8A', marginBottom: 4 }}>Saldo do período</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: saldo >= 0 ? '#4C8C6E' : '#B71C1C' }}>{formatarMoeda(saldo)}</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: saldo >= 0 ? '#1F3A5F' : '#7B4FA6' }}>{formatarMoeda(saldo)}</div>
           </div>
           <div style={{ ...estilo.card, borderLeft: '4px solid #4C8C6E' }}>
             <div style={{ fontSize: 13, color: '#8A8A8A', marginBottom: 4 }}>Entradas</div>
@@ -419,7 +491,7 @@ export default function FinancasPage() {
                           🔒 Consolidado
                         </span>
                       )}
-                    </td>
+</td>
                     <td style={{ padding: '12px 16px', fontWeight: 600, color: '#2E2E2E', verticalAlign: 'top' }}>
                       {l.descricao || (l.tipo === 'entrada' && l.membro_id ? nomeMembro(l.membro_id) : '—')}
                       {l.nota_permanente && (
