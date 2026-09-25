@@ -2,21 +2,19 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { getPerfil } from '../../../lib/perfil'
-
 const FORMAS_PAGAMENTO = ['Dinheiro', 'PIX', 'Transferência', 'Cartão', 'Cheque', 'Outro']
-
 export default function EditarFinancas() {
   const [perfilAtual, setPerfilAtual] = useState(null)
   const [verificando, setVerificando] = useState(true)
   const [categorias, setCategorias] = useState([])
   const [membros, setMembros] = useState([])
+  const [abas, setAbas] = useState([])
   const [form, setForm] = useState(null)
   const [naoEncontrado, setNaoEncontrado] = useState(false)
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
   const [consolidado, setConsolidado] = useState(false)
   const [salvo, setSalvo] = useState(false)
-
   useEffect(() => {
     getPerfil().then((p) => {
       setPerfilAtual(p)
@@ -26,7 +24,6 @@ export default function EditarFinancas() {
       }
     })
   }, [])
-
   async function carregarDados() {
     const params = new URLSearchParams(window.location.search)
     const id = params.get('id')
@@ -34,19 +31,22 @@ export default function EditarFinancas() {
       setNaoEncontrado(true)
       return
     }
-    const [lanc, cat, mem] = await Promise.all([
+    const [lanc, cat, mem, abs] = await Promise.all([
       supabase.from('lancamentos').select('*').eq('id', id).single(),
       supabase.from('categorias').select('*').order('nome'),
       supabase.from('membros').select('id, nome').in('situacao', ['membro', 'congregado', 'visitante']).order('nome'),
+      supabase.from('financas_abas').select('*').order('ordem'),
     ])
     setCategorias(cat.data || [])
     setMembros(mem.data || [])
+    setAbas(abs.data || [])
     if (lanc.error || !lanc.data) {
       setNaoEncontrado(true)
     } else {
       setConsolidado(!!lanc.data.consolidado)
       setForm({
         tipo: lanc.data.tipo,
+        aba_id: lanc.data.aba_id || '',
         categoria_id: lanc.data.categoria_id || '',
         descricao: lanc.data.descricao || '',
         valor: String(lanc.data.valor).replace('.', ','),
@@ -57,7 +57,6 @@ export default function EditarFinancas() {
       })
     }
   }
-
   function mudarTipo(tipo) {
     const iniciais = categorias.filter((c) => c.tipo === tipo)
     setForm({
@@ -67,7 +66,6 @@ export default function EditarFinancas() {
       membro_id: '',
     })
   }
-
   async function salvar(e) {
     e.preventDefault()
     setErro('')
@@ -109,6 +107,7 @@ export default function EditarFinancas() {
     }
     const { error } = await supabase.from('lancamentos').update({
       tipo: form.tipo,
+      aba_id: form.aba_id || null,
       categoria_id: form.categoria_id,
       descricao: form.descricao.trim() || null,
       valor: valorNum,
@@ -124,13 +123,11 @@ export default function EditarFinancas() {
       window.location.href = '/financas'
     }
   }
-
   const campo = {
     width: '100%', padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8,
     fontSize: 14, marginBottom: 16, boxSizing: 'border-box', fontFamily: 'inherit',
   }
   const rotulo = { fontSize: 13, color: '#2E2E2E', display: 'block', marginBottom: 6 }
-
   if (verificando) {
     return (
       <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -140,7 +137,6 @@ export default function EditarFinancas() {
       </main>
     )
   }
-
   if (!perfilAtual || (perfilAtual.perfil !== 'admin_master' && perfilAtual.perfil !== 'tesouraria')) {
     return (
       <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -151,7 +147,6 @@ export default function EditarFinancas() {
       </main>
     )
   }
-
   if (naoEncontrado) {
     return (
       <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -162,7 +157,6 @@ export default function EditarFinancas() {
       </main>
     )
   }
-
   if (salvo) {
     return (
       <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -187,7 +181,6 @@ export default function EditarFinancas() {
       </main>
     )
   }
-
   if (!form) {
     return (
       <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -197,7 +190,6 @@ export default function EditarFinancas() {
       </main>
     )
   }
-
   return (
     <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
       <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -243,6 +235,17 @@ export default function EditarFinancas() {
               Saída
             </button>
           </div>
+          <label style={rotulo}>Aba / Conta{consolidado && ' (não alterável em consolidado)'}</label>
+          <select
+            value={form.aba_id}
+            onChange={(e) => setForm({ ...form, aba_id: e.target.value })}
+            disabled={consolidado}
+            style={{ ...campo, opacity: consolidado ? 0.6 : 1 }}
+          >
+            {abas.map((a) => (
+              <option key={a.id} value={a.id}>{a.nome}</option>
+            ))}
+          </select>
           <label style={rotulo}>Categoria</label>
           <select value={form.categoria_id} onChange={(e) => setForm({ ...form, categoria_id: e.target.value })} style={campo}>
             {categorias.filter((c) => c.tipo === form.tipo).map((c) => (
