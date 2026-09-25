@@ -235,8 +235,14 @@ export default function FinancasPage() {
       setIgreja(igr.data || null)
       const listaAbas = abs.data || []
       setAbas(listaAbas)
-      setAbaAtivaId((atual) => (atual && listaAbas.some((a) => a.id === atual) ? atual : (listaAbas[0]?.id || '')))
-    }
+      // Aba ativa: prioridade para a ?aba= da URL (retorno pós-lançamento), senão a que já estava ativa, senão a primeira
+      const params = new URLSearchParams(window.location.search)
+      const abaUrl = params.get('aba')
+      const abaValida = (abaUrl && listaAbas.some((a) => a.id === abaUrl)) ? abaUrl : null
+      setAbaAtivaId((atual) => {
+        if (abaValida) return abaValida
+        return (atual && listaAbas.some((a) => a.id === atual)) ? atual : (listaAbas[0]?.id || '')
+      })
     setCarregando(false)
   }
   const nomeCategoria = (id) => {
