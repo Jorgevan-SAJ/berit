@@ -36,7 +36,7 @@ const estilo = {
   botaoAzul: { padding: '12px 20px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
   botaoVerde: { padding: '10px 16px', background: '#4C8C6E', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' },
   botaoVermelho: { padding: '10px 16px', background: '#FFFFFF', color: '#B71C1C', border: '1px solid #B71C1C', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' },
-  botaoLimpar: { padding: '10px 16px', background: '#FFFFFF', color: '#5A5A5A', border: '1px solid #C9C2B4', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' },
+  botaoLimpar: { padding: '8px 14px', background: '#FFFFFF', color: '#5A5A5A', border: '1px solid #C9C2B4', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' },
   badge: { display: 'inline-block', padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700 },
 }
 export default function AutocadastrosPage() {
@@ -54,7 +54,7 @@ export default function AutocadastrosPage() {
   const [situacoes, setSituacoes] = useState({})
   const [processando, setProcessando] = useState(null)
   const [rejeitando, setRejeitando] = useState(null)
-  const [limpando, setLimpando] = useState(null)
+  const [limpando, setLimpando] = useState(false)
   useEffect(() => { iniciar() }, [])
   async function iniciar() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -84,7 +84,7 @@ export default function AutocadastrosPage() {
     } else {
       const todas = sol.data || []
       setPendentes(todas.filter((s) => s.status === 'pendente').reverse())
-      setHistorico(todas.filter((s) => s.status === 'aprovado' || s.status === 'rejeitado').slice(0, 50))
+      setHistorico(todas.filter((s) => s.status === 'aprovado' || s.status === 'rejeitado'))
       setMembros(mem.data || [])
       const init = {}
       todas.filter((s) => s.status === 'pendente').forEach((s) => { init[s.id] = 'congregado' })
@@ -186,22 +186,22 @@ export default function AutocadastrosPage() {
     carregarTudo(perfil.igreja_id)
   }
   async function confirmarLimpeza() {
-    if (!limpando) return
-    setProcessando(limpando.id)
+    if (!limpando || historico.length === 0) return
+    setProcessando('limpeza')
     setErro('')
     setMsg('')
-    const nome = limpando.nome
+    const ids = historico.map((h) => h.id)
     const { error } = await supabase
       .from('solicitacoes_membros')
       .delete()
-      .eq('id', limpando.id)
+      .in('id', ids)
     setProcessando(null)
-    setLimpando(null)
+    setLimpando(false)
     if (error) {
-      setErro('Não foi possível limpar os dados da solicitação.')
+      setErro('Não foi possível limpar o histórico.')
       return
     }
-    setMsg(`Dados de ${nome} removidos da lista de pendências.`)
+    setMsg(`Histórico limpo: ${ids.length} registro(s) removido(s). Os membros aprovados permanecem no cadastro.`)
     carregarTudo(perfil.igreja_id)
   }
   if (verificando) {
@@ -314,9 +314,6 @@ export default function AutocadastrosPage() {
                     <button onClick={() => setRejeitando({ id: s.id, motivo: '' })} disabled={processando === s.id} style={estilo.botaoVermelho}>
                       Rejeitar
                     </button>
-                    <button onClick={() => setLimpando({ id: s.id, nome: s.nome })} disabled={processando === s.id} style={estilo.botaoLimpar}>
-                      Limpar dados
-                    </button>
                   </div>
                 </div>
               )
@@ -325,7 +322,12 @@ export default function AutocadastrosPage() {
         </div>
         {historico.length > 0 && (
           <div style={{ ...estilo.card, marginTop: '1.5rem' }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 12 }}>Histórico recente</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: 12 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F' }}>Histórico recente ({historico.length})</div>
+              <button onClick={() => setLimpando(true)} disabled={processando === 'limpeza'} style={estilo.botaoLimpar}>
+                🗑️ Limpar dados
+              </button>
+            </div>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 560 }}>
                 <thead>
@@ -337,7 +339,7 @@ export default function AutocadastrosPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {historico.map((h) => (
+                  {historico.slice(0, 50).map((h) => (
                     <tr key={h.id} style={{ borderTop: '1px solid #F0EAE0' }}>
                       <td style={{ padding: '10px 12px', fontWeight: 600, color: '#2E2E2E' }}>{h.nome}</td>
                       <td style={{ padding: '10px 12px' }}>
@@ -387,15 +389,15 @@ export default function AutocadastrosPage() {
       {limpando && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
           <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', maxWidth: 420, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#B71C1C', marginBottom: 6 }}>Limpar dados da solicitação</div>
-            <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 12px' }}>
-              Os dados de <strong>{limpando.nome}</strong> serão removidos permanentemente da lista de pendências. Essa ação não pode ser desfeita.
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#B71C1C', marginBottom: 6 }}>Limpar histórico</div>
+            <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 12px', lineHeight: 1.6 }}>
+              Todos os <strong>{historico.length}</strong> registros aprovados e rejeitados serão removidos permanentemente desta lista. Os membros já aprovados <strong>continuam no cadastro de membros</strong>. Essa ação não pode ser desfeita.
             </p>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button onClick={confirmarLimpeza} disabled={processando === limpando.id} style={{ flex: 1, padding: '12px', background: '#B71C1C', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-                {processando === limpando.id ? 'Limpando...' : 'Confirmar limpeza'}
+              <button onClick={confirmarLimpeza} disabled={processando === 'limpeza'} style={{ flex: 1, padding: '12px', background: '#B71C1C', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                {processando === 'limpeza' ? 'Limpando...' : 'Confirmar limpeza'}
               </button>
-              <button onClick={() => setLimpando(null)} style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+              <button onClick={() => setLimpando(false)} style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
                 Cancelar
               </button>
             </div>
