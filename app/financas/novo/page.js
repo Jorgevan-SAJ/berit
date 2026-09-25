@@ -2,21 +2,20 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { getPerfil } from '../../../lib/perfil'
-
 const FORMAS_PAGAMENTO = ['Dinheiro', 'PIX', 'Transferência', 'Cartão', 'Cheque', 'Outro']
-
 // P8 — situações que podem ser vinculadas a um lançamento de entrada
 const SITUACOES_VINCULAVEIS = ['membro', 'congregado', 'visitante']
 // P8 — motivos de inativação que mantêm o vínculo (disciplina e outros)
 const MOTIVOS_INATIVOS_VINCULAVEIS = ['disciplina', 'outros']
-
 export default function NovoFinancas() {
   const [perfilAtual, setPerfilAtual] = useState(null)
   const [verificando, setVerificando] = useState(true)
   const [categorias, setCategorias] = useState([])
   const [membros, setMembros] = useState([])
+  const [abas, setAbas] = useState([])
   const [form, setForm] = useState({
     tipo: 'entrada',
+    aba_id: '',
     categoria_id: '',
     descricao: '',
     valor: '',
@@ -27,7 +26,6 @@ export default function NovoFinancas() {
   })
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
-
   useEffect(() => {
     getPerfil().then((p) => {
       setPerfilAtual(p)
@@ -37,15 +35,14 @@ export default function NovoFinancas() {
       }
     })
   }, [])
-
   async function carregarOpcoes() {
-    const [cat, mem] = await Promise.all([
+    const [cat, mem, abs] = await Promise.all([
       supabase.from('categorias').select('*').order('nome'),
       // P8 — busca também o motivo de inativação para liberar disciplina/outros
       supabase.from('membros').select('id, nome, situacao, motivo_inativacao').order('nome'),
+      supabase.from('financas_abas').select('*').order('ordem'),
     ])
     setCategorias(cat.data || [])
-
     // P8 — membros ativos (membro, congregado, visitante) + inativos por disciplina/outros
     const lista = (mem.data || []).filter((m) => {
       if (SITUACOES_VINCULAVEIS.includes(m.situacao)) return true
@@ -56,13 +53,18 @@ export default function NovoFinancas() {
       return false
     })
     setMembros(lista)
-
+    const listaAbas = abs.data || []
+    setAbas(listaAbas)
+    // Aba padrão: a que veio pela URL (?aba=), senão a primeira
+    const params = new URLSearchParams(window.location.search)
+    const abaUrl = params.get('aba')
+    const abaPadrao = (abaUrl && listaAbas.some((a) => a.id === abaUrl)) ? abaUrl : (listaAbas[0]?.id || '')
+    setForm((f) => ({ ...f, aba_id: abaPadrao }))
     const iniciais = (cat.data || []).filter((c) => c.tipo === 'entrada')
     if (iniciais.length > 0) {
       setForm((f) => ({ ...f, categoria_id: iniciais[0].id }))
     }
   }
-
   function mudarTipo(tipo) {
     const iniciais = categorias.filter((c) => c.tipo === tipo)
     setForm({
@@ -72,7 +74,6 @@ export default function NovoFinancas() {
       membro_id: '',
     })
   }
-
   // P8 — rótulo do membro no seletor, com contexto quando inativo
   function rotuloMembro(m) {
     if (m.situacao === 'inativo') {
@@ -81,7 +82,6 @@ export default function NovoFinancas() {
     }
     return m.nome
   }
-
   async function salvar(e) {
     e.preventDefault()
     setErro('')
@@ -94,11 +94,16 @@ export default function NovoFinancas() {
       setErro('Selecione a categoria.')
       return
     }
+    if (!form.aba_id) {
+      setErro('Selecione a aba (conta) do lançamento.')
+      return
+    }
     setCarregando(true)
     const { data: { user } } = await supabase.auth.getUser()
     const { error } = await supabase.from('lancamentos').insert([
       {
         tipo: form.tipo,
+        aba_id: form.aba_id,
         categoria_id: form.categoria_id,
         descricao: form.descricao.trim() || null,
         valor: valorNum,
@@ -116,13 +121,11 @@ export default function NovoFinancas() {
       window.location.href = '/financas'
     }
   }
-
   const campo = {
     width: '100%', padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8,
     fontSize: 14, marginBottom: 16, boxSizing: 'border-box', fontFamily: 'inherit',
   }
   const rotulo = { fontSize: 13, color: '#2E2E2E', display: 'block', marginBottom: 6 }
-
   if (verificando) {
     return (
       <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -132,7 +135,6 @@ export default function NovoFinancas() {
       </main>
     )
   }
-
   if (!perfilAtual || perfilAtual.perfil !== 'tesouraria') {
     return (
       <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -150,7 +152,6 @@ export default function NovoFinancas() {
       </main>
     )
   }
-
   return (
     <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
       <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -191,6 +192,12 @@ export default function NovoFinancas() {
               Saída
             </button>
           </div>
+          <label style={rotulo}>Aba / Conta</label>
+          <select value={form.aba_id} onChange={(e) => setForm({ ...form, aba_id: e.target.value })} style={campo}>
+            {abas.map((a) => (
+              <option key={a.id} value={a.id}>{a.nome}</option>
+            ))}
+          </select>
           <label style={rotulo}>Categoria</label>
           <select value={form.categoria_id} onChange={(e) => setForm({ ...form, categoria_id: e.target.value })} style={campo}>
             {categorias.filter((c) => c.tipo === form.tipo).map((c) => (
