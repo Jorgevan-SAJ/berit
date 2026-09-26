@@ -25,6 +25,7 @@ export default function RelatoriosPage() {
   const [membros, setMembros] = useState([])
   const [abas, setAbas] = useState([])
   const [abaRel, setAbaRel] = useState('') // '' = todas as abas
+  const [consolidacao, setConsolidacao] = useState('') // '' = todos | 'consolidado' | 'nao_consolidado'
   // P3 — CNPJ e nome da igreja para o cabeçalho dos relatórios em PDF
   const [cnpjIgreja, setCnpjIgreja] = useState('')
   const [nomeIgreja, setNomeIgreja] = useState('')
@@ -102,6 +103,8 @@ export default function RelatoriosPage() {
       return data >= dataInicio && data <= dataFim
     })
     if (abaRel) lista = lista.filter((l) => l.aba_id === abaRel)
+    if (consolidacao === 'consolidado') lista = lista.filter((l) => l.consolidado)
+    if (consolidacao === 'nao_consolidado') lista = lista.filter((l) => !l.consolidado)
     if (tipoRel === 'entrada') lista = lista.filter((l) => l.tipo === 'entrada')
     if (tipoRel === 'saida') lista = lista.filter((l) => l.tipo === 'saida')
     let saldo = 0
@@ -124,12 +127,19 @@ export default function RelatoriosPage() {
   function tituloRelatorio() {
     const tipo = tipoRel === 'entrada' ? ' — Apenas Entradas' : tipoRel === 'saida' ? ' — Apenas Saídas' : ''
     const aba = nomeAbaSelecionada ? ` — ${nomeAbaSelecionada}` : ''
-    if (modo === 'dia') return `Relatório do Dia (${formatarDataBR(dia)})${tipo}${aba}`
+    const cons = consolidacao === 'consolidado' ? ' — Consolidados' : consolidacao === 'nao_consolidado' ? ' — Não consolidados' : ''
+    if (modo === 'dia') return `Relatório do Dia (${formatarDataBR(dia)})${tipo}${aba}${cons}`
     if (modo === 'mes') {
       const [a, m] = mes.split('-')
-      return `Relatório Mensal — ${MESES[Number(m) - 1]} de ${a}${tipo}${aba}`
+      return `Relatório Mensal — ${MESES[Number(m) - 1]} de ${a}${tipo}${aba}${cons}`
     }
-    return `Relatório por Período (${formatarDataBR(dataInicio)} a ${formatarDataBR(dataFim)})${tipo}${aba}`
+    return `Relatório por Período (${formatarDataBR(dataInicio)} a ${formatarDataBR(dataFim)})${tipo}${aba}${cons}`
+  }
+  function sufixoArquivo() {
+    const partes = [modo, tipoRel]
+    if (nomeAbaSelecionada) partes.push(nomeAbaSelecionada.toLowerCase().replace(/\s+/g, '_'))
+    if (consolidacao) partes.push(consolidacao)
+    return partes.join('_')
   }
   function gerarPDF() {
     const lista = filtrar()
@@ -140,14 +150,14 @@ export default function RelatoriosPage() {
       lancamentos: lista,
       totais,
       assinaturas,
-      nomeArquivo: `berit_relatorio_${modo}_${tipoRel}${nomeAbaSelecionada ? '_' + nomeAbaSelecionada.toLowerCase().replace(/\s+/g, '_') : ''}.pdf`,
+      nomeArquivo: `berit_relatorio_${sufixoArquivo()}.pdf`,
       cnpj: cnpjIgreja, // P3 — CNPJ no cabeçalho do PDF
       nomeIgreja, // nome da igreja em negrito no cabeçalho
     })
   }
   function gerarExcel() {
     const lista = filtrar()
-    gerarExcelRelatorio(lista, `berit_relatorio_${modo}_${tipoRel}${nomeAbaSelecionada ? '_' + nomeAbaSelecionada.toLowerCase().replace(/\s+/g, '_') : ''}.xlsx`)
+    gerarExcelRelatorio(lista, `berit_relatorio_${sufixoArquivo()}.xlsx`)
   }
   const estilo = {
     main: { minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" },
@@ -278,6 +288,27 @@ export default function RelatoriosPage() {
               </button>
             ))}
           </div>
+          <label style={estilo.rotulo}>Consolidação</label>
+          <div style={{ display: 'flex', gap: '0.75rem', marginBottom: 16, flexWrap: 'wrap' }}>
+            {[
+              { v: '', r: 'Todos' },
+              { v: 'consolidado', r: '🔒 Consolidados' },
+              { v: 'nao_consolidado', r: 'Não consolidados' },
+            ].map((o) => (
+              <button
+                key={o.v}
+                type="button"
+                onClick={() => setConsolidacao(o.v)}
+                style={{
+                  padding: '10px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none',
+                  background: consolidacao === o.v ? '#B26A00' : '#F5F0E6',
+                  color: consolidacao === o.v ? '#FFFFFF' : '#5A5A5A',
+                }}
+              >
+                {o.r}
+              </button>
+            ))}
+          </div>
           {modo === 'dia' && (
             <>
               <label style={estilo.rotulo}>Assinaturas dos representantes (contagem dos dízimos)</label>
@@ -330,9 +361,16 @@ export default function RelatoriosPage() {
                 </thead>
                 <tbody>
                   {lista.map((l) => (
-                    <tr key={l.id} style={{ borderTop: '1px solid #F0EAE0' }}>
+                    <tr key={l.id} style={{ borderTop: '1px solid #F0EAE0', background: l.consolidado ? '#FFFDF7' : 'transparent' }}>
                       <td style={{ padding: '10px 12px', color: '#5A5A5A' }}>{l.seq}</td>
-                      <td style={{ padding: '10px 12px', color: '#5A5A5A' }}>{formatarDataBR(l.data_lancamento)}</td>
+                      <td style={{ padding: '10px 12px', color: '#5A5A5A' }}>
+                        {formatarDataBR(l.data_lancamento)}
+                        {l.consolidado && (
+                          <span style={{ display: 'block', background: '#FDF3E3', color: '#B26A00', padding: '2px 8px', borderRadius: 999, fontSize: 10, marginTop: 4, width: 'fit-content' }}>
+                            🔒 Consolidado
+                          </span>
+                        )}
+                      </td>
                       <td style={{ padding: '10px 12px', fontWeight: 600, color: '#2E2E2E' }}>{l.descricaoExibida}</td>
                       <td style={{ padding: '10px 12px', color: '#5A5A5A' }}>{l.categoriaNome}</td>
                       <td style={{ padding: '10px 12px' }}>
