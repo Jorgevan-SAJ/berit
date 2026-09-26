@@ -5,7 +5,8 @@ import { getPerfil } from '../../../lib/perfil'
 import { formatarMoeda, formatarDataBR, gerarExcelRelatorio, gerarPDFRelatorio } from '../../../lib/relatorios'
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 function hojeISO() {
-  return new Date().toISOString().slice(0, 10)
+  const hoje = new Date()
+  return `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`
 }
 function mesAtual() {
   const hoje = new Date()
