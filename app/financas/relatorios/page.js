@@ -24,8 +24,9 @@ export default function RelatoriosPage() {
   const [membros, setMembros] = useState([])
   const [abas, setAbas] = useState([])
   const [abaRel, setAbaRel] = useState('') // '' = todas as abas
-  // P3 — CNPJ da igreja para o cabeçalho dos relatórios em PDF
+  // P3 — CNPJ e nome da igreja para o cabeçalho dos relatórios em PDF
   const [cnpjIgreja, setCnpjIgreja] = useState('')
+  const [nomeIgreja, setNomeIgreja] = useState('')
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
   const [modo, setModo] = useState('dia')
@@ -61,13 +62,13 @@ export default function RelatoriosPage() {
   }, [])
   async function carregarDados(igrejaId) {
     setCarregando(true)
-    // P3 — busca o CNPJ da igreja junto com os demais dados
+    // P3 — busca o CNPJ e o nome da igreja junto com os demais dados
     const [lanc, cat, mem, igr, abs] = await Promise.all([
       supabase.from('lancamentos').select('*').order('data_lancamento', { ascending: true }),
       supabase.from('categorias').select('*').order('nome'),
       supabase.from('membros').select('id, nome').order('nome'),
       igrejaId
-        ? supabase.from('igrejas').select('cnpj').eq('id', igrejaId).maybeSingle()
+        ? supabase.from('igrejas').select('cnpj, nome').eq('id', igrejaId).maybeSingle()
         : Promise.resolve({ data: null }),
       supabase.from('financas_abas').select('*').order('ordem'),
     ])
@@ -78,6 +79,7 @@ export default function RelatoriosPage() {
       setCategorias(cat.data || [])
       setMembros(mem.data || [])
       setCnpjIgreja(igr.data?.cnpj || '')
+      setNomeIgreja(igr.data?.nome || '')
       setAbas(abs.data || [])
     }
     setCarregando(false)
@@ -134,12 +136,12 @@ export default function RelatoriosPage() {
     const assinaturas = modo === 'dia' ? [assinatura1, assinatura2, assinatura3].filter((a) => a.trim()) : []
     gerarPDFRelatorio({
       titulo: tituloRelatorio(),
-      subtitulo: 'Berit — Finanças e Tesouraria' + (nomeAbaSelecionada ? ` — ${nomeAbaSelecionada}` : ''),
       lancamentos: lista,
       totais,
       assinaturas,
       nomeArquivo: `berit_relatorio_${modo}_${tipoRel}${nomeAbaSelecionada ? '_' + nomeAbaSelecionada.toLowerCase().replace(/\s+/g, '_') : ''}.pdf`,
       cnpj: cnpjIgreja, // P3 — CNPJ no cabeçalho do PDF
+      nomeIgreja, // nome da igreja em negrito no cabeçalho
     })
   }
   function gerarExcel() {
