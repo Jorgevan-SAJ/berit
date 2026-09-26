@@ -83,10 +83,6 @@ export default function DiretorioIgrejas() {
     const link = `${origem}/cadastro`
     return `Olá, Pastor! Indiquei a nossa igreja no Berit, uma plataforma de gestão simples para igrejas. Por meio dela, a igreja ganha um diretório público, gestão de membros, tesouraria com relatórios e agenda. Cadastre os dados e funções da igreja neste link: ${link}. É rápido e gratuito para começar.`
   }
-  function linkCadastro() {
-    const origem = typeof window !== 'undefined' ? window.location.origin : ''
-    return `${origem}/cadastro`
-  }
   async function copiarTexto(texto, rotulo) {
     try {
       await navigator.clipboard.writeText(texto)
@@ -421,20 +417,12 @@ export default function DiretorioIgrejas() {
               >
                 Enviar por e-mail
               </a>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button
-                  onClick={() => copiarTexto(linkCadastro(), 'Link copiado!')}
-                  style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
-                >
-                  Copiar link
-                </button>
-                <button
-                  onClick={() => copiarTexto(mensagemApresentacao(), 'Mensagem copiada!')}
-                  style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
-                >
-                  Copiar mensagem
-                </button>
-              </div>
+                            <button
+                onClick={() => copiarTexto(mensagemApresentacao(), 'Mensagem copiada!')}
+                style={{ padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Copiar mensagem
+              </button>
             </div>
             <button
               onClick={() => setApresentacaoAberta(false)}
