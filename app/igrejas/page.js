@@ -1,9 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
-
 const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
-
 const estilo = {
   main: { minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" },
   header: { background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem' },
@@ -13,7 +11,6 @@ const estilo = {
   campo: { width: '100%', padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', fontFamily: 'inherit' },
   botao: { padding: '12px 20px', background: '#D9A441', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer' },
 }
-
 function SeloVerificado() {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#EAF4EE', color: '#4C8C6E', padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
@@ -24,7 +21,6 @@ function SeloVerificado() {
     </span>
   )
 }
-
 function BadgeComunidade() {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', background: '#FDF3E3', color: '#B26A00', padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
@@ -32,7 +28,6 @@ function BadgeComunidade() {
     </span>
   )
 }
-
 function CardIgreja({ ig }) {
   return (
     <div style={estilo.card}>
@@ -59,7 +54,6 @@ function CardIgreja({ ig }) {
     </div>
   )
 }
-
 export default function DiretorioIgrejas() {
   const [carregando, setCarregando] = useState(true)
   const [igrejas, setIgrejas] = useState([])
@@ -74,13 +68,34 @@ export default function DiretorioIgrejas() {
   const [enviando, setEnviando] = useState(false)
   const [msgForm, setMsgForm] = useState('')
   const [erroForm, setErroForm] = useState('')
+  // Item 7 — apresentação pós-indicação (WhatsApp, e-mail, cópia)
+  const [apresentacaoAberta, setApresentacaoAberta] = useState(false)
+  const [copiado, setCopiado] = useState('')
   const [modoBusca, setModoBusca] = useState(false)
   const [localizacao, setLocalizacao] = useState(null)
   const [fila, setFila] = useState([])
   const [pos, setPos] = useState(0)
   const [vitrine, setVitrine] = useState([])
   const [pausado, setPausado] = useState(false)
-
+  // Item 7 — monta a mensagem de apresentação com o link do Berit
+  function mensagemApresentacao() {
+    const origem = typeof window !== 'undefined' ? window.location.origin : ''
+    const link = `${origem}/cadastro`
+    return `Olá, Pastor! Indiquei a nossa igreja no Berit, uma plataforma de gestão simples para igrejas. Por meio dela, a igreja ganha um diretório público, gestão de membros, tesouraria com relatórios e agenda. Cadastre os dados e funções da igreja neste link: ${link}. É rápido e gratuito para começar.`
+  }
+  function linkCadastro() {
+    const origem = typeof window !== 'undefined' ? window.location.origin : ''
+    return `${origem}/cadastro`
+  }
+  async function copiarTexto(texto, rotulo) {
+    try {
+      await navigator.clipboard.writeText(texto)
+      setCopiado(rotulo)
+      setTimeout(() => setCopiado(''), 2500)
+    } catch {
+      setCopiado('')
+    }
+  }
   async function buscar(t, u, c) {
     setCarregando(true)
     setErro('')
@@ -98,7 +113,6 @@ export default function DiretorioIgrejas() {
     }
     setCarregando(false)
   }
-
   async function obterLocalizacao() {
     if (typeof navigator === 'undefined' || !navigator.geolocation) return null
     return new Promise((resolve) => {
@@ -123,7 +137,6 @@ export default function DiretorioIgrejas() {
       )
     })
   }
-
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       if (data?.user) {
@@ -139,7 +152,6 @@ export default function DiretorioIgrejas() {
     buscar('', '', '')
     obterLocalizacao().then((loc) => setLocalizacao(loc))
   }, [])
-
   useEffect(() => {
     if (modoBusca) return
     let pool = [...igrejas]
@@ -156,7 +168,6 @@ export default function DiretorioIgrejas() {
     setFila([...pool].sort(() => Math.random() - 0.5))
     setPos(0)
   }, [igrejas, localizacao, modoBusca])
-
   useEffect(() => {
     if (fila.length === 0) {
       setVitrine([])
@@ -168,7 +179,6 @@ export default function DiretorioIgrejas() {
     }
     setVitrine(tres)
   }, [fila, pos])
-
   useEffect(() => {
     if (modoBusca || pausado || fila.length <= 3) return
     const id = setInterval(() => {
@@ -176,18 +186,15 @@ export default function DiretorioIgrejas() {
     }, 2000)
     return () => clearInterval(id)
   }, [modoBusca, pausado, fila.length])
-
   async function sair() {
     await supabase.auth.signOut()
     setUsuario(null)
     setEhMaster(false)
   }
-
   function aplicar(e) {
     e.preventDefault()
     buscar(termo.trim(), uf, cidade.trim())
   }
-
   async function indicar(e) {
     e.preventDefault()
     setErroForm('')
@@ -212,9 +219,10 @@ export default function DiretorioIgrejas() {
     setMsgForm(data.mensagem)
     setForm({ nome: '', cidade: '', uf: '', endereco: '', bairro: '', contato: '', observacoes: '' })
     setMostrarForm(false)
+    // Item 7 — abre a apresentação para enviar ao pastor/líder
+    setApresentacaoAberta(true)
     buscar('', '', '')
   }
-
   return (
     <main style={estilo.main}>
       <style>{`
@@ -306,6 +314,17 @@ export default function DiretorioIgrejas() {
             </form>
           </div>
         )}
+        {msgForm && !mostrarForm && (
+          <div style={{ background: '#EAF4EE', borderRadius: 12, border: '1px solid #CDE5D6', padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <span style={{ fontSize: 13, color: '#4C8C6E' }}>{msgForm}</span>
+            <button
+              onClick={() => setApresentacaoAberta(true)}
+              style={{ background: '#4C8C6E', color: '#FFFFFF', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            >
+              Enviar apresentação ao pastor/líder
+            </button>
+          </div>
+        )}
         <form onSubmit={aplicar} style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
           <input
             type="text"
@@ -369,6 +388,63 @@ export default function DiretorioIgrejas() {
       <footer style={{ borderTop: '1px solid #E4DED2', padding: '1.5rem', textAlign: 'center', fontSize: 12, color: '#8A8A8A' }}>
         Berit, Gestão simples para igrejas
       </footer>
+      {apresentacaoAberta && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, padding: '1rem' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', maxWidth: 520, width: '100%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#1F3A5F' }}>Apresente o Berit ao pastor/líder</div>
+              <button onClick={() => setApresentacaoAberta(false)} style={{ background: 'none', border: 'none', fontSize: 20, color: '#8A8A8A', cursor: 'pointer' }}>✕</button>
+            </div>
+            <p style={{ fontSize: 13, color: '#8A8A8A', margin: '0 0 12px', lineHeight: 1.5 }}>
+              Envie esta mensagem à liderança da igreja indicada. Ela contém o link para conhecer o Berit e cadastrar os dados e funções da igreja.
+            </p>
+            <div style={{ background: '#F5F0E6', borderRadius: 8, padding: '12px 14px', fontSize: 13, color: '#2E2E2E', lineHeight: 1.6, whiteSpace: 'pre-line', marginBottom: 12 }}>
+              {mensagemApresentacao()}
+            </div>
+            {copiado && (
+              <div style={{ background: '#EAF4EE', color: '#4C8C6E', padding: '8px 12px', borderRadius: 8, fontSize: 12, marginBottom: 12 }}>
+                ✅ {copiado}
+              </div>
+            )}
+            <div style={{ display: 'grid', gap: '0.5rem' }}>
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(mensagemApresentacao())}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: 'block', textAlign: 'center', padding: '12px', background: '#4C8C6E', color: '#FFFFFF', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}
+              >
+                Enviar por WhatsApp
+              </a>
+              <a
+                href={`mailto:?subject=${encodeURIComponent('Conheça o Berit — Gestão simples para igrejas')}&body=${encodeURIComponent(mensagemApresentacao())}`}
+                style={{ display: 'block', textAlign: 'center', padding: '12px', background: '#1F3A5F', color: '#FFFFFF', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}
+              >
+                Enviar por e-mail
+              </a>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={() => copiarTexto(linkCadastro(), 'Link copiado!')}
+                  style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Copiar link
+                </button>
+                <button
+                  onClick={() => copiarTexto(mensagemApresentacao(), 'Mensagem copiada!')}
+                  style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Copiar mensagem
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => setApresentacaoAberta(false)}
+              style={{ width: '100%', marginTop: 12, padding: '12px', background: 'transparent', color: '#8A8A8A', border: 'none', fontSize: 13, cursor: 'pointer' }}
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
