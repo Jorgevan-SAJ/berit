@@ -262,20 +262,15 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
             <div style={{ display: 'grid', gap: '0.6rem' }}>
               <div style={{ background: '#F5F0E6', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#2E2E2E', whiteSpace: 'pre-line', lineHeight: 1.6 }}>
                 {montarMensagem()}
-              {numeroDestino && (
-                <div style={{ fontSize: 12, color: '#5A5A5A' }}>
-                  Enviando para: +{numeroDestino.slice(0, 2)} ({numeroDestino.slice(2, 4)}) {numeroDestino.slice(4)}
-                </div>
-              )}
-
+              
               </div>
               {numeroDestino ? (
                 <button onClick={enviar} style={{ padding: '12px', background: '#25D366', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                   <IconeWhatsApp tamanho={18} /> Enviar pelo WhatsApp da igreja
                 </button>
-             ) : (
+              ) : (
                 <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 12 }}>
-                  O WhatsApp desta igreja não está configurado corretamente. Valor recebido do cadastro: "{campoWhats || '(vazio)'}". Entre em contato pelos dados da seção "Local e contato".
+                  O WhatsApp desta igreja não está configurado corretamente. Entre em contato pelos dados da seção "Local e contato".
                 </div>
               )}
               <div style={{ fontSize: 11, color: '#8A8A8A', lineHeight: 1.5 }}>
