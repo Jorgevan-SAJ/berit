@@ -55,9 +55,11 @@ function saudacaoHorario() {
 
 // Item 8 — normaliza o número para o formato internacional do wa.me (55 + DDD + número)
 function normalizarWhats(valor) {
-  const d = String(valor || '').replace(/\D/g, '')
+  const texto = String(valor || '')
+  const m = texto.match(/(?:wa\.me\/|phone=)(\d+)/)
+  const d = (m ? m[1] : texto).replace(/\D/g, '')
   if (d.length === 10 || d.length === 11) return `55${d}`
-  if (d.length === 12 || d.length === 13 && d.startsWith('55')) return d
+  if ((d.length === 12 || d.length === 13) && d.startsWith('55')) return d
   return ''
 }
 
@@ -271,9 +273,9 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
                 <button onClick={enviar} style={{ padding: '12px', background: '#25D366', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                   <IconeWhatsApp tamanho={18} /> Enviar pelo WhatsApp da igreja
                 </button>
-              ) : (
+             ) : (
                 <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 12 }}>
-                  O WhatsApp desta igreja não está configurado corretamente. Entre em contato pelos dados da seção "Local e contato".
+                  O WhatsApp desta igreja não está configurado corretamente. Valor recebido do cadastro: "{campoWhats || '(vazio)'}". Entre em contato pelos dados da seção "Local e contato".
                 </div>
               )}
               <div style={{ fontSize: 11, color: '#8A8A8A', lineHeight: 1.5 }}>
