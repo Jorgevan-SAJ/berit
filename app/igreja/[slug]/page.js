@@ -122,7 +122,8 @@ function ReclamarIgreja() {
 
 // ===== Canal de acolhimento — conversa guiada com envio híbrido =====
 // Prioridade: WhatsApp da igreja quando configurado (número ou grupo);
-// sem WhatsApp configurado, o pedido é registrado no painel da igreja (Berit).
+// sem WhatsApp configurado, o pedido é registrado no painel da igreja (Berit);
+// igreja sem administração recebe orientação e convite aos líderes.
 function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
   const [etapa, setEtapa] = useState('nome')
   const [historico, setHistorico] = useState([])
@@ -135,6 +136,7 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
   const [contato, setContato] = useState('')
   const [enviandoBerit, setEnviandoBerit] = useState(false)
   const [erroBerit, setErroBerit] = useState('')
+  const [copiado, setCopiado] = useState('')
 
   useEffect(() => {
     setHistorico([
@@ -191,6 +193,7 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
   const numeroDestino = normalizarWhats(campoWhats)
   const linkGrupo = extrairLinkGrupo(campoWhats)
   const podeEnviar = etapa === 'resumo' && autoriza !== null && retorno !== null
+  const semAdministracao = igreja.aguarda_confirmacao || (igreja.origem === 'indicacao' && !igreja.publico_verificado)
 
   // Envio pelo WhatsApp da igreja (número)
   function enviar() {
@@ -228,6 +231,16 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
       return
     }
     avancar('enviado', null, 'Pronto! Seu pedido foi registrado com segurança e a liderança da igreja vai recebê-lo pelo painel Berit.')
+  }
+
+  async function copiarTexto(texto, rotulo) {
+    try {
+      await navigator.clipboard.writeText(texto)
+      setCopiado(rotulo)
+      setTimeout(() => setCopiado(''), 2500)
+    } catch {
+      setCopiado('')
+    }
   }
 
   function recomecar() {
@@ -329,6 +342,27 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
                     Este canal é um grupo de WhatsApp. A mensagem será copiada e o convite do grupo será aberto: entre no grupo e cole a mensagem no chat.
                   </div>
                 </>
+              ) : semAdministracao ? (
+                <>
+                  <div style={{ background: '#FDF3E3', border: '1px solid #F0D9A8', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#7A5A1E', lineHeight: 1.5 }}>
+                    Esta igreja ainda não possui administração no Berit, por isso não há como registrar seu pedido com segurança. Você pode ajudar: envie aos líderes/pastores a apresentação do Berit para que adquiram a plataforma e configurem este canal de acolhimento.
+                  </div>
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(`Olá, Pastor! Conheça o Berit, uma plataforma de gestão simples para igrejas: diretório público, gestão de membros, tesouraria com relatórios e agenda. Cadastre os dados e funções da igreja neste link: ${typeof window !== 'undefined' ? window.location.origin : ''}/cadastro. É rápido e gratuito para começar.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ padding: '12px', background: '#25D366', color: '#FFFFFF', borderRadius: 8, fontSize: 14, fontWeight: 700, textDecoration: 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  >
+                    <IconeWhatsApp tamanho={18} /> Enviar apresentação ao pastor/líder
+                  </a>
+                  <button
+                    onClick={() => copiarTexto(`Olá, Pastor! Conheça o Berit, uma plataforma de gestão simples para igrejas: diretório público, gestão de membros, tesouraria com relatórios e agenda. Cadastre os dados e funções da igreja neste link: ${typeof window !== 'undefined' ? window.location.origin : ''}/cadastro. É rápido e gratuito para começar.`, 'Mensagem copiada!')}
+                    style={{ padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Copiar mensagem
+                  </button>
+                  {copiado && <div style={{ background: '#EAF4EE', color: '#4C8C6E', padding: '8px 12px', borderRadius: 8, fontSize: 12 }}>✅ {copiado}</div>}
+                </>
               ) : (
                 <>
                   <button
@@ -352,11 +386,11 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
                 <div style={{ fontSize: 11, color: '#8A8A8A', lineHeight: 1.5 }}>
                   O envio acontece direto no WhatsApp da igreja. O Berit não participa da conversa nem armazena seu pedido.
                 </div>
-              ) : (
+              ) : !semAdministracao ? (
                 <div style={{ fontSize: 11, color: '#8A8A8A', lineHeight: 1.5 }}>
                   Seu pedido fica registrado apenas no painel da igreja, visível somente à liderança.
                 </div>
-              )}
+              ) : null}
               <button onClick={recomecar} style={{ background: 'transparent', border: 'none', color: '#8A8A8A', fontSize: 12, cursor: 'pointer' }}>
                 ↺ Voltar ao início da conversa
               </button>
