@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getPerfil, perfilLabel } from '../../lib/perfil'
-
 const DIAS_SEMANA_CURTO = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 const ABAS_ANIVERSARIO = [
   { v: 'hoje', r: 'Hoje' },
@@ -17,25 +16,41 @@ const ROTULOS_EVENTO = {
   campanha: { r: 'Campanha', cor: '#7B4FA6', bg: '#F3EAFB' },
   outro: { r: 'Outro', cor: '#5A5A5A', bg: '#F0EAE0' },
 }
-
+const ROTULOS_PEDIDO = {
+  oracao: { r: 'Oração', cor: '#4C8C6E', bg: '#EAF4EE' },
+  orientacao: { r: 'Orientação', cor: '#1F3A5F', bg: '#E8F0FA' },
+}
+const ABAS_PEDIDO_STATUS = [
+  { v: 'pendente', r: 'Pendentes' },
+  { v: 'em_atendimento', r: 'Em atendimento' },
+  { v: 'concluido', r: 'Concluídos' },
+]
+const ABAS_PEDIDO_TIPO = [
+  { v: 'todos', r: 'Todos' },
+  { v: 'oracao', r: 'Oração' },
+  { v: 'orientacao', r: 'Orientação' },
+]
 function formatarCnpj(cnpj) {
   const d = String(cnpj || '').replace(/\D/g, '')
   if (d.length !== 14) return cnpj
   return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12, 14)}`
 }
-
 function partesData(iso) {
   if (!iso) return null
   const [a, m, d] = String(iso).split('-').map(Number)
   if (!a || !m || !d) return null
   return { ano: a, mes: m, dia: d }
 }
-
 function rotuloDiaSemana(mes, dia) {
   const d = new Date(new Date().getFullYear(), mes - 1, dia)
   return DIAS_SEMANA_CURTO[d.getDay()]
 }
-
+function formatarDataHoraBR(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}h${String(d.getMinutes()).padStart(2, '0')}`
+}
 function montarProximosEventos(eventos, hoje, limite) {
   const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())
   const itens = []
@@ -59,7 +74,6 @@ function montarProximosEventos(eventos, hoje, limite) {
   itens.sort((a, b) => a.quando - b.quando || a.hora.localeCompare(b.hora))
   return itens.slice(0, limite)
 }
-
 export default function AreaPage() {
   const [carregando, setCarregando] = useState(true)
   const [usuario, setUsuario] = useState(null)
@@ -71,7 +85,11 @@ export default function AreaPage() {
   const [abaAniversario, setAbaAniversario] = useState('hoje')
   const [proximosEventos, setProximosEventos] = useState([])
   const [igreja, setIgreja] = useState(null)
-
+  // Pedidos de acolhimento (canal da página pública)
+  const [pedidos, setPedidos] = useState([])
+  const [abaPedidoStatus, setAbaPedidoStatus] = useState('pendente')
+  const [abaPedidoTipo, setAbaPedidoTipo] = useState('todos')
+  const [carregandoPedidos, setCarregandoPedidos] = useState(false)
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) {
@@ -108,13 +126,14 @@ export default function AreaPage() {
       }
     })
   }, [])
-
   async function carregarPainel() {
     setCarregandoPainel(true)
+    setCarregandoPedidos(true)
     const hoje = new Date()
-    const [mem, ev] = await Promise.all([
+    const [mem, ev, pd] = await Promise.all([
       supabase.from('membros').select('nome, data_nascimento, situacao'),
       supabase.from('eventos').select('id, titulo, tipo, tipo_evento, dia_semana, data_inicio, hora_inicio, local'),
+      supabase.from('pedidos_acolhimento').select('*').order('criado_em', { ascending: false }),
     ])
     const lista = (mem.data || [])
       .filter((m) => m.data_nascimento && m.situacao !== 'inativo')
@@ -127,9 +146,19 @@ export default function AreaPage() {
       .sort((a, b) => a.dia - b.dia)
     setAniversariantes(lista)
     setProximosEventos(montarProximosEventos(ev.data || [], hoje, 5))
+    setPedidos(pd.data || [])
     setCarregandoPainel(false)
+    setCarregandoPedidos(false)
   }
-
+  async function mudarStatusPedido(id, novoStatus) {
+    const { error } = await supabase
+      .from('pedidos_acolhimento')
+      .update({ status: novoStatus })
+      .eq('id', id)
+    if (!error) {
+      setPedidos((lista) => lista.map((p) => (p.id === id ? { ...p, status: novoStatus } : p)))
+    }
+  }
   useEffect(() => {
     if (pendentes > 0 && !toastVisivel) {
       const jaVisto = typeof window !== 'undefined' && window.sessionStorage.getItem('berit_aviso_pendencia_visto') === '1'
@@ -141,7 +170,6 @@ export default function AreaPage() {
       }
     }
   }, [pendentes, toastVisivel])
-
   if (carregando) {
     return (
       <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -149,7 +177,6 @@ export default function AreaPage() {
       </main>
     )
   }
-
   const card = {
     background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', border: '1px solid #E4DED2',
     boxShadow: '0 2px 12px rgba(31,58,95,0.06)', textDecoration: 'none', display: 'block',
@@ -181,7 +208,16 @@ export default function AreaPage() {
       : abaAniversario === 'semana'
         ? 'Nenhum aniversariante esta semana.'
         : 'Nenhum aniversariante este mês.'
-
+  const pedidosPendentes = pedidos.filter((p) => p.status === 'pendente').length
+  const pedidosFiltrados = pedidos.filter(
+    (p) => p.status === abaPedidoStatus && (abaPedidoTipo === 'todos' || p.tipo === abaPedidoTipo)
+  )
+  const vazioPedidos =
+    abaPedidoStatus === 'pendente'
+      ? 'Nenhum pedido pendente.'
+      : abaPedidoStatus === 'em_atendimento'
+        ? 'Nenhum pedido em atendimento.'
+        : 'Nenhum pedido concluído.'
   return (
     <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
       <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -213,7 +249,6 @@ export default function AreaPage() {
           </button>
         </div>
       </header>
-
       {toastVisivel && pendentes > 0 && (
         <div
           onClick={() => { window.location.href = '/financas/auditoria' }}
@@ -233,7 +268,6 @@ export default function AreaPage() {
           </div>
         </div>
       )}
-
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Área da Igreja</h1>
         <p style={{ fontSize: 12, color: '#8A8A8A', margin: '0 0 1rem' }}>
@@ -253,7 +287,6 @@ export default function AreaPage() {
             </span>
           )}
         </p>
-
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
           {podeMembros ? (
             <a href="/membros" style={card}>
@@ -271,7 +304,6 @@ export default function AreaPage() {
               <p style={cardTexto}>Acesso restrito.</p>
             </div>
           )}
-
           {podeFinancas ? (
             <a href="/financas" style={card}>
               <div style={cardTitulo}>Finanças</div>
@@ -298,14 +330,12 @@ export default function AreaPage() {
               <p style={cardTexto}>Acesso restrito ao perfil Tesouraria.</p>
             </div>
           )}
-
           {ehAdmin && (
             <a href="/acessos" style={card}>
               <div style={cardTitulo}>Perfis de Acesso</div>
               <p style={cardTexto}>Crie usuários e controle as permissões da plataforma.</p>
             </a>
           )}
-
           {podeAgenda ? (
             <a href="/agenda" style={card}>
               <div style={cardTitulo}>Agenda</div>
@@ -322,7 +352,6 @@ export default function AreaPage() {
               <p style={cardTexto}>Acesso restrito.</p>
             </div>
           )}
-
           <a
             href={igreja?.slug ? `/igreja/${igreja.slug}` : '/igrejas'}
             target="_blank"
@@ -337,7 +366,6 @@ export default function AreaPage() {
             </p>
           </a>
         </div>
-
         {podePainel && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem', marginTop: '1.5rem' }}>
             <div style={card}>
@@ -398,7 +426,6 @@ export default function AreaPage() {
                 </div>
               )}
             </div>
-
             <div style={card}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                 <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F' }}>📅 Próximos eventos</div>
@@ -446,10 +473,112 @@ export default function AreaPage() {
                 </div>
               )}
             </div>
+            <div style={card}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: 10 }}>
+                <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F' }}>🙏 Pedidos de acolhimento</div>
+                {pedidosPendentes > 0 && (
+                  <span style={{ background: '#FDF3E3', color: '#B26A00', padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
+                    {pedidosPendentes} pendente(s)
+                  </span>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 4, background: '#F5F0E6', borderRadius: 999, padding: 3, marginBottom: 8, width: 'fit-content' }}>
+                {ABAS_PEDIDO_TIPO.map((aba) => (
+                  <button
+                    key={aba.v}
+                    onClick={() => setAbaPedidoTipo(aba.v)}
+                    style={{
+                      border: 'none', borderRadius: 999, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                      background: abaPedidoTipo === aba.v ? '#1F3A5F' : 'transparent',
+                      color: abaPedidoTipo === aba.v ? '#FFFFFF' : '#5A5A5A',
+                    }}
+                  >
+                    {aba.r}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 4, background: '#F5F0E6', borderRadius: 999, padding: 3, marginBottom: 10, width: 'fit-content' }}>
+                {ABAS_PEDIDO_STATUS.map((aba) => (
+                  <button
+                    key={aba.v}
+                    onClick={() => setAbaPedidoStatus(aba.v)}
+                    style={{
+                      border: 'none', borderRadius: 999, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                      background: abaPedidoStatus === aba.v ? '#4C8C6E' : 'transparent',
+                      color: abaPedidoStatus === aba.v ? '#FFFFFF' : '#5A5A5A',
+                    }}
+                  >
+                    {aba.r}
+                  </button>
+                ))}
+              </div>
+              {carregandoPedidos ? (
+                <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '1.5rem' }}>Carregando...</div>
+              ) : pedidosFiltrados.length === 0 ? (
+                <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '1.5rem' }}>{vazioPedidos}</div>
+              ) : (
+                <div>
+                  {pedidosFiltrados.map((p, i) => {
+                    const rotulo = ROTULOS_PEDIDO[p.tipo] || ROTULOS_PEDIDO.oracao
+                    return (
+                      <div
+                        key={p.id}
+                        style={{
+                          padding: '10px 0', borderTop: i === 0 ? 'none' : '1px solid #F0EAE0',
+                          display: 'flex', flexDirection: 'column', gap: 6,
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <span style={{ background: rotulo.bg, color: rotulo.cor, padding: '3px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                              {rotulo.r}
+                            </span>
+                            <span style={{ fontSize: 14, fontWeight: 600, color: '#2E2E2E' }}>{p.nome}</span>
+                            {p.cidade && <span style={{ fontSize: 12, color: '#8A8A8A' }}>· {p.cidade}</span>}
+                          </div>
+                          <span style={{ fontSize: 11, color: '#8A8A8A', whiteSpace: 'nowrap' }}>{formatarDataHoraBR(p.criado_em)}</span>
+                        </div>
+                        <div style={{ fontSize: 13, color: '#5A5A5A', lineHeight: 1.6, whiteSpace: 'pre-line' }}>{p.texto}</div>
+                        <div style={{ fontSize: 11, color: '#8A8A8A', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                          <span>Compartilhar no grupo: {p.autoriza_compartilhar ? 'Sim' : 'Não'}</span>
+                          <span>Deseja retorno: {p.deseja_retorno ? 'Sim' : 'Não'}</span>
+                          {p.deseja_retorno && p.contato_retorno && <span>Contato: {p.contato_retorno}</span>}
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          {p.status === 'pendente' && (
+                            <button
+                              onClick={() => mudarStatusPedido(p.id, 'em_atendimento')}
+                              style={{ padding: '6px 12px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              Iniciar atendimento
+                            </button>
+                          )}
+                          {p.status === 'em_atendimento' && (
+                            <button
+                              onClick={() => mudarStatusPedido(p.id, 'concluido')}
+                              style={{ padding: '6px 12px', background: '#4C8C6E', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              Concluir
+                            </button>
+                          )}
+                          {p.status === 'concluido' && (
+                            <button
+                              onClick={() => mudarStatusPedido(p.id, 'em_atendimento')}
+                              style={{ padding: '6px 12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                            >
+                              Reabrir
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
-
       <footer style={{ textAlign: 'center', padding: '1.5rem', fontSize: 12, color: '#8A8A8A' }}>
         <a href="/recuperar-acesso" style={{ color: '#8A8A8A', textDecoration: 'underline' }}>Recuperar acesso de administrador</a>
         <span style={{ margin: '0 8px' }}>·</span>
