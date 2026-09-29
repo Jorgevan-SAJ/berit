@@ -53,7 +53,8 @@ function saudacaoHorario() {
   return 'Boa noite'
 }
 
-// Item 8 — normaliza o número para o formato internacional do wa.me (55 + DDD + número)
+// Normaliza o número para o formato internacional do wa.me (55 + DDD + número).
+// Também extrai o número de links wa.me caso o valor gravado seja um link.
 function normalizarWhats(valor) {
   const texto = String(valor || '')
   const m = texto.match(/(?:wa\.me\/|phone=)(\d+)/)
@@ -61,6 +62,12 @@ function normalizarWhats(valor) {
   if (d.length === 10 || d.length === 11) return `55${d}`
   if ((d.length === 12 || d.length === 13) && d.startsWith('55')) return d
   return ''
+}
+
+// Detecta link de convite de grupo (chat.whatsapp.com) no campo configurado
+function extrairLinkGrupo(valor) {
+  const m = String(valor || '').match(/chat\.whatsapp\.com\/(?:invite\/)?([A-Za-z0-9_-]+)/)
+  return m ? `https://chat.whatsapp.com/${m[1]}` : ''
 }
 
 function SeloVerificado() {
@@ -113,7 +120,9 @@ function ReclamarIgreja() {
   )
 }
 
-// ===== Item 8 — Conversa guiada de acolhimento (Oração / Orientação espiritual) =====
+// ===== Canal de acolhimento — conversa guiada com envio híbrido =====
+// Prioridade: WhatsApp da igreja quando configurado (número ou grupo);
+// sem WhatsApp configurado, o pedido é registrado no painel da igreja (Berit).
 function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
   const [etapa, setEtapa] = useState('nome')
   const [historico, setHistorico] = useState([])
@@ -173,22 +182,57 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
       tipo === 'oracao' ? `Motivo de oração: ${texto.trim()}` : `Dúvida/orientação: ${texto.trim()}`,
       `Autoriza compartilhar no grupo da igreja: ${autoriza === 'sim' ? 'Sim' : 'Não'}`,
       `Deseja que alguém da igreja retorne o contato: ${retorno === 'sim' ? 'Sim' : 'Não'}`,
+      ...(retorno === 'sim' && contato.trim() ? [`Contato para retorno: ${contato.trim()}`] : []),
       `— Enviado pela página da ${igreja.nome} no Berit`,
     ].join('\n')
   }
 
-  const numeroDestino = normalizarWhats(tipo === 'oracao' ? igreja.whatsapp_oracoes : igreja.whatsapp_orientacoes)
-  const podeEnviar = etapa === 'resumo' && numeroDestino && autoriza !== null && retorno !== null
+  const campoWhats = tipo === 'oracao' ? igreja.whatsapp_oracoes : igreja.whatsapp_orientacoes
+  const numeroDestino = normalizarWhats(campoWhats)
+  const linkGrupo = extrairLinkGrupo(campoWhats)
+  const podeEnviar = etapa === 'resumo' && autoriza !== null && retorno !== null
 
+  // Envio pelo WhatsApp da igreja (número)
   function enviar() {
-    if (!podeEnviar) return
+    if (!numeroDestino || !podeEnviar) return
     const url = `https://wa.me/${numeroDestino}?text=${encodeURIComponent(montarMensagem())}`
     window.open(url, '_blank', 'noopener,noreferrer')
     aoFechar()
   }
 
+  // Envio por grupo: copia a mensagem e orienta o usuário a colar no grupo
+  async function enviarGrupo() {
+    if (!linkGrupo || !podeEnviar) return
+    try { await navigator.clipboard.writeText(montarMensagem()) } catch {}
+    avancar('grupo', null, 'Copiei a sua mensagem para a área de transferência. Siga os passos abaixo para enviá-la ao grupo.')
+  }
+
+  // Envio pelo Berit: registra o pedido no painel da igreja
+  async function enviarBerit() {
+    if (!podeEnviar) return
+    setEnviandoBerit(true)
+    setErroBerit('')
+    const { data, error } = await supabase.rpc('registrar_pedido_acolhimento', {
+      p_slug: igreja.slug,
+      p_tipo: tipo,
+      p_nome: nome.trim(),
+      p_cidade: cidade.trim(),
+      p_texto: texto.trim(),
+      p_autoriza: autoriza === 'sim',
+      p_retorno: retorno === 'sim',
+      p_contato: retorno === 'sim' ? contato.trim() : null,
+    })
+    setEnviandoBerit(false)
+    if (error || !data || !data.ok) {
+      setErroBerit(data?.mensagem || 'Não foi possível registrar o pedido. Tente novamente.')
+      return
+    }
+    avancar('enviado', null, 'Pronto! Seu pedido foi registrado com segurança e a liderança da igreja vai recebê-lo pelo painel Berit.')
+  }
+
   function recomecar() {
-    setNome(''); setTipo(''); setTexto(''); setCidade(''); setAutoriza(null); setRetorno(null)
+    setNome(''); setTipo(''); setTexto(''); setCidade(''); setAutoriza(null); setRetorno(null); setContato('')
+    setErroBerit('')
     setHistorico([{ de: 'igreja', texto: `${saudacaoHorario()}! Seja bem-vindo(a) ao canal de acolhimento da ${igreja.nome}. Como é o seu nome?` }])
     setEtapa('nome')
   }
@@ -252,8 +296,14 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
                   <button onClick={() => setRetorno('nao')} style={botaoOpcao(retorno === 'nao')}>Não</button>
                 </div>
               </div>
+              {retorno === 'sim' && (
+                <div>
+                  <div style={{ fontSize: 12, color: '#5A5A5A', marginBottom: 4 }}>Opcional: qual é o seu contato (WhatsApp ou e-mail)? A igreja usará apenas para retornar a você.</div>
+                  <input type="text" value={contato} onChange={(e) => setContato(e.target.value)} placeholder="Seu WhatsApp ou e-mail" style={campo} />
+                </div>
+              )}
               <button
-                onClick={() => avancar('resumo', `Cidade: ${cidade.trim()} · Compartilhar: ${autoriza === 'sim' ? 'Sim' : 'Não'} · Retorno: ${retorno === 'sim' ? 'Sim' : 'Não'}`, 'Perfeito! Confira o resumo do seu pedido abaixo e envie pelo WhatsApp da igreja.')}
+                onClick={() => avancar('resumo', `Cidade: ${cidade.trim()} · Compartilhar: ${autoriza === 'sim' ? 'Sim' : 'Não'} · Retorno: ${retorno === 'sim' ? 'Sim' : 'Não'}`, 'Perfeito! Confira o resumo do seu pedido abaixo e envie.')}
                 disabled={!cidade.trim() || autoriza === null || retorno === null}
                 style={{ ...botaoPrimario, opacity: cidade.trim() && autoriza !== null && retorno !== null ? 1 : 0.5 }}
               >
@@ -265,22 +315,83 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
             <div style={{ display: 'grid', gap: '0.6rem' }}>
               <div style={{ background: '#F5F0E6', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#2E2E2E', whiteSpace: 'pre-line', lineHeight: 1.6 }}>
                 {montarMensagem()}
-              
               </div>
               {numeroDestino ? (
                 <button onClick={enviar} style={{ padding: '12px', background: '#25D366', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                   <IconeWhatsApp tamanho={18} /> Enviar pelo WhatsApp da igreja
                 </button>
+              ) : linkGrupo ? (
+                <>
+                  <button onClick={enviarGrupo} style={{ padding: '12px', background: '#25D366', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <IconeWhatsApp tamanho={18} /> Copiar mensagem e ir para o grupo
+                  </button>
+                  <div style={{ background: '#FDF3E3', color: '#7A5A1E', padding: '10px 12px', borderRadius: 8, fontSize: 12, lineHeight: 1.5 }}>
+                    Este canal é um grupo de WhatsApp. A mensagem será copiada e o convite do grupo será aberto: entre no grupo e cole a mensagem no chat.
+                  </div>
+                </>
               ) : (
-                <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 12 }}>
-                  O WhatsApp desta igreja não está configurado corretamente. Entre em contato pelos dados da seção "Local e contato".
+                <>
+                  <button
+                    onClick={enviarBerit}
+                    disabled={enviandoBerit}
+                    style={{ padding: '12px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: enviandoBerit ? 0.6 : 1 }}
+                  >
+                    {enviandoBerit ? 'Enviando...' : 'Enviar pelo Berit'}
+                  </button>
+                  {erroBerit && (
+                    <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 12 }}>
+                      {erroBerit}
+                    </div>
+                  )}
+                  <div style={{ fontSize: 11, color: '#8A8A8A', lineHeight: 1.5 }}>
+                    Seu pedido será registrado com segurança no painel da igreja. A liderança o receberá por lá e, se você autorizou o retorno, entrará em contato pelo contato informado.
+                  </div>
+                </>
+              )}
+              {(numeroDestino || linkGrupo) ? (
+                <div style={{ fontSize: 11, color: '#8A8A8A', lineHeight: 1.5 }}>
+                  O envio acontece direto no WhatsApp da igreja. O Berit não participa da conversa nem armazena seu pedido.
+                </div>
+              ) : (
+                <div style={{ fontSize: 11, color: '#8A8A8A', lineHeight: 1.5 }}>
+                  Seu pedido fica registrado apenas no painel da igreja, visível somente à liderança.
                 </div>
               )}
-              <div style={{ fontSize: 11, color: '#8A8A8A', lineHeight: 1.5 }}>
-                O Berit não participa da conversa nem armazena seu pedido: o envio acontece direto no WhatsApp da igreja.
-              </div>
               <button onClick={recomecar} style={{ background: 'transparent', border: 'none', color: '#8A8A8A', fontSize: 12, cursor: 'pointer' }}>
                 ↺ Voltar ao início da conversa
+              </button>
+            </div>
+          )}
+          {etapa === 'grupo' && (
+            <div style={{ display: 'grid', gap: '0.6rem' }}>
+              <div style={{ background: '#F5F0E6', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#2E2E2E', lineHeight: 1.6 }}>
+                1. Toque no botão abaixo para abrir o convite do grupo.<br />
+                2. Entre no grupo (se ainda não participa).<br />
+                3. Cole a mensagem (já copiada) no chat do grupo e envie.
+              </div>
+              <a
+                href={linkGrupo}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ padding: '12px', background: '#25D366', color: '#FFFFFF', borderRadius: 8, fontSize: 14, fontWeight: 700, textDecoration: 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              >
+                <IconeWhatsApp tamanho={18} /> Abrir convite do grupo
+              </a>
+              <button onClick={recomecar} style={{ background: 'transparent', border: 'none', color: '#8A8A8A', fontSize: 12, cursor: 'pointer' }}>
+                ↺ Voltar ao início da conversa
+              </button>
+            </div>
+          )}
+          {etapa === 'enviado' && (
+            <div style={{ display: 'grid', gap: '0.6rem' }}>
+              <div style={{ background: '#EAF4EE', color: '#4C8C6E', padding: '12px', borderRadius: 8, fontSize: 13, lineHeight: 1.6 }}>
+                ✅ Pedido registrado com sucesso. Obrigado pela confiança!
+              </div>
+              <button onClick={recomecar} style={{ background: 'transparent', border: 'none', color: '#1F3A5F', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                ↺ Fazer um novo pedido
+              </button>
+              <button onClick={aoFechar} style={{ background: 'transparent', border: 'none', color: '#8A8A8A', fontSize: 12, cursor: 'pointer' }}>
+                Fechar
               </button>
             </div>
           )}
@@ -296,7 +407,6 @@ export default function PaginaPublicaIgreja() {
   const [erro, setErro] = useState('')
   const [igreja, setIgreja] = useState(null)
   const [eventos, setEventos] = useState([])
-  // Item 8 — conversa guiada de acolhimento
   const [chatAberto, setChatAberto] = useState(false)
   const [chatTipo, setChatTipo] = useState('')
 
@@ -360,8 +470,8 @@ export default function PaginaPublicaIgreja() {
   const temDadosInstitucionais =
     redes.length > 0 ||
     !!igreja.contato ||
-    !!igreja.whatsapp_oracoes ||
-    !!igreja.whatsapp_orientacoes ||
+    temWhatsOracoes ||
+    temWhatsOrientacoes ||
     cultos.length > 0
 
   return (
@@ -491,32 +601,26 @@ export default function PaginaPublicaIgreja() {
           </div>
         )}
 
-        {(temWhatsOracoes || temWhatsOrientacoes) && (
-          <div style={estilo.card}>
-            <h2 style={estilo.tituloSecao}>Canais de acolhimento</h2>
-            <p style={{ margin: '0 0 12px', fontSize: 13, color: '#8A8A8A', lineHeight: 1.5 }}>
-              Fale com a igreja pelo WhatsApp. A conversa é guiada pelo Berit e o envio acontece direto no WhatsApp da igreja.
-            </p>
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-              {temWhatsOracoes && (
-                <button
-                  onClick={() => { setChatTipo('oracao'); setChatAberto(true) }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#25D366', color: '#FFFFFF', padding: '12px 18px', borderRadius: 8, fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer' }}
-                >
-                  <IconeWhatsApp tamanho={18} /> Pedidos de oração
-                </button>
-              )}
-              {temWhatsOrientacoes && (
-                <button
-                  onClick={() => { setChatTipo('orientacao'); setChatAberto(true) }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#1F3A5F', color: '#FFFFFF', padding: '12px 18px', borderRadius: 8, fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer' }}
-                >
-                  <IconeWhatsApp tamanho={18} /> Orientação espiritual
-                </button>
-              )}
-            </div>
+        <div style={estilo.card}>
+          <h2 style={estilo.tituloSecao}>Canais de acolhimento</h2>
+          <p style={{ margin: '0 0 12px', fontSize: 13, color: '#8A8A8A', lineHeight: 1.5 }}>
+            Fale com a igreja com segurança. A conversa é guiada pelo Berit e o seu pedido chega à liderança pelo painel da igreja — ou pelo WhatsApp cadastrado, quando a igreja o configurar.
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => { setChatTipo('oracao'); setChatAberto(true) }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#25D366', color: '#FFFFFF', padding: '12px 18px', borderRadius: 8, fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer' }}
+            >
+              <IconeWhatsApp tamanho={18} /> Pedidos de oração
+            </button>
+            <button
+              onClick={() => { setChatTipo('orientacao'); setChatAberto(true) }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#1F3A5F', color: '#FFFFFF', padding: '12px 18px', borderRadius: 8, fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer' }}
+            >
+              <IconeWhatsApp tamanho={18} /> Orientação espiritual
+            </button>
           </div>
-        )}
+        </div>
 
         {redes.length > 0 && (
           <div style={estilo.card}>
