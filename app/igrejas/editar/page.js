@@ -47,6 +47,7 @@ export default function ConfiguracoesIgreja() {
     endereco_publico: '',
     bairro: '',
     lead_publico: '',
+    chave_pix: '',
     publico_visivel: false,
     publico_verificado: false,
     publico_confirmado_em: null,
@@ -122,6 +123,7 @@ export default function ConfiguracoesIgreja() {
           endereco_publico: igreja.endereco_publico || '',
           bairro: igreja.bairro || '',
           lead_publico: igreja.lead_publico || '',
+          chave_pix: igreja.chave_pix || '',
           publico_visivel: !!igreja.publico_visivel,
           publico_verificado: !!igreja.publico_verificado,
           publico_confirmado_em: igreja.publico_confirmado_em || null,
@@ -265,6 +267,7 @@ export default function ConfiguracoesIgreja() {
       endereco_publico: form.endereco_publico,
       bairro: form.bairro,
       lead_publico: form.lead_publico,
+      chave_pix: form.chave_pix,
       publico_visivel: form.publico_visivel,
       horarios_cultos: horariosCultos,
     }
@@ -617,6 +620,19 @@ export default function ConfiguracoesIgreja() {
                   className={inputClasse}
                   placeholder="Opcional, ex.: Sejam bem-vindos!"
                 />
+              </div>
+              <div>
+                <label className={rotuloClasse}>Chave Pix (opcional)</label>
+                <input
+                  type="text"
+                  value={form.chave_pix}
+                  onChange={(e) => setForm({ ...form, chave_pix: e.target.value })}
+                  className={inputClasse}
+                  placeholder="CPF/CNPJ, celular, e-mail ou chave aleatória"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Se preenchida, a página pública exibirá o botão "Dizimar/Ofertar", que copia a chave para o visitante colar no aplicativo do banco.
+                </p>
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-1">Horários de cultos</p>
