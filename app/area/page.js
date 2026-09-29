@@ -159,6 +159,20 @@ export default function AreaPage() {
       setPedidos((lista) => lista.map((p) => (p.id === id ? { ...p, status: novoStatus } : p)))
     }
   }
+  // Copia a mensagem formatada do pedido e abre o WhatsApp para escolher o grupo
+  async function copiarEEnviarGrupo(p) {
+    const titulo = p.tipo === 'oracao' ? '*Pedido de oração*' : '*Orientação espiritual / dúvida teológica*'
+    const msg = [
+      titulo,
+      `Nome: ${p.nome}`,
+      p.cidade ? `Cidade: ${p.cidade}` : null,
+      p.texto,
+      p.autoriza_compartilhar ? '(Pedido autorizado para compartilhamento no grupo)' : '(Pedido NÃO autorizado para compartilhamento no grupo)',
+      '— Enviado via Berit',
+    ].filter(Boolean).join('\n')
+    try { await navigator.clipboard.writeText(msg) } catch {}
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer')
+  }
   useEffect(() => {
     if (pendentes > 0 && !toastVisivel) {
       const jaVisto = typeof window !== 'undefined' && window.sessionStorage.getItem('berit_aviso_pendencia_visto') === '1'
@@ -554,12 +568,20 @@ export default function AreaPage() {
                             </button>
                           )}
                           {p.status === 'em_atendimento' && (
-                            <button
-                              onClick={() => mudarStatusPedido(p.id, 'concluido')}
-                              style={{ padding: '6px 12px', background: '#4C8C6E', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                            >
-                              Concluir
-                            </button>
+                            <>
+                              <button
+                                onClick={() => copiarEEnviarGrupo(p)}
+                                style={{ padding: '6px 12px', background: '#25D366', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                              >
+                                Copiar e enviar ao grupo
+                              </button>
+                              <button
+                                onClick={() => mudarStatusPedido(p.id, 'concluido')}
+                                style={{ padding: '6px 12px', background: '#4C8C6E', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                              >
+                                Concluir
+                              </button>
+                            </>
                           )}
                           {p.status === 'concluido' && (
                             <button
