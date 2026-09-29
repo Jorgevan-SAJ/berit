@@ -3,14 +3,12 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 import ReclamarDuranteCadastro from '../../cadastro/ReclamarDuranteCadastro'
-
 const NOMES_PLANOS = {
   trial: 'Trial (30 dias)',
   basico: 'Plano Básico',
   plano2: 'Plano 2',
   plano3: 'Plano 3',
 }
-
 const OPCOES_REDE = [
   'Instagram',
   'Facebook',
@@ -19,7 +17,6 @@ const OPCOES_REDE = [
   'X (Twitter)',
   'Outra',
 ]
-
 const CORES_REDE = {
   Instagram: { cor: '#7B4FA6', bg: '#F3EAFB' },
   Facebook: { cor: '#1F3A5F', bg: '#E8F0FA' },
@@ -28,14 +25,11 @@ const CORES_REDE = {
   'X (Twitter)': { cor: '#5A5A5A', bg: '#F0EAE0' },
   Outra: { cor: '#4C8C6E', bg: '#EAF4EE' },
 }
-
 const DIAS_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 const UFS = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO']
-
 function estiloRede(nome) {
   return CORES_REDE[nome] || CORES_REDE.Outra
 }
-
 export default function ConfiguracoesIgreja() {
   const router = useRouter()
   const [perfil, setPerfil] = useState(null)
@@ -78,11 +72,9 @@ export default function ConfiguracoesIgreja() {
   const [alterandoSenha, setAlterandoSenha] = useState(false)
   const [msgSenha, setMsgSenha] = useState('')
   const [erroSenha, setErroSenha] = useState('')
-
   useEffect(() => {
     carregar()
   }, [])
-
   function pendenciaPublicacao() {
   const faltando = []
   if (!form.nome.trim()) faltando.push('Nome da igreja')
@@ -92,7 +84,6 @@ export default function ConfiguracoesIgreja() {
   if (!form.bairro.trim()) faltando.push('Bairro')
   return faltando
 }
-
   async function carregar() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -145,7 +136,6 @@ export default function ConfiguracoesIgreja() {
     }
     setCarregando(false)
   }
-
   function adicionarRede() {
     const url = redeUrl.trim()
     if (!url) {
@@ -156,11 +146,9 @@ export default function ConfiguracoesIgreja() {
     setRedes([...redes, { nome: redeNome, url }])
     setRedeUrl('')
   }
-
   function removerRede(indice) {
     setRedes(redes.filter((_, i) => i !== indice))
   }
-
   function adicionarCulto() {
     if (!novoCulto.horario.trim()) {
       setErroPublico('Informe o horário do culto.')
@@ -173,11 +161,9 @@ export default function ConfiguracoesIgreja() {
     ])
     setNovoCulto({ dia: 'Domingo', horario: '', nome: '' })
   }
-
   function removerCulto(indice) {
     setHorariosCultos(horariosCultos.filter((_, i) => i !== indice))
   }
-
   function copiarLinkPublico() {
     if (!form.slug) return
     const url = `${window.location.origin}/igreja/${form.slug}`
@@ -185,7 +171,13 @@ export default function ConfiguracoesIgreja() {
       .then(() => setMsgPublico('Link copiado! Compartilhe com quem quiser.'))
       .catch(() => setMsgPublico('Copie o link manualmente.'))
   }
-
+  // Verifica no Google Maps com a mesma fórmula da página pública:
+  // nome da igreja + endereço + cidade + UF (busca de maior precisão)
+  function verificarNoMaps() {
+    const query = [form.nome, form.endereco_publico, form.cidade, form.uf].filter(Boolean).join(', ')
+    if (!query) return
+    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, '_blank', 'noopener,noreferrer')
+  }
   async function confirmarPublico() {
     const pend = pendenciaPublicacao()
     if (pend.length > 0) {
@@ -210,7 +202,6 @@ export default function ConfiguracoesIgreja() {
     setForm({ ...form, publico_verificado: true })
     setMsgPublico('Dados públicos confirmados. O selo de verificado agora aparece no portal.')
   }
-
   async function confirmarIndicacao() {
     setConfirmandoIndicacao(true)
     setMsgPublico('')
@@ -227,7 +218,6 @@ export default function ConfiguracoesIgreja() {
     setIgrejaAguardaConfirmacao(false)
     setMsgPublico('Cadastro confirmado. Esta igreja agora aparece como confirmada no diretorio. Preencha os dados publicos e ative o selo quando quiser.')
   }
-
   async function salvar(e) {
     e.preventDefault()
     setSalvando(true)
@@ -306,7 +296,6 @@ export default function ConfiguracoesIgreja() {
     setMsg('Dados da igreja atualizados com sucesso.')
     setTimeout(() => router.push('/area'), 1200)
   }
-
   async function alterarSenha(e) {
     e.preventDefault()
     setMsgSenha('')
@@ -330,13 +319,10 @@ export default function ConfiguracoesIgreja() {
     setNovaSenha('')
     setConfirmarSenha('')
   }
-
   if (carregando) return <div className="p-8">Carregando...</div>
-
   const inputClasse = 'w-full border border-gray-300 rounded-lg px-3 py-2'
   const rotuloClasse = 'block text-sm font-medium text-gray-700 mb-1'
   const pend = pendenciaPublicacao()
-
   return (
     <div className="max-w-2xl mx-auto p-6">
       <button
@@ -410,7 +396,7 @@ export default function ConfiguracoesIgreja() {
                   value={form.whatsapp_oracoes}
                   onChange={(e) => setForm({ ...form, whatsapp_oracoes: e.target.value })}
                   className={inputClasse}
-                  placeholder="https://chat.whatsapp.com/..."
+                  placeholder="Número no formato 55 + DDD + número (ex.: 5575988038122) ou link de grupo"
                 />
               </div>
               <div>
@@ -420,9 +406,12 @@ export default function ConfiguracoesIgreja() {
                   value={form.whatsapp_orientacoes}
                   onChange={(e) => setForm({ ...form, whatsapp_orientacoes: e.target.value })}
                   className={inputClasse}
-                  placeholder="https://chat.whatsapp.com/..."
+                  placeholder="Número no formato 55 + DDD + número (ex.: 5575988038122) ou link de grupo"
                 />
               </div>
+              <p className="text-xs text-gray-500">
+                Recomendado: cadastre o número de um responsável pelo canal (formato 55 + DDD + número, 13 dígitos para celular). O pedido do visitante chega pronto por mensagem. Links de grupo (chat.whatsapp.com) também são aceitos, mas exigem que o visitante cole a mensagem manualmente.
+              </p>
             </div>
           </div>
           <div className="border-t pt-4">
@@ -572,40 +561,53 @@ export default function ConfiguracoesIgreja() {
                 </div>
               </div>
               <div>
-           <label className={rotuloClasse}>Endereço público *</label>
-           <input
-           type="text"
-           required
-           value={form.endereco_publico}
-           onChange={(e) => setForm({ ...form, endereco_publico: e.target.value })}
-           className={inputClasse}
-           placeholder="Rua, número, bairro"
-         />
-        </div>
-        <div>
-           <label className={rotuloClasse}>Bairro *</label>
-           <input
-           type="text"
-           required
-           value={form.bairro}
-           onChange={(e) => setForm({ ...form, bairro: e.target.value })}
-           className={inputClasse}
-           placeholder="Nome do bairro"
-         />
-         </div>
-          {ehAdmin && (!perfil?.igreja_id || !form.endereco_publico.trim()) && (
-           <ReclamarDuranteCadastro
-            nome={form.nome}
-            cidade={form.cidade}
-            uf={form.uf}
-            endereco={form.endereco_publico}
-            modoAdocao={!!perfil?.igreja_id}
-            onVinculada={(ig) => {
-            setMsg('Igreja vinculada ao seu usuário. Agora você pode gerenciar os dados.')
-            carregar()
-          }}
-         />
-        )}
+                <label className={rotuloClasse}>Endereço público *</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={form.endereco_publico}
+                    onChange={(e) => setForm({ ...form, endereco_publico: e.target.value })}
+                    className={inputClasse}
+                    placeholder="Rua, número, bairro"
+                  />
+                  <button
+                    type="button"
+                    onClick={verificarNoMaps}
+                    disabled={!form.endereco_publico.trim()}
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap disabled:opacity-40"
+                  >
+                    Verificar no Maps
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Abre o Google Maps com a busca "Nome da igreja + endereço + cidade + UF" — a mesma fórmula usada na página pública. Confirme o resultado antes de publicar.
+                </p>
+              </div>
+              <div>
+                <label className={rotuloClasse}>Bairro *</label>
+                <input
+                  type="text"
+                  required
+                  value={form.bairro}
+                  onChange={(e) => setForm({ ...form, bairro: e.target.value })}
+                  className={inputClasse}
+                  placeholder="Nome do bairro"
+                />
+              </div>
+              {ehAdmin && (!perfil?.igreja_id || !form.endereco_publico.trim()) && (
+                <ReclamarDuranteCadastro
+                  nome={form.nome}
+                  cidade={form.cidade}
+                  uf={form.uf}
+                  endereco={form.endereco_publico}
+                  modoAdocao={!!perfil?.igreja_id}
+                  onVinculada={(ig) => {
+                    setMsg('Igreja vinculada ao seu usuário. Agora você pode gerenciar os dados.')
+                    carregar()
+                  }}
+                />
+              )}
               <div>
                 <label className={rotuloClasse}>Mensagem de acolhimento</label>
                 <input
