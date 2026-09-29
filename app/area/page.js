@@ -232,35 +232,25 @@ export default function AreaPage() {
       : abaPedidoStatus === 'em_atendimento'
         ? 'Nenhum pedido em atendimento.'
         : 'Nenhum pedido concluído.'
+  const botaoHeader = { background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none', cursor: 'pointer' }
   return (
     <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
-      <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em' }}>Berit</div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <a
-            href="/igrejas"
-            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}
-          >
-            Voltar ao Diretório
-          </a>
-          <a
-            href="/igrejas/editar"
-            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}
-          >
-            Configurações
-          </a>
-          <a
-            href="/ajuda"
-            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}
-          >
-            Ajuda
-          </a>
-          <button
-            onClick={async () => { await supabase.auth.signOut(); window.location.href = '/login' }}
-            style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}
-          >
-            Sair
-          </button>
+      <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem' }}>
+        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 10 }}>Berit</div>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <a href="/igrejas" style={botaoHeader}>Voltar ao Diretório</a>
+            <a href="/igrejas/editar" style={botaoHeader}>Configurações</a>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: 8 }}>
+            <a href="/ajuda" style={botaoHeader}>Ajuda</a>
+            <button
+              onClick={async () => { await supabase.auth.signOut(); window.location.href = '/login' }}
+              style={botaoHeader}
+            >
+              Sair
+            </button>
+          </div>
         </div>
       </header>
       {toastVisivel && pendentes > 0 && (
