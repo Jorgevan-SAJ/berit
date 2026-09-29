@@ -499,7 +499,8 @@ export default function PaginaPublicaIgreja() {
   const cnpjFormatado = formatarCNPJ(igreja.cnpj)
   const temWhatsOracoes = !!igreja.whatsapp_oracoes
   const temWhatsOrientacoes = !!igreja.whatsapp_orientacoes
-  const enderecoCompleto = `${igreja.endereco_publico || ''}${igreja.bairro ? `, ${igreja.bairro}` : ''}${igreja.cidade ? `, ${igreja.cidade}` : ''}${igreja.uf ? ` - ${igreja.uf}` : ''}`
+  // Busca no Maps pelo nome da igreja + endereço + cidade + UF (fórmula de maior precisão)
+  const queryMaps = [igreja.nome, igreja.endereco_publico, igreja.cidade, igreja.uf].filter(Boolean).join(', ')
   const enderecoComunidade = (igreja.aguarda_confirmacao || (igreja.origem === 'indicacao' && !igreja.publico_verificado)) && igreja.endereco_publico
   const temDadosInstitucionais =
     redes.length > 0 ||
@@ -612,7 +613,7 @@ export default function PaginaPublicaIgreja() {
               {igreja.endereco_publico && (
                 <div>
                   <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(enderecoCompleto)}`}
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(queryMaps)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ color: '#1F3A5F', textDecoration: 'underline' }}
