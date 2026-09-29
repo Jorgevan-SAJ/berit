@@ -123,6 +123,9 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
   const [cidade, setCidade] = useState('')
   const [autoriza, setAutoriza] = useState(null)
   const [retorno, setRetorno] = useState(null)
+  const [contato, setContato] = useState('')
+  const [enviandoBerit, setEnviandoBerit] = useState(false)
+  const [erroBerit, setErroBerit] = useState('')
 
   useEffect(() => {
     setHistorico([
