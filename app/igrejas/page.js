@@ -6,7 +6,7 @@ const estilo = {
   main: { minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" },
   header: { background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem' },
   logo: { fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF', textDecoration: 'none' },
-  hero: { background: '#1F3A5F', color: '#FFFFFF', padding: '3rem 1.5rem 2rem', textAlign: 'center' },
+  hero: { background: '#1F3A5F', color: '#FFFFFF', padding: '2rem 1.5rem 1.5rem', textAlign: 'center' },
   card: { background: '#FFFFFF', borderRadius: 12, border: '1px solid #E4DED2', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' },
   campo: { width: '100%', padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', fontFamily: 'inherit' },
   botao: { padding: '12px 20px', background: '#D9A441', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer' },
@@ -249,37 +249,21 @@ export default function DiretorioIgrejas() {
           )}
         </div>
       </header>
-            <div style={estilo.hero}>
-        <h1 style={{ margin: '0 0 8px', fontSize: 28 }}>Encontre uma igreja</h1>
+      <div style={estilo.hero}>
+        <h1 style={{ margin: '0 0 6px', fontSize: 26 }}>Encontre uma igreja</h1>
         <p style={{ margin: 0, color: 'rgba(255,255,255,0.85)', fontSize: 14 }}>
           Diretório de congregações cadastradas na plataforma Berit.
         </p>
-        <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+        <div style={{ marginTop: 14 }}>
           <a
             href="/cadastro"
-            style={{ display: 'inline-block', background: '#D9A441', color: '#1F3A5F', borderRadius: 8, padding: '12px 24px', fontSize: 15, fontWeight: 700, textDecoration: 'none' }}
+            style={{ display: 'inline-block', background: '#D9A441', color: '#1F3A5F', borderRadius: 8, padding: '10px 20px', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}
           >
             Cadastre Sua Igreja
           </a>
-          <p style={{ margin: 0, color: 'rgba(255,255,255,0.85)', fontSize: 12 }}>
-            Crie sua conta, gerencie os dados da sua igreja e apareça no diretório.
-          </p>
-          <button onClick={() => { setMostrarForm(!mostrarForm); setMsgForm(''); setErroForm('') }} style={{ ...estilo.botao, background: 'transparent', border: '1px solid rgba(255,255,255,0.6)', color: '#FFFFFF' }}>
-            {mostrarForm ? 'Fechar formulário' : 'Sua igreja não está aqui? Cadastre-a'}
-          </button>
-          {mostrarForm && ehMaster && (
-            <div style={{ marginTop: 14 }}>
-              <a
-                href="/igrejas/moderacao"
-                style={{ color: '#D9A441', fontSize: 13, fontWeight: 700, textDecoration: 'underline' }}
-              >
-                Moderação de igrejas indicadas
-              </a>
-            </div>
-          )}
         </div>
       </div>
-      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '1.5rem' }}>
+      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '1.25rem 1.5rem' }}>
         {mostrarForm && (
           <div style={{ background: '#FFFFFF', borderRadius: 12, border: '1px solid #E4DED2', padding: '1.25rem', marginBottom: '1.5rem' }}>
             <h2 style={{ fontSize: 16, color: '#1F3A5F', margin: '0 0 4px' }}>Indicar uma igreja</h2>
@@ -321,7 +305,7 @@ export default function DiretorioIgrejas() {
             </button>
           </div>
         )}
-        <form onSubmit={aplicar} style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+        <form onSubmit={aplicar} style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1.25rem' }}>
           <input
             type="text"
             value={termo}
@@ -341,6 +325,21 @@ export default function DiretorioIgrejas() {
             {UFS.map((u) => <option key={u} value={u}>{u}</option>)}
           </select>
           <button type="submit" style={estilo.botao}>Buscar</button>
+          <button
+            type="button"
+            onClick={() => { setMostrarForm(!mostrarForm); setMsgForm(''); setErroForm('') }}
+            style={{ background: 'transparent', border: 'none', color: '#1F3A5F', fontSize: 13, fontWeight: 600, textDecoration: 'underline', cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            {mostrarForm ? 'Fechar indicação' : 'Sua igreja não está aqui? Faça a indicação'}
+          </button>
+          {ehMaster && (
+            <a
+              href="/igrejas/moderacao"
+              style={{ color: '#B26A00', fontSize: 12, fontWeight: 600, textDecoration: 'underline', whiteSpace: 'nowrap' }}
+            >
+              Moderação
+            </a>
+          )}
         </form>
         {erro && <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>}
         {carregando ? (
@@ -417,7 +416,7 @@ export default function DiretorioIgrejas() {
               >
                 Enviar por e-mail
               </a>
-                            <button
+              <button
                 onClick={() => copiarTexto(mensagemApresentacao(), 'Mensagem copiada!')}
                 style={{ padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
               >
