@@ -788,3 +788,118 @@ export default function ConfiguracoesIgreja() {
                     Adicionar
                   </button>
                 </div>
+                {horariosCultos.length === 0 ? (
+                  <p className="text-sm text-gray-500">Nenhum horário cadastrado.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {horariosCultos.map((c, i) => (
+                      <li
+                        key={i}
+                        className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                      >
+                        <span>
+                          <strong>{c.dia}</strong> às {c.horario}
+                          {c.nome ? ` · ${c.nome}` : ''}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removerCulto(i)}
+                          className="text-red-600 text-sm"
+                        >
+                          Remover
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+            {form.slug && (
+              <div className="bg-gray-50 border rounded-lg p-3 mt-4 text-sm">
+                <p className="text-xs text-gray-500 mb-1">Link público da igreja:</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    readOnly
+                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/igreja/${form.slug}`}
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-xs bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={copiarLinkPublico}
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-xs"
+                  >
+                    Copiar
+                  </button>
+                </div>
+              </div>
+            )}
+            <div className="mt-4 flex items-center gap-3 flex-wrap">
+              <button
+                type="button"
+                onClick={confirmarPublico}
+                disabled={confirmandoPublico || pend.length > 0 || !form.publico_visivel}
+                className="border border-green-600 text-green-700 rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-40"
+              >
+                {confirmandoPublico
+                  ? 'Confirmando...'
+                  : form.publico_verificado
+                    ? 'Dados públicos confirmados'
+                    : 'Confirmar dados públicos'}
+              </button>
+              {form.publico_verificado && (
+                <span className="text-xs text-green-700">✓ Selo de verificado ativo no portal.</span>
+              )}
+            </div>
+          </div>
+          <button
+            type="submit"
+            disabled={salvando}
+            className="w-full font-semibold rounded-lg py-2.5 disabled:opacity-50"
+          >
+            {salvando ? 'Salvando...' : 'Salvar alterações'}
+          </button>
+        </form>
+      ) : (
+        <div className="bg-gray-50 border rounded-lg p-4 mb-6 text-sm text-gray-600">
+          Apenas o Administrador pode editar os dados da igreja. Nesta área, você pode alterar a sua senha de acesso.
+        </div>
+      )}
+      <div className="border-t pt-4 mt-6">
+        <p className="text-sm font-semibold text-gray-700 mb-3">Alteração de Senha</p>
+        {msgSenha && <p className="text-green-600 mb-4">{msgSenha}</p>}
+        {erroSenha && <p className="text-red-600 mb-4">{erroSenha}</p>}
+        <form onSubmit={alterarSenha} className="space-y-3">
+          <div>
+            <label className={rotuloClasse}>Nova senha</label>
+            <input
+              type="password"
+              value={novaSenha}
+              onChange={(e) => setNovaSenha(e.target.value)}
+              className={inputClasse}
+              autoComplete="new-password"
+              required
+            />
+          </div>
+          <div>
+            <label className={rotuloClasse}>Confirmar nova senha</label>
+            <input
+              type="password"
+              value={confirmarSenha}
+              onChange={(e) => setConfirmarSenha(e.target.value)}
+              className={inputClasse}
+              autoComplete="new-password"
+              required
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={alterandoSenha}
+            className="w-full font-semibold rounded-lg py-2.5 disabled:opacity-50"
+          >
+            {alterandoSenha ? 'Alterando...' : 'Alterar senha'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
