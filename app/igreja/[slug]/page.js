@@ -661,6 +661,9 @@ export default function PaginaPublicaIgreja() {
             <div style={{ fontSize: 11, color: '#8A8A8A', marginTop: 8, lineHeight: 1.5 }}>
               A contribuição é feita diretamente pelo seu banco. O Berit não participa da transação e não tem acesso aos valores.
             </div>
+            <div style={{ background: '#FDF3E3', border: '1px solid #F0D9A8', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#7A5A1E', marginTop: 10, lineHeight: 1.5 }}>
+              ⚠️ <strong>Atenção:</strong> antes de confirmar o envio do Pix, verifique se o nome do favorecido é o da igreja que deseja enviar o dízimo/oferta. Em caso de divergência de nome, <strong>NÃO CONCLUA</strong> o envio do Pix — converse com seus líderes.
+            </div>
           </div>
         )}
 
