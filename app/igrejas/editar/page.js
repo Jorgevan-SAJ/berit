@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 import ReclamarDuranteCadastro from '../../cadastro/ReclamarDuranteCadastro'
@@ -32,6 +32,7 @@ function estiloRede(nome) {
 }
 export default function ConfiguracoesIgreja() {
   const router = useRouter()
+  const inputFotoRef = useRef(null)
   const [perfil, setPerfil] = useState(null)
   const [ehAdmin, setEhAdmin] = useState(false)
   const [carregando, setCarregando] = useState(true)
@@ -53,6 +54,10 @@ export default function ConfiguracoesIgreja() {
     publico_confirmado_em: null,
     slug: '',
   })
+  const [fotoUrl, setFotoUrl] = useState('')
+  const [enviandoFoto, setEnviandoFoto] = useState(false)
+  const [msgFoto, setMsgFoto] = useState('')
+  const [erroFoto, setErroFoto] = useState('')
   const [horariosCultos, setHorariosCultos] = useState([])
   const [novoCulto, setNovoCulto] = useState({ dia: 'Domingo', horario: '', nome: '' })
   const [redes, setRedes] = useState([])
@@ -129,6 +134,7 @@ export default function ConfiguracoesIgreja() {
           publico_confirmado_em: igreja.publico_confirmado_em || null,
           slug: igreja.slug || '',
         })
+        setFotoUrl(igreja.foto_url || '')
         setHorariosCultos(Array.isArray(igreja.horarios_cultos) ? igreja.horarios_cultos : [])
         setRedes(Array.isArray(igreja.redes_sociais_lista) ? igreja.redes_sociais_lista : [])
         setPlano(igreja)
@@ -137,6 +143,67 @@ export default function ConfiguracoesIgreja() {
       }
     }
     setCarregando(false)
+  }
+  // Upload da foto da igreja para o bucket fotos-igrejas (Supabase Storage)
+  async function selecionarFoto(e) {
+    const arquivo = e.target.files?.[0]
+    e.target.value = ''
+    if (!arquivo || !perfil?.igreja_id) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(arquivo.type)) {
+      setErroFoto('Formato não aceito. Use JPG, PNG ou WEBP.')
+      return
+    }
+    if (arquivo.size > 5 * 1024 * 1024) {
+      setErroFoto('Arquivo muito grande. O limite é 5 MB.')
+      return
+    }
+    setEnviandoFoto(true)
+    setErroFoto('')
+    setMsgFoto('')
+    const ext = arquivo.name.split('.').pop().toLowerCase()
+    const caminho = `igreja-${perfil.igreja_id}/foto-${Date.now()}.${ext}`
+    const { error: erroUpload } = await supabase.storage
+      .from('fotos-igrejas')
+      .upload(caminho, arquivo, { upsert: true })
+    if (erroUpload) {
+      setEnviandoFoto(false)
+      setErroFoto('Erro no envio da foto: ' + erroUpload.message)
+      return
+    }
+    const { data: dadosUrl } = supabase.storage.from('fotos-igrejas').getPublicUrl(caminho)
+    const url = dadosUrl?.publicUrl || ''
+    const { error: erroSalvar } = await supabase
+      .from('igrejas')
+      .update({ foto_url: url })
+      .eq('id', perfil.igreja_id)
+    setEnviandoFoto(false)
+    if (erroSalvar) {
+      setErroFoto('A foto foi enviada, mas não foi possível vinculá-la à igreja: ' + erroSalvar.message)
+      return
+    }
+    setFotoUrl(url)
+    setMsgFoto('Foto atualizada. Ela aparece na página pública da igreja.')
+  }
+  async function removerFoto() {
+    if (!fotoUrl || !perfil?.igreja_id) return
+    setEnviandoFoto(true)
+    setErroFoto('')
+    setMsgFoto('')
+    const m = fotoUrl.match(/fotos-igrejas\/(.+)$/)
+    if (m) {
+      await supabase.storage.from('fotos-igrejas').remove([m[1]])
+    }
+    const { error } = await supabase
+      .from('igrejas')
+      .update({ foto_url: null })
+      .eq('id', perfil.igreja_id)
+    setEnviandoFoto(false)
+    if (error) {
+      setErroFoto('Não foi possível remover a foto: ' + error.message)
+      return
+    }
+    setFotoUrl('')
+    setMsgFoto('Foto removida.')
   }
   function adicionarRede() {
     const url = redeUrl.trim()
@@ -538,6 +605,60 @@ export default function ConfiguracoesIgreja() {
                   placeholder="Apresentação curta exibida no diretório e na página pública"
                 />
               </div>
+              <div>
+                <label className={rotuloClasse}>Foto da igreja (opcional)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  {fotoUrl ? (
+                    <img
+                      src={fotoUrl}
+                      alt="Foto da igreja"
+                      style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '2px solid #E4DED2' }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 72, height: 72, borderRadius: '50%', background: '#F5F0E6',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 24, color: '#B26A00', fontWeight: 700,
+                      }}
+                    >
+                      {(form.nome || '?').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => inputFotoRef.current?.click()}
+                      disabled={enviandoFoto}
+                      className="border border-gray-300 rounded-lg px-3 py-2 text-sm font-medium disabled:opacity-40"
+                    >
+                      {enviandoFoto ? 'Enviando...' : fotoUrl ? 'Trocar foto' : 'Enviar foto'}
+                    </button>
+                    {fotoUrl && (
+                      <button
+                        type="button"
+                        onClick={removerFoto}
+                        disabled={enviandoFoto}
+                        className="text-red-600 text-sm"
+                      >
+                        Remover
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <input
+                  ref={inputFotoRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  style={{ display: 'none' }}
+                  onChange={selecionarFoto}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  JPG, PNG ou WEBP até 5 MB. A foto aparece em formato circular no topo da página pública. O envio é imediato — não é preciso clicar em "Salvar alterações".
+                </p>
+                {msgFoto && <p className="text-green-600 text-xs mt-1">{msgFoto}</p>}
+                {erroFoto && <p className="text-red-600 text-xs mt-1">{erroFoto}</p>}
+              </div>
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2">
                   <label className={rotuloClasse}>Cidade *</label>
@@ -667,118 +788,3 @@ export default function ConfiguracoesIgreja() {
                     Adicionar
                   </button>
                 </div>
-                {horariosCultos.length === 0 ? (
-                  <p className="text-sm text-gray-500">Nenhum horário cadastrado.</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {horariosCultos.map((c, i) => (
-                      <li
-                        key={i}
-                        className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                      >
-                        <span>
-                          <strong>{c.dia}</strong> às {c.horario}
-                          {c.nome ? ` · ${c.nome}` : ''}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => removerCulto(i)}
-                          className="text-red-600 text-sm"
-                        >
-                          Remover
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-            {form.slug && (
-              <div className="bg-gray-50 border rounded-lg p-3 mt-4 text-sm">
-                <p className="text-xs text-gray-500 mb-1">Link público da igreja:</p>
-                <div className="flex items-center gap-2">
-                  <input
-                    readOnly
-                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/igreja/${form.slug}`}
-                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-xs bg-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={copiarLinkPublico}
-                    className="border border-gray-300 rounded-lg px-3 py-2 text-xs"
-                  >
-                    Copiar
-                  </button>
-                </div>
-              </div>
-            )}
-            <div className="mt-4 flex items-center gap-3 flex-wrap">
-              <button
-                type="button"
-                onClick={confirmarPublico}
-                disabled={confirmandoPublico || pend.length > 0 || !form.publico_visivel}
-                className="border border-green-600 text-green-700 rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-40"
-              >
-                {confirmandoPublico
-                  ? 'Confirmando...'
-                  : form.publico_verificado
-                    ? 'Dados públicos confirmados'
-                    : 'Confirmar dados públicos'}
-              </button>
-              {form.publico_verificado && (
-                <span className="text-xs text-green-700">✓ Selo de verificado ativo no portal.</span>
-              )}
-            </div>
-          </div>
-          <button
-            type="submit"
-            disabled={salvando}
-            className="w-full font-semibold rounded-lg py-2.5 disabled:opacity-50"
-          >
-            {salvando ? 'Salvando...' : 'Salvar alterações'}
-          </button>
-        </form>
-      ) : (
-        <div className="bg-gray-50 border rounded-lg p-4 mb-6 text-sm text-gray-600">
-          Apenas o Administrador pode editar os dados da igreja. Nesta área, você pode alterar a sua senha de acesso.
-        </div>
-      )}
-      <div className="border-t pt-4 mt-6">
-        <p className="text-sm font-semibold text-gray-700 mb-3">Alteração de Senha</p>
-        {msgSenha && <p className="text-green-600 mb-4">{msgSenha}</p>}
-        {erroSenha && <p className="text-red-600 mb-4">{erroSenha}</p>}
-        <form onSubmit={alterarSenha} className="space-y-3">
-          <div>
-            <label className={rotuloClasse}>Nova senha</label>
-            <input
-              type="password"
-              value={novaSenha}
-              onChange={(e) => setNovaSenha(e.target.value)}
-              className={inputClasse}
-              autoComplete="new-password"
-              required
-            />
-          </div>
-          <div>
-            <label className={rotuloClasse}>Confirmar nova senha</label>
-            <input
-              type="password"
-              value={confirmarSenha}
-              onChange={(e) => setConfirmarSenha(e.target.value)}
-              className={inputClasse}
-              autoComplete="new-password"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={alterandoSenha}
-            className="w-full font-semibold rounded-lg py-2.5 disabled:opacity-50"
-          >
-            {alterandoSenha ? 'Alterando...' : 'Alterar senha'}
-          </button>
-        </form>
-      </div>
-    </div>
-  )
-}
