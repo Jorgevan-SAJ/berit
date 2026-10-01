@@ -74,12 +74,29 @@ function montarProximosEventos(eventos, hoje, limite) {
   itens.sort((a, b) => a.quando - b.quando || a.hora.localeCompare(b.hora))
   return itens.slice(0, limite)
 }
+// Status do plano da igreja para o banner do dashboard:
+// vitalicio não exibe nada; trial calcula dias restantes a partir da data gravada.
+function calcularStatusPlano(ig) {
+  if (!ig) return null
+  if (ig.vitalicio) return { tipo: 'vitalicio' }
+  if (ig.plano !== 'trial' || !ig.trial_termina_em) return null
+  const fim = new Date(ig.trial_termina_em)
+  if (Number.isNaN(fim.getTime())) return null
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
+  const fimDia = new Date(fim)
+  fimDia.setHours(0, 0, 0, 0)
+  const dias = Math.round((fimDia - hoje) / 86400000)
+  return { tipo: 'trial', dias, fim }
+}
 export default function AreaPage() {
   const [carregando, setCarregando] = useState(true)
   const [usuario, setUsuario] = useState(null)
   const [perfil, setPerfil] = useState(null)
   const [pendentes, setPendentes] = useState(0)
+  const [pendentesAutocadastro, setPendentesAutocadastro] = useState(0)
   const [toastVisivel, setToastVisivel] = useState(false)
+  const [toastAutocadastroVisivel, setToastAutocadastroVisivel] = useState(false)
   const [carregandoPainel, setCarregandoPainel] = useState(false)
   const [aniversariantes, setAniversariantes] = useState([])
   const [abaAniversario, setAbaAniversario] = useState('hoje')
@@ -106,7 +123,7 @@ export default function AreaPage() {
         if (perfilIgreja?.igreja_id) {
           const { data: ig } = await supabase
             .from('igrejas')
-            .select('nome, cnpj, slug')
+            .select('nome, cnpj, slug, plano, trial_termina_em, vitalicio')
             .eq('id', perfilIgreja.igreja_id)
             .maybeSingle()
           setIgreja(ig)
@@ -121,6 +138,11 @@ export default function AreaPage() {
           setPendentes(count || 0)
         }
         if (p && ['admin_master', 'secretaria'].includes(p.perfil)) {
+          const { count: countAuto } = await supabase
+            .from('solicitacoes_membros')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'pendente')
+          setPendentesAutocadastro(countAuto || 0)
           carregarPainel()
         }
       }
@@ -184,6 +206,17 @@ export default function AreaPage() {
       }
     }
   }, [pendentes, toastVisivel])
+  useEffect(() => {
+    if (pendentesAutocadastro > 0 && !toastAutocadastroVisivel) {
+      const jaVisto = typeof window !== 'undefined' && window.sessionStorage.getItem('berit_aviso_autocadastro_visto') === '1'
+      if (!jaVisto) {
+        setToastAutocadastroVisivel(true)
+        window.sessionStorage.setItem('berit_aviso_autocadastro_visto', '1')
+        const t = setTimeout(() => setToastAutocadastroVisivel(false), 8000)
+        return () => clearTimeout(t)
+      }
+    }
+  }, [pendentesAutocadastro, toastAutocadastroVisivel])
   if (carregando) {
     return (
       <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -205,6 +238,7 @@ export default function AreaPage() {
   const podeAgenda = perfil && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
   const podePainel = perfil && ['admin_master', 'secretaria'].includes(perfil.perfil)
   const seloLeitura = { display: 'inline-block', background: '#E8F0FA', color: '#1F3A5F', padding: '2px 8px', borderRadius: 999, fontSize: 11, marginBottom: 6 }
+  const statusPlano = calcularStatusPlano(igreja)
   const hoje = new Date()
   const chavesSemana = new Set()
   for (let i = 0; i < 7; i++) {
@@ -233,6 +267,27 @@ export default function AreaPage() {
         ? 'Nenhum pedido em atendimento.'
         : 'Nenhum pedido concluído.'
   const botaoHeader = { background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none', cursor: 'pointer' }
+  // Banner do trial: cores conforme proximidade do vencimento
+  const bannerTrial = (() => {
+    if (!statusPlano || statusPlano.tipo !== 'trial') return null
+    const dataFim = statusPlano.fim.toLocaleDateString('pt-BR')
+    if (statusPlano.dias > 1) {
+      return {
+        bg: '#E8F0FA', borda: '#C9D9EC', cor: '#1F3A5F',
+        texto: `⏳ Período de teste: ${statusPlano.dias} dias restantes — termina em ${dataFim}.`,
+      }
+    }
+    if (statusPlano.dias === 1) {
+      return {
+        bg: '#FDF3E3', borda: '#F0D9A8', cor: '#7A5A1E',
+        texto: `⚠️ O período de teste encerra amanhã (${dataFim}). Regularize seu plano para continuar sem interrupções.`,
+      }
+    }
+    return {
+      bg: '#FDECEC', borda: '#F0C9C9', cor: '#B71C1C',
+      texto: `⛔ O período de teste encerrou em ${dataFim}. Regularize seu plano para continuar utilizando todos os recursos do Berit.`,
+    }
+  })()
   return (
     <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
       <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem' }}>
@@ -272,7 +327,36 @@ export default function AreaPage() {
           </div>
         </div>
       )}
+      {toastAutocadastroVisivel && pendentesAutocadastro > 0 && (
+        <div
+          onClick={() => { window.location.href = '/membros/autocadastros' }}
+          style={{ position: 'fixed', top: toastVisivel && pendentes > 0 ? 90 : 16, left: '50%', transform: 'translateX(-50%)', zIndex: 50, maxWidth: 560, width: 'calc(100% - 2rem)', background: '#4C8C6E', color: '#FFFFFF', borderRadius: 10, padding: '14px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.25)', cursor: 'pointer', fontSize: 13, lineHeight: 1.5 }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+            <span>
+              📋 <strong>Existem {pendentesAutocadastro} cadastro(s) de autocadastro aguardando confirmação.</strong>{' '}
+              Acesse Membros e em seguida Autocadastro para aprovar ou rejeitar.
+            </span>
+            <button
+              onClick={(e) => { e.stopPropagation(); setToastAutocadastroVisivel(false) }}
+              style={{ background: 'none', border: 'none', color: '#FFFFFF', fontSize: 16, cursor: 'pointer', lineHeight: 1 }}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem 1.5rem' }}>
+        {bannerTrial && (
+          <div
+            style={{
+              background: bannerTrial.bg, border: `1px solid ${bannerTrial.borda}`, color: bannerTrial.cor,
+              borderRadius: 10, padding: '12px 14px', marginBottom: '1rem', fontSize: 13, lineHeight: 1.5, fontWeight: 600,
+            }}
+          >
+            {bannerTrial.texto}
+          </div>
+        )}
         <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Área da Igreja</h1>
         <p style={{ fontSize: 12, color: '#8A8A8A', margin: '0 0 1rem' }}>
           Acesso restrito para usuários cadastrados e autorizados pela administração da igreja.
@@ -296,6 +380,16 @@ export default function AreaPage() {
             <a href="/membros" style={card}>
               <div style={cardTitulo}>Membros</div>
               {ehSomenteLeitura && <span style={seloLeitura}>Somente leitura</span>}
+              {pendentesAutocadastro > 0 && (
+                <span
+                  role="link"
+                  tabIndex={0}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = '/membros/autocadastros' }}
+                  style={{ display: 'inline-block', background: '#FDF3E3', color: '#B26A00', padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700, marginBottom: 6, cursor: 'pointer' }}
+                >
+                  {pendentesAutocadastro} autocadastro(s) a confirmar →
+                </span>
+              )}
               <p style={cardTexto}>
                 {ehSomenteLeitura
                   ? 'Consulta do rol de membros — sem cadastro ou edição.'
