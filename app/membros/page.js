@@ -1,650 +1,508 @@
 'use client'
 import { useEffect, useState } from 'react'
+import * as XLSX from 'xlsx'
 import { supabase } from '../../lib/supabase'
-import { getPerfil, perfilLabel } from '../../lib/perfil'
-const DIAS_SEMANA_CURTO = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
-const ABAS_ANIVERSARIO = [
-  { v: 'hoje', r: 'Hoje' },
-  { v: 'semana', r: 'Esta semana' },
-  { v: 'mes', r: 'Este mês' },
+import { getPerfil } from '../../lib/perfil'
+function formatarCelular(valor) {
+  const d = (valor || '').replace(/\D/g, '').slice(0, 11)
+  if (d.length <= 2) return d
+  if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
+}
+function formatarData(valor) {
+  if (!valor) return ''
+  const partes = valor.split('-')
+  if (partes.length !== 3) return valor
+  return `${partes[2]}/${partes[1]}/${partes[0]}`
+}
+function calcularIdade(dataNascimento) {
+  if (!dataNascimento) return null
+  const nasc = new Date(dataNascimento + 'T00:00:00')
+  const hoje = new Date()
+  let idade = hoje.getFullYear() - nasc.getFullYear()
+  const m = hoje.getMonth() - nasc.getMonth()
+  if (m < 0 || (m === 0 && hoje.getDate() < nasc.getDate())) idade--
+  return idade
+}
+function faixaEtaria(idade) {
+  if (idade === null || idade === undefined) return 'sem-data'
+  if (idade <= 11) return 'crianca'
+  if (idade <= 17) return 'adolescente'
+  if (idade <= 35) return 'jovem'
+  if (idade <= 59) return 'adulto'
+  return 'anciao'
+}
+const FAIXA_ROTULO = {
+  crianca: 'Criança',
+  adolescente: 'Adolescente',
+  jovem: 'Jovem',
+  adulto: 'Adulto',
+  anciao: 'Ancião',
+  'sem-data': '',
+}
+const FAIXAS = [
+  { valor: '', rotulo: 'Todas as idades' },
+  { valor: 'crianca', rotulo: 'Crianças (0 a 11)' },
+  { valor: 'adolescente', rotulo: 'Adolescentes (12 a 17)' },
+  { valor: 'jovem', rotulo: 'Jovens (18 a 35)' },
+  { valor: 'adulto', rotulo: 'Adultos (36 a 59)' },
+  { valor: 'anciao', rotulo: 'Anciãos (60+)' },
 ]
-const ROTULOS_EVENTO = {
-  culto: { r: 'Culto', cor: '#1F3A5F', bg: '#E8F0FA' },
-  ensaio: { r: 'Ensaio', cor: '#4C8C6E', bg: '#EAF4EE' },
-  reuniao: { r: 'Reunião', cor: '#B26A00', bg: '#FDF3E3' },
-  evento: { r: 'Evento', cor: '#B71C1C', bg: '#FDECEC' },
-  campanha: { r: 'Campanha', cor: '#7B4FA6', bg: '#F3EAFB' },
-  outro: { r: 'Outro', cor: '#5A5A5A', bg: '#F0EAE0' },
-}
-const ROTULOS_PEDIDO = {
-  oracao: { r: 'Oração', cor: '#4C8C6E', bg: '#EAF4EE' },
-  orientacao: { r: 'Orientação', cor: '#1F3A5F', bg: '#E8F0FA' },
-}
-const ABAS_PEDIDO_STATUS = [
-  { v: 'pendente', r: 'Pendentes' },
-  { v: 'em_atendimento', r: 'Em atendimento' },
-  { v: 'concluido', r: 'Concluídos' },
+const SITUACOES = [
+  { valor: '', rotulo: 'Todas as situações' },
+  { valor: 'membro', rotulo: 'Membros' },
+  { valor: 'congregado', rotulo: 'Congregados' },
+  { valor: 'visitante', rotulo: 'Visitantes' },
 ]
-const ABAS_PEDIDO_TIPO = [
-  { v: 'todos', r: 'Todos' },
-  { v: 'oracao', r: 'Oração' },
-  { v: 'orientacao', r: 'Orientação' },
+const SITUACAO_ROTULO = {
+  membro: 'Membro',
+  congregado: 'Congregado',
+  visitante: 'Visitante',
+  inativo: 'Inativo',
+}
+const CORES_SITUACAO = {
+  membro: { bg: '#EAF4EE', cor: '#4C8C6E' },
+  congregado: { bg: '#E8F0FA', cor: '#1F3A5F' },
+  visitante: { bg: '#FFF8E1', cor: '#B7791F' },
+}
+const MOTIVOS = [
+  'Falecido',
+  'Abandono',
+  'Em disciplina',
+  'Transferido para outra igreja',
+  'Mudança de cidade',
+  'Outros',
 ]
-function formatarCnpj(cnpj) {
-  const d = String(cnpj || '').replace(/\D/g, '')
-  if (d.length !== 14) return cnpj
-  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12, 14)}`
-}
-function partesData(iso) {
-  if (!iso) return null
-  const [a, m, d] = String(iso).split('-').map(Number)
-  if (!a || !m || !d) return null
-  return { ano: a, mes: m, dia: d }
-}
-function rotuloDiaSemana(mes, dia) {
-  const d = new Date(new Date().getFullYear(), mes - 1, dia)
-  return DIAS_SEMANA_CURTO[d.getDay()]
-}
-function formatarDataHoraBR(iso) {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}h${String(d.getMinutes()).padStart(2, '0')}`
-}
-function montarProximosEventos(eventos, hoje, limite) {
-  const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())
-  const itens = []
-  eventos.forEach((e) => {
-    const hora = e.hora_inicio ? String(e.hora_inicio).slice(0, 5) : ''
-    const base = { id: e.id, titulo: e.titulo, tipo: e.tipo, local: e.local, hora }
-    if (e.tipo_evento === 'permanente') {
-      const ds = Number(e.dia_semana)
-      if (Number.isNaN(ds) || ds < 0 || ds > 6) return
-      const quando = new Date(inicioHoje)
-      quando.setDate(quando.getDate() + ((ds - quando.getDay() + 7) % 7))
-      itens.push({ ...base, quando, permanente: true })
-      return
-    }
-    const p = partesData(e.data_inicio)
-    if (!p) return
-    const quando = new Date(p.ano, p.mes - 1, p.dia)
-    if (quando < inicioHoje) return
-    itens.push({ ...base, quando, permanente: false })
-  })
-  itens.sort((a, b) => a.quando - b.quando || a.hora.localeCompare(b.hora))
-  return itens.slice(0, limite)
-}
-export default function AreaPage() {
+export default function MembrosPage() {
+  const [perfilAtual, setPerfilAtual] = useState(null)
+  const [verificando, setVerificando] = useState(true)
+  const [membros, setMembros] = useState([])
+  const [busca, setBusca] = useState('')
+  const [faixa, setFaixa] = useState('')
+  const [sexo, setSexo] = useState('')
+  const [situacao, setSituacao] = useState('')
   const [carregando, setCarregando] = useState(true)
-  const [usuario, setUsuario] = useState(null)
-  const [perfil, setPerfil] = useState(null)
-  const [pendentes, setPendentes] = useState(0)
+  const [erro, setErro] = useState('')
+  const [inativando, setInativando] = useState(null)
+  const [motivo, setMotivo] = useState(MOTIVOS[0])
+  const [excluindo, setExcluindo] = useState(null)
+  const [consultando, setConsultando] = useState(null)
+  const [salvando, setSalvando] = useState(false)
   const [pendentesAutocadastro, setPendentesAutocadastro] = useState(0)
-  const [toastVisivel, setToastVisivel] = useState(false)
-  const [toastAutocadastroVisivel, setToastAutocadastroVisivel] = useState(false)
-  const [carregandoPainel, setCarregandoPainel] = useState(false)
-  const [aniversariantes, setAniversariantes] = useState([])
-  const [abaAniversario, setAbaAniversario] = useState('hoje')
-  const [proximosEventos, setProximosEventos] = useState([])
-  const [igreja, setIgreja] = useState(null)
-  // Pedidos de acolhimento (canal da página pública)
-  const [pedidos, setPedidos] = useState([])
-  const [abaPedidoStatus, setAbaPedidoStatus] = useState('pendente')
-  const [abaPedidoTipo, setAbaPedidoTipo] = useState('todos')
-  const [carregandoPedidos, setCarregandoPedidos] = useState(false)
+  const podeVer = perfilAtual && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(perfilAtual.perfil)
+  const podeEditar = perfilAtual && ['admin_master', 'secretaria'].includes(perfilAtual.perfil)
+  const ehSomenteLeitura = perfilAtual && ['tesouraria', 'conselho_fiscal'].includes(perfilAtual.perfil)
+  async function carregar() {
+    setCarregando(true)
+    const { data, error } = await supabase
+      .from('membros')
+      .select('*')
+      .in('situacao', ['membro', 'congregado', 'visitante'])
+      .order('nome')
+    if (error) {
+      setErro('Não foi possível carregar os membros.')
+    } else {
+      setMembros(data || [])
+    }
+    setCarregando(false)
+  }
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!data.session) {
-        window.location.href = '/login'
-      } else {
-        setUsuario(data.session.user)
-        const p = await getPerfil()
-        setPerfil(p)
-        const { data: perfilIgreja } = await supabase
-          .from('perfis')
-          .select('igreja_id')
-          .eq('user_id', data.session.user.id)
-          .maybeSingle()
-        if (perfilIgreja?.igreja_id) {
-          const { data: ig } = await supabase
-            .from('igrejas')
-            .select('nome, cnpj, slug')
-            .eq('id', perfilIgreja.igreja_id)
-            .maybeSingle()
-          setIgreja(ig)
-        }
-        setCarregando(false)
-        if (p && ['admin_master', 'tesouraria'].includes(p.perfil)) {
-          const { count } = await supabase
-            .from('solicitacoes_alteracao')
-            .select('id', { count: 'exact', head: true })
-            .eq('status', 'pendente')
-            .neq('solicitado_por', data.session.user.id)
-          setPendentes(count || 0)
-        }
-        if (p && ['admin_master', 'secretaria'].includes(p.perfil)) {
-          const { count: countAuto } = await supabase
-            .from('solicitacoes_membros')
-            .select('id', { count: 'exact', head: true })
-            .eq('status', 'pendente')
-          setPendentesAutocadastro(countAuto || 0)
-          carregarPainel()
-        }
+    getPerfil().then((p) => {
+      setPerfilAtual(p)
+      setVerificando(false)
+      if (p && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(p.perfil)) carregar()
+      if (p && ['admin_master', 'secretaria'].includes(p.perfil)) {
+        supabase
+          .from('solicitacoes_membros')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'pendente')
+          .then(({ count }) => setPendentesAutocadastro(count || 0))
       }
     })
   }, [])
-  async function carregarPainel() {
-    setCarregandoPainel(true)
-    setCarregandoPedidos(true)
-    const hoje = new Date()
-    const [mem, ev, pd] = await Promise.all([
-      supabase.from('membros').select('nome, data_nascimento, situacao'),
-      supabase.from('eventos').select('id, titulo, tipo, tipo_evento, dia_semana, data_inicio, hora_inicio, local'),
-      supabase.from('pedidos_acolhimento').select('*').order('criado_em', { ascending: false }),
-    ])
-    const lista = (mem.data || [])
-      .filter((m) => m.data_nascimento && m.situacao !== 'inativo')
-      .map((m) => {
-        const p = partesData(m.data_nascimento)
-        if (!p) return null
-        return { nome: m.nome, mes: p.mes, dia: p.dia, anoNascimento: p.ano }
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.dia - b.dia)
-    setAniversariantes(lista)
-    setProximosEventos(montarProximosEventos(ev.data || [], hoje, 5))
-    setPedidos(pd.data || [])
-    setCarregandoPainel(false)
-    setCarregandoPedidos(false)
-  }
-  async function mudarStatusPedido(id, novoStatus) {
+  async function confirmarInativacao() {
+    if (!inativando) return
+    setSalvando(true)
     const { error } = await supabase
-      .from('pedidos_acolhimento')
-      .update({ status: novoStatus })
-      .eq('id', id)
-    if (!error) {
-      setPedidos((lista) => lista.map((p) => (p.id === id ? { ...p, status: novoStatus } : p)))
+      .from('membros')
+      .update({
+        situacao: 'inativo',
+        motivo_inativacao: motivo,
+        data_inativacao: new Date().toISOString().slice(0, 10),
+      })
+      .eq('id', inativando.id)
+    setSalvando(false)
+    setInativando(null)
+    setMotivo(MOTIVOS[0])
+    if (error) {
+      setErro('Não foi possível inativar o membro. Tente novamente.')
+    } else {
+      carregar()
     }
   }
-  // Copia a mensagem formatada do pedido e abre o WhatsApp para escolher o grupo
-  async function copiarEEnviarGrupo(p) {
-    const titulo = p.tipo === 'oracao' ? '*Pedido de oração*' : '*Orientação espiritual / dúvida teológica*'
-    const msg = [
-      titulo,
-      `Nome: ${p.nome}`,
-      p.cidade ? `Cidade: ${p.cidade}` : null,
-      p.texto,
-      p.autoriza_compartilhar ? '(Pedido autorizado para compartilhamento no grupo)' : '(Pedido NÃO autorizado para compartilhamento no grupo)',
-      '— Enviado via Berit',
-    ].filter(Boolean).join('\n')
-    try { await navigator.clipboard.writeText(msg) } catch {}
-    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer')
+  async function confirmarExclusao() {
+    if (!excluindo) return
+    setSalvando(true)
+    const { error } = await supabase.from('membros').delete().eq('id', excluindo.id)
+    setSalvando(false)
+    if (error) {
+      setErro('Não foi possível excluir o cadastro. Tente novamente.')
+    } else {
+      setExcluindo(null)
+      carregar()
+    }
   }
-  useEffect(() => {
-    if (pendentes > 0 && !toastVisivel) {
-      const jaVisto = typeof window !== 'undefined' && window.sessionStorage.getItem('berit_aviso_pendencia_visto') === '1'
-      if (!jaVisto) {
-        setToastVisivel(true)
-        window.sessionStorage.setItem('berit_aviso_pendencia_visto', '1')
-        const t = setTimeout(() => setToastVisivel(false), 8000)
-        return () => clearTimeout(t)
+  function exportar() {
+    const dados = filtrados.map((m) => {
+      const idade = calcularIdade(m.data_nascimento)
+      return {
+        Nome: m.nome,
+        'E-mail': m.email || '',
+        Celular: formatarCelular(m.celular),
+        Sexo: m.sexo || '',
+        Idade: idade === null ? '' : idade,
+        'Faixa Etária': FAIXA_ROTULO[faixaEtaria(idade)] || '',
+        'Data de Nascimento': formatarData(m.data_nascimento),
+        'Data de Batismo': formatarData(m.data_batismo),
+        'Data de Recebimento': formatarData(m.data_recebimento),
+        Endereço: m.endereco || '',
+        Bairro: m.bairro || '',
+        Cidade: m.cidade || '',
+        UF: m.uf || '',
+        CEP: m.cep || '',
+        'Nome do Pai': m.nome_pai || '',
+        'Nome da Mãe': m.nome_mae || '',
+        Situacao: SITUACAO_ROTULO[m.situacao] || m.situacao,
+        Observações: m.observacoes || '',
       }
-    }
-  }, [pendentes, toastVisivel])
-  useEffect(() => {
-    if (pendentesAutocadastro > 0 && !toastAutocadastroVisivel) {
-      const jaVisto = typeof window !== 'undefined' && window.sessionStorage.getItem('berit_aviso_autocadastro_visto') === '1'
-      if (!jaVisto) {
-        setToastAutocadastroVisivel(true)
-        window.sessionStorage.setItem('berit_aviso_autocadastro_visto', '1')
-        const t = setTimeout(() => setToastAutocadastroVisivel(false), 8000)
-        return () => clearTimeout(t)
-      }
-    }
-  }, [pendentesAutocadastro, toastAutocadastroVisivel])
-  if (carregando) {
+    })
+    const ws = XLSX.utils.json_to_sheet(dados)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Membros')
+    XLSX.writeFile(wb, 'membros_berit.xlsx')
+  }
+  const filtrados = membros.filter((m) => {
+    const texto = busca.trim().toLowerCase()
+    const nomeOk = !texto ||
+      (m.nome || '').toLowerCase().includes(texto) ||
+      (m.email || '').toLowerCase().includes(texto)
+    const idade = calcularIdade(m.data_nascimento)
+    const faixaOk = !faixa || faixaEtaria(idade) === faixa
+    const sexoOk = !sexo || String(m.sexo || '').toLowerCase() === sexo
+    const situacaoOk = !situacao || (m.situacao || '') === situacao
+    return nomeOk && faixaOk && sexoOk && situacaoOk
+  })
+  const rotuloSexo = (s) => {
+    const v = String(s || '').toLowerCase()
+    return v === 'masculino' ? 'Masculino' : v === 'feminino' ? 'Feminino' : '—'
+  }
+  if (verificando) {
     return (
-      <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
-        <div style={{ fontSize: 14, color: '#8A8A8A' }}>Carregando...</div>
+      <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem', textAlign: 'center', fontSize: 14, color: '#8A8A8A' }}>
+          Verificando permissões...
+        </div>
       </main>
     )
   }
-  const card = {
-    background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', border: '1px solid #E4DED2',
-    boxShadow: '0 2px 12px rgba(31,58,95,0.06)', textDecoration: 'none', display: 'block',
+  if (!perfilAtual || !podeVer) {
+    return (
+      <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
+        <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <a href="/area" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF', textDecoration: 'none' }}>
+            Berit
+          </a>
+          <a href="/area" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}>
+            Voltar
+          </a>
+        </header>
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem', textAlign: 'center' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#1F3A5F', marginBottom: 8 }}>Acesso restrito</div>
+          <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 16px' }}>
+            Esta área é exclusiva dos perfis <strong>Administrador</strong>, <strong>Secretaria</strong>, <strong>Tesouraria</strong> e <strong>Conselho Fiscal</strong>.
+          </p>
+          <a href="/area" style={{ color: '#1F3A5F', fontSize: 14 }}>Voltar para o início</a>
+        </div>
+      </main>
+    )
   }
-  const cardTitulo = { fontSize: 16, fontWeight: 600, color: '#1F3A5F', marginBottom: 6 }
-  const cardTexto = { fontSize: 13, color: '#8A8A8A', margin: 0 }
-  const ehAdmin = perfil && perfil.perfil === 'admin_master'
-  const ehConselhoFiscal = perfil && perfil.perfil === 'conselho_fiscal'
-  const ehSomenteLeitura = perfil && ['tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
-  const podeFinancas = perfil && ['admin_master', 'tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
-  const podeMembros = perfil && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
-  const podeAgenda = perfil && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
-  const podePainel = perfil && ['admin_master', 'secretaria'].includes(perfil.perfil)
-  const seloLeitura = { display: 'inline-block', background: '#E8F0FA', color: '#1F3A5F', padding: '2px 8px', borderRadius: 999, fontSize: 11, marginBottom: 6 }
-  const hoje = new Date()
-  const chavesSemana = new Set()
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + i)
-    chavesSemana.add(`${d.getMonth() + 1}-${d.getDate()}`)
-  }
-  const aniversariantesHoje = aniversariantes.filter((a) => a.mes === hoje.getMonth() + 1 && a.dia === hoje.getDate())
-  const aniversariantesSemana = aniversariantes.filter((a) => chavesSemana.has(`${a.mes}-${a.dia}`))
-  const aniversariantesMes = aniversariantes.filter((a) => a.mes === hoje.getMonth() + 1)
-  const listaAniversariantes =
-    abaAniversario === 'hoje' ? aniversariantesHoje : abaAniversario === 'semana' ? aniversariantesSemana : aniversariantesMes
-  const vazioAniversario =
-    abaAniversario === 'hoje'
-      ? 'Nenhum aniversariante hoje.'
-      : abaAniversario === 'semana'
-        ? 'Nenhum aniversariante esta semana.'
-        : 'Nenhum aniversariante este mês.'
-  const pedidosPendentes = pedidos.filter((p) => p.status === 'pendente').length
-  const pedidosFiltrados = pedidos.filter(
-    (p) => p.status === abaPedidoStatus && (abaPedidoTipo === 'todos' || p.tipo === abaPedidoTipo)
-  )
-  const vazioPedidos =
-    abaPedidoStatus === 'pendente'
-      ? 'Nenhum pedido pendente.'
-      : abaPedidoStatus === 'em_atendimento'
-        ? 'Nenhum pedido em atendimento.'
-        : 'Nenhum pedido concluído.'
-  const botaoHeader = { background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none', cursor: 'pointer' }
   return (
     <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
-      <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem' }}>
-        <div style={{ maxWidth: 960, margin: '0 auto' }}>
-          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 10 }}>Berit</div>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <a href="/igrejas" style={botaoHeader}>Voltar ao Diretório</a>
-            <a href="/igrejas/editar" style={botaoHeader}>Configurações</a>
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: 8 }}>
-            <a href="/ajuda" style={botaoHeader}>Ajuda</a>
-            <button
-              onClick={async () => { await supabase.auth.signOut(); window.location.href = '/login' }}
-              style={botaoHeader}
-            >
-              Sair
-            </button>
-          </div>
-        </div>
+      <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <a href="/area" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF', textDecoration: 'none' }}>
+          Berit
+        </a>
+        <a href="/area" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}>
+          Voltar
+        </a>
       </header>
-      {toastVisivel && pendentes > 0 && (
-        <div
-          onClick={() => { window.location.href = '/financas/auditoria' }}
-          style={{ position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 50, maxWidth: 560, width: 'calc(100% - 2rem)', background: '#1F3A5F', color: '#FFFFFF', borderRadius: 10, padding: '14px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.25)', cursor: 'pointer', fontSize: 13, lineHeight: 1.5 }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-            <span>
-              ⚠️ <strong>Existem {pendentes} pendência(s) a confirmar na auditoria.</strong>{' '}
-              Acesse Finanças e em seguida Auditoria para aprovar ou recusar as alterações.
-            </span>
-            <button
-              onClick={(e) => { e.stopPropagation(); setToastVisivel(false) }}
-              style={{ background: 'none', border: 'none', color: '#FFFFFF', fontSize: 16, cursor: 'pointer', lineHeight: 1 }}
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
-      {toastAutocadastroVisivel && pendentesAutocadastro > 0 && (
-        <div
-          onClick={() => { window.location.href = '/membros/autocadastros' }}
-          style={{ position: 'fixed', top: toastVisivel && pendentes > 0 ? 90 : 16, left: '50%', transform: 'translateX(-50%)', zIndex: 50, maxWidth: 560, width: 'calc(100% - 2rem)', background: '#4C8C6E', color: '#FFFFFF', borderRadius: 10, padding: '14px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.25)', cursor: 'pointer', fontSize: 13, lineHeight: 1.5 }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-            <span>
-              📋 <strong>Existem {pendentesAutocadastro} cadastro(s) de autocadastro aguardando confirmação.</strong>{' '}
-              Acesse Membros e em seguida Autocadastro para aprovar ou rejeitar.
-            </span>
-            <button
-              onClick={(e) => { e.stopPropagation(); setToastAutocadastroVisivel(false) }}
-              style={{ background: 'none', border: 'none', color: '#FFFFFF', fontSize: 16, cursor: 'pointer', lineHeight: 1 }}
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '2rem 1.5rem' }}>
-        <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Área da Igreja</h1>
-        <p style={{ fontSize: 12, color: '#8A8A8A', margin: '0 0 1rem' }}>
-          Acesso restrito para usuários cadastrados e autorizados pela administração da igreja.
-        </p>
-        <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 2rem' }}>
-          Bem-vindo {perfil?.nome || usuario?.user_metadata?.nome || usuario?.email || ''}.{' '}
-          {perfil ? `Perfil ${perfilLabel(perfil.perfil)}.` : ''} Gestão Simples Para Igrejas.
-          {igreja?.cnpj && (
-            <span style={{ display: 'block', marginTop: 6 }}>
-              CNPJ: {formatarCnpj(igreja.cnpj)}
-            </span>
-          )}
-          {ehConselhoFiscal && (
-            <span style={{ display: 'block', marginTop: 6, color: '#4C8C6E' }}>
-              🔍 Acesso de consulta em todos os módulos, em modo somente leitura (fiscalização).
-            </span>
-          )}
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-          {podeMembros ? (
-            <a href="/membros" style={card}>
-              <div style={cardTitulo}>Membros</div>
-              {ehSomenteLeitura && <span style={seloLeitura}>Somente leitura</span>}
-              {pendentesAutocadastro > 0 && (
-                <span
-                  role="link"
-                  tabIndex={0}
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = '/membros/autocadastros' }}
-                  style={{ display: 'inline-block', background: '#FDF3E3', color: '#B26A00', padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700, marginBottom: 6, cursor: 'pointer' }}
-                >
-                  {pendentesAutocadastro} autocadastro(s) a confirmar →
-                </span>
-              )}
-              <p style={cardTexto}>
-                {ehSomenteLeitura
-                  ? 'Consulta do rol de membros — sem cadastro ou edição.'
-                  : 'Cadastro e gestão do rol de membros. Clique para acessar.'}
-              </p>
-            </a>
-          ) : (
-            <div style={{ ...card, opacity: 0.6 }}>
-              <div style={cardTitulo}>Membros</div>
-              <p style={cardTexto}>Acesso restrito.</p>
-            </div>
-          )}
-          {podeFinancas ? (
-            <a href="/financas" style={card}>
-              <div style={cardTitulo}>Finanças</div>
-              {ehConselhoFiscal && <span style={seloLeitura}>Somente leitura</span>}
-              {pendentes > 0 && (
-                <span
-                  role="link"
-                  tabIndex={0}
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = '/financas/auditoria' }}
-                  style={{ display: 'inline-block', background: '#FDF3E3', color: '#B26A00', padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700, marginBottom: 6, cursor: 'pointer' }}
-                >
-                  {pendentes} pendência(s) a confirmar →
-                </span>
-              )}
-              <p style={cardTexto}>
-                {ehConselhoFiscal
-                  ? 'Consulta de lançamentos, relatórios e auditoria — modo somente leitura.'
-                  : 'Entradas, saídas e relatório de dizimistas. Clique para acessar.'}
-              </p>
-            </a>
-          ) : (
-            <div style={{ ...card, opacity: 0.6 }}>
-              <div style={cardTitulo}>Finanças</div>
-              <p style={cardTexto}>Acesso restrito ao perfil Tesouraria.</p>
-            </div>
-          )}
-          {ehAdmin && (
-            <a href="/acessos" style={card}>
-              <div style={cardTitulo}>Perfis de Acesso</div>
-              <p style={cardTexto}>Crie usuários e controle as permissões da plataforma.</p>
-            </a>
-          )}
-          {podeAgenda ? (
-            <a href="/agenda" style={card}>
-              <div style={cardTitulo}>Agenda</div>
-              {ehSomenteLeitura && <span style={seloLeitura}>Somente leitura</span>}
-              <p style={cardTexto}>
-                {ehSomenteLeitura
-                  ? 'Consulta de programações e eventos — sem cadastro ou edição.'
-                  : 'Programações e eventos da igreja. Clique para acessar.'}
-              </p>
-            </a>
-          ) : (
-            <div style={{ ...card, opacity: 0.6 }}>
-              <div style={cardTitulo}>Agenda</div>
-              <p style={cardTexto}>Acesso restrito.</p>
-            </div>
-          )}
-          <a
-            href={igreja?.slug ? `/igreja/${igreja.slug}` : '/igrejas'}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={card}
+      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '2rem 1.5rem' }}>
+        {pendentesAutocadastro > 0 && (
+          <div
+            onClick={() => { window.location.href = '/membros/autocadastros' }}
+            style={{ background: '#FDF3E3', border: '1px solid #F0D9A8', borderRadius: 10, padding: '12px 14px', marginBottom: '1.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}
           >
-            <div style={cardTitulo}>Diretório Público</div>
-            <p style={cardTexto}>
-              {igreja?.slug
-                ? 'Veja a página pública da sua igreja como os visitantes enxergam.'
-                : 'Busca de igrejas perto de você. Clique para acessar o diretório.'}
+            <span style={{ fontSize: 18 }}>⚠️</span>
+            <span style={{ fontSize: 13, color: '#7A5A1E', lineHeight: 1.5 }}>
+              <strong>{pendentesAutocadastro} cadastro(s) de autocadastro aguardando confirmação.</strong>{' '}
+              Clique aqui para revisar e confirmar.
+            </span>
+          </div>
+        )}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+          <div>
+            <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Membros</h1>
+            <p style={{ fontSize: 14, color: '#8A8A8A', margin: 0 }}>
+              Cadastro e gestão do rol de membros da igreja.
+              {ehSomenteLeitura && ' Consulta em modo somente leitura.'}
             </p>
-          </a>
-        </div>
-        {podePainel && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem', marginTop: '1.5rem' }}>
-            <div style={card}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: 10 }}>
-                <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F' }}>🎂 Aniversariantes</div>
-                <div style={{ display: 'flex', gap: 4, background: '#F5F0E6', borderRadius: 999, padding: 3 }}>
-                  {ABAS_ANIVERSARIO.map((aba) => (
-                    <button
-                      key={aba.v}
-                      onClick={() => setAbaAniversario(aba.v)}
-                      style={{
-                        border: 'none', borderRadius: 999, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                        background: abaAniversario === aba.v ? '#1F3A5F' : 'transparent',
-                        color: abaAniversario === aba.v ? '#FFFFFF' : '#5A5A5A',
-                      }}
-                    >
-                      {aba.r}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {carregandoPainel ? (
-                <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '1.5rem' }}>Carregando...</div>
-              ) : listaAniversariantes.length === 0 ? (
-                <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '1.5rem' }}>{vazioAniversario}</div>
-              ) : (
-                <div>
-                  {listaAniversariantes.map((a, i) => {
-                    const idade = hoje.getFullYear() - a.anoNascimento
-                    const ehHoje = a.mes === hoje.getMonth() + 1 && a.dia === hoje.getDate()
-                    return (
-                      <div
-                        key={`${a.nome}-${a.dia}-${a.mes}`}
-                        style={{
-                          display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem',
-                          padding: '9px 0', borderTop: i === 0 ? 'none' : '1px solid #F0EAE0',
-                        }}
-                      >
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: '#2E2E2E' }}>
-                            {a.nome}
-                            {ehHoje && (
-                              <span style={{ marginLeft: 8, background: '#FDF3E3', color: '#B26A00', padding: '2px 8px', borderRadius: 999, fontSize: 10, fontWeight: 700 }}>
-                                hoje
-                              </span>
-                            )}
-                          </div>
-                          <div style={{ fontSize: 12, color: '#8A8A8A' }}>
-                            {rotuloDiaSemana(a.mes, a.dia)} · {String(a.dia).padStart(2, '0')}/{String(a.mes).padStart(2, '0')}
-                          </div>
-                        </div>
-                        <div style={{ fontSize: 12, color: '#4C8C6E', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                          {idade} {idade === 1 ? 'ano' : 'anos'}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-            <div style={card}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F' }}>📅 Próximos eventos</div>
-                <a href="/agenda" style={{ fontSize: 12, color: '#1F3A5F', textDecoration: 'none', fontWeight: 600 }}>
-                  Ver agenda →
-                </a>
-              </div>
-              {carregandoPainel ? (
-                <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '1.5rem' }}>Carregando...</div>
-              ) : proximosEventos.length === 0 ? (
-                <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '1.5rem' }}>Nenhum evento próximo.</div>
-              ) : (
-                <div>
-                  {proximosEventos.map((e, i) => {
-                    const rotulo = ROTULOS_EVENTO[e.tipo] || ROTULOS_EVENTO.outro
-                    return (
-                      <div
-                        key={`${e.id}-${i}`}
-                        style={{
-                          display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem',
-                          padding: '9px 0', borderTop: i === 0 ? 'none' : '1px solid #F0EAE0',
-                        }}
-                      >
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 600, color: '#2E2E2E' }}>{e.titulo}</div>
-                          <div style={{ fontSize: 12, color: '#8A8A8A', marginTop: 3 }}>
-                            {DIAS_SEMANA_CURTO[e.quando.getDay()]} · {String(e.quando.getDate()).padStart(2, '0')}/{String(e.quando.getMonth() + 1).padStart(2, '0')}
-                            {e.hora ? ` · ${e.hora}` : ''}
-                            {e.local ? ` · ${e.local}` : ''}
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                          <span style={{ background: rotulo.bg, color: rotulo.cor, padding: '3px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>
-                            {rotulo.r}
-                          </span>
-                          {e.permanente && (
-                            <span style={{ background: '#E8F0FA', color: '#1F3A5F', padding: '2px 7px', borderRadius: 999, fontSize: 10 }}>
-                              semanal
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-            <div style={card}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: 10 }}>
-                <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F' }}>🙏 Pedidos de acolhimento</div>
-                {pedidosPendentes > 0 && (
-                  <span style={{ background: '#FDF3E3', color: '#B26A00', padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700 }}>
-                    {pedidosPendentes} pendente(s)
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {podeEditar && (
+              <a href="/membros/inativos" style={{ background: '#F5F0E6', color: '#1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+                Inativos
+              </a>
+            )}
+            {podeEditar && (
+              <a href="/membros/importar" style={{ background: '#FFFFFF', color: '#1F3A5F', border: '1px solid #1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+                Importar dados
+              </a>
+            )}
+            {podeEditar && (
+              <a href="/membros/autocadastros" style={{ background: '#FFFFFF', color: '#1F3A5F', border: '1px solid #1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                Autocadastro
+                {pendentesAutocadastro > 0 && (
+                  <span style={{ background: '#B71C1C', color: '#FFFFFF', borderRadius: 999, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>
+                    {pendentesAutocadastro}
                   </span>
                 )}
-              </div>
-              <div style={{ display: 'flex', gap: 4, background: '#F5F0E6', borderRadius: 999, padding: 3, marginBottom: 8, width: 'fit-content' }}>
-                {ABAS_PEDIDO_TIPO.map((aba) => (
-                  <button
-                    key={aba.v}
-                    onClick={() => setAbaPedidoTipo(aba.v)}
-                    style={{
-                      border: 'none', borderRadius: 999, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                      background: abaPedidoTipo === aba.v ? '#1F3A5F' : 'transparent',
-                      color: abaPedidoTipo === aba.v ? '#FFFFFF' : '#5A5A5A',
-                    }}
-                  >
-                    {aba.r}
-                  </button>
-                ))}
-              </div>
-              <div style={{ display: 'flex', gap: 4, background: '#F5F0E6', borderRadius: 999, padding: 3, marginBottom: 10, width: 'fit-content' }}>
-                {ABAS_PEDIDO_STATUS.map((aba) => (
-                  <button
-                    key={aba.v}
-                    onClick={() => setAbaPedidoStatus(aba.v)}
-                    style={{
-                      border: 'none', borderRadius: 999, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                      background: abaPedidoStatus === aba.v ? '#4C8C6E' : 'transparent',
-                      color: abaPedidoStatus === aba.v ? '#FFFFFF' : '#5A5A5A',
-                    }}
-                  >
-                    {aba.r}
-                  </button>
-                ))}
-              </div>
-              {carregandoPedidos ? (
-                <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '1.5rem' }}>Carregando...</div>
-              ) : pedidosFiltrados.length === 0 ? (
-                <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '1.5rem' }}>{vazioPedidos}</div>
-              ) : (
-                <div>
-                  {pedidosFiltrados.map((p, i) => {
-                    const rotulo = ROTULOS_PEDIDO[p.tipo] || ROTULOS_PEDIDO.oracao
-                    return (
-                      <div
-                        key={p.id}
-                        style={{
-                          padding: '10px 0', borderTop: i === 0 ? 'none' : '1px solid #F0EAE0',
-                          display: 'flex', flexDirection: 'column', gap: 6,
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                            <span style={{ background: rotulo.bg, color: rotulo.cor, padding: '3px 8px', borderRadius: 999, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>
-                              {rotulo.r}
-                            </span>
-                            <span style={{ fontSize: 14, fontWeight: 600, color: '#2E2E2E' }}>{p.nome}</span>
-                            {p.cidade && <span style={{ fontSize: 12, color: '#8A8A8A' }}>· {p.cidade}</span>}
-                          </div>
-                          <span style={{ fontSize: 11, color: '#8A8A8A', whiteSpace: 'nowrap' }}>{formatarDataHoraBR(p.criado_em)}</span>
-                        </div>
-                        <div style={{ fontSize: 13, color: '#5A5A5A', lineHeight: 1.6, whiteSpace: 'pre-line' }}>{p.texto}</div>
-                        <div style={{ fontSize: 11, color: '#8A8A8A', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                          <span>Compartilhar no grupo: {p.autoriza_compartilhar ? 'Sim' : 'Não'}</span>
-                          <span>Deseja retorno: {p.deseja_retorno ? 'Sim' : 'Não'}</span>
-                          {p.deseja_retorno && p.contato_retorno && <span>Contato: {p.contato_retorno}</span>}
-                        </div>
-                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                          {p.status === 'pendente' && (
-                            <button
-                              onClick={() => mudarStatusPedido(p.id, 'em_atendimento')}
-                              style={{ padding: '6px 12px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                            >
-                              Iniciar atendimento
+              </a>
+            )}
+            {podeEditar && (
+              <button onClick={exportar} style={{ background: '#FFFFFF', color: '#1F3A5F', border: '1px solid #1F3A5F', padding: '10px 14px', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                Exportar
+              </button>
+            )}
+            {podeEditar && (
+              <a href="/membros/novo" style={{ background: '#D9A441', color: '#1F3A5F', padding: '10px 18px', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}>
+                + Novo membro
+              </a>
+            )}
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
+          <input
+            type="text"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            placeholder="Buscar por nome ou e-mail..."
+            style={{ padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', width: '100%' }}
+          />
+          <select value={faixa} onChange={(e) => setFaixa(e.target.value)} style={{ padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', width: '100%' }}>
+            {FAIXAS.map((f) => (
+              <option key={f.valor} value={f.valor}>{f.rotulo}</option>
+            ))}
+          </select>
+          <select value={sexo} onChange={(e) => setSexo(e.target.value)} style={{ padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', width: '100%' }}>
+            <option value="">Homens e mulheres</option>
+            <option value="masculino">Homens</option>
+            <option value="feminino">Mulheres</option>
+          </select>
+          <select value={situacao} onChange={(e) => setSituacao(e.target.value)} style={{ padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', width: '100%' }}>
+            {SITUACOES.map((s) => (
+              <option key={s.valor} value={s.valor}>{s.rotulo}</option>
+            ))}
+          </select>
+        </div>
+        {erro && (
+          <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>
+            {erro}
+          </div>
+        )}
+        {carregando ? (
+          <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '2rem' }}>Carregando membros...</div>
+        ) : filtrados.length === 0 ? (
+          <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '2rem', textAlign: 'center', border: '1px solid #E4DED2', fontSize: 14, color: '#8A8A8A' }}>
+            Nenhum membro encontrado com os filtros selecionados.
+          </div>
+        ) : (
+          <div style={{ background: '#FFFFFF', borderRadius: 12, border: '1px solid #E4DED2', overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 700 }}>
+              <thead>
+                <tr style={{ background: '#F5F0E6', color: '#1F3A5F', textAlign: 'left' }}>
+                  <th style={{ padding: '12px 16px' }}>Nome</th>
+                  <th style={{ padding: '12px 16px' }}>Idade</th>
+                  <th style={{ padding: '12px 16px' }}>Sexo</th>
+                  <th style={{ padding: '12px 16px' }}>Celular</th>
+                  <th style={{ padding: '12px 16px' }}>Situação</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'right' }}>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtrados.map((m) => {
+                  const idade = calcularIdade(m.data_nascimento)
+                  const cores = CORES_SITUACAO[m.situacao] || { bg: '#F5F0E6', cor: '#8A8A8A' }
+                  return (
+                    <tr key={m.id} style={{ borderTop: '1px solid #F0EAE0' }}>
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ fontWeight: 600, color: '#2E2E2E' }}>{m.nome}</div>
+                        {(!m.sexo || !m.data_nascimento) && (
+                          <span style={{ background: '#FDF3E3', color: '#B26A00', padding: '2px 8px', borderRadius: 999, fontSize: 11, display: 'inline-block', marginTop: 4 }}>
+                            Dados incompletos
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{idade === null ? '—' : `${idade} anos`}</td>
+                      <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{rotuloSexo(m.sexo)}</td>
+                      <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{formatarCelular(m.celular) || '—'}</td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{ background: cores.bg, color: cores.cor, padding: '4px 10px', borderRadius: 999, fontSize: 12 }}>
+                          {SITUACAO_ROTULO[m.situacao] || m.situacao}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <button onClick={() => setConsultando(m)} style={{ background: 'none', border: 'none', color: '#1F3A5F', fontSize: 13, cursor: 'pointer', marginRight: 12 }}>
+                          Consultar
+                        </button>
+                        {podeEditar && (
+                          <>
+                            <a href={`/membros/editar?id=${m.id}`} style={{ color: '#1F3A5F', marginRight: 12, fontSize: 13 }}>Editar</a>
+                            <button onClick={() => setInativando(m)} style={{ background: 'none', border: 'none', color: '#B7791F', fontSize: 13, cursor: 'pointer', marginRight: 12 }}>
+                              Inativar
                             </button>
-                          )}
-                          {p.status === 'em_atendimento' && (
-                            <>
-                              <button
-                                onClick={() => copiarEEnviarGrupo(p)}
-                                style={{ padding: '6px 12px', background: '#25D366', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                              >
-                                Copiar e enviar ao grupo
-                              </button>
-                              <button
-                                onClick={() => mudarStatusPedido(p.id, 'concluido')}
-                                style={{ padding: '6px 12px', background: '#4C8C6E', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                              >
-                                Concluir
-                              </button>
-                            </>
-                          )}
-                          {p.status === 'concluido' && (
-                            <button
-                              onClick={() => mudarStatusPedido(p.id, 'em_atendimento')}
-                              style={{ padding: '6px 12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                            >
-                              Reabrir
+                            <button onClick={() => setExcluindo(m)} style={{ background: 'none', border: 'none', color: '#B71C1C', fontSize: 13, cursor: 'pointer' }}>
+                              Excluir
                             </button>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
-      <footer style={{ textAlign: 'center', padding: '1.5rem', fontSize: 12, color: '#8A8A8A' }}>
-        <a href="/recuperar-acesso" style={{ color: '#8A8A8A', textDecoration: 'underline' }}>Recuperar acesso de administrador</a>
-        <span style={{ margin: '0 8px' }}>·</span>
-        <a href="mailto:beritinovacoes@gmail.com?subject=Contato%20Berit" style={{ color: '#8A8A8A', textDecoration: 'underline' }}>Fale conosco</a>
-        <span style={{ margin: '0 8px' }}>·</span>
-        Berit — Gestão Simples Para Igrejas
-      </footer>
+      {consultando && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+          <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', maxWidth: 560, width: '90%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: '#1F3A5F' }}>Ficha do membro</div>
+              <button onClick={() => setConsultando(null)} style={{ background: 'none', border: 'none', fontSize: 20, color: '#8A8A8A', cursor: 'pointer' }}>✕</button>
+            </div>
+            <div style={{ display: 'grid', gap: '0.6rem', fontSize: 14 }}>
+              <div><strong style={{ color: '#1F3A5F' }}>Nome:</strong> {consultando.nome}</div>
+              <div>
+                <strong style={{ color: '#1F3A5F' }}>Idade / Faixa:</strong>{' '}
+                {calcularIdade(consultando.data_nascimento) === null
+                  ? '—'
+                  : `${calcularIdade(consultando.data_nascimento)} anos (${FAIXA_ROTULO[faixaEtaria(calcularIdade(consultando.data_nascimento))] || '—'})`}
+              </div>
+              <div><strong style={{ color: '#1F3A5F' }}>Sexo:</strong> {rotuloSexo(consultando.sexo)}</div>
+              <div><strong style={{ color: '#1F3A5F' }}>E-mail:</strong> {consultando.email || '—'}</div>
+              <div><strong style={{ color: '#1F3A5F' }}>Celular:</strong> {formatarCelular(consultando.celular) || '—'}</div>
+              <div><strong style={{ color: '#1F3A5F' }}>Data de nascimento:</strong> {formatarData(consultando.data_nascimento) || '—'}</div>
+              <div><strong style={{ color: '#1F3A5F' }}>Data de batismo:</strong> {formatarData(consultando.data_batismo) || '—'}</div>
+              <div><strong style={{ color: '#1F3A5F' }}>Data de recebimento:</strong> {formatarData(consultando.data_recebimento) || '—'}</div>
+              {consultando.endereco && <div><strong style={{ color: '#1F3A5F' }}>Endereço:</strong> {consultando.endereco}</div>}
+              {consultando.bairro && <div><strong style={{ color: '#1F3A5F' }}>Bairro:</strong> {consultando.bairro}</div>}
+              {consultando.cidade && <div><strong style={{ color: '#1F3A5F' }}>Cidade / UF:</strong> {consultando.cidade}{consultando.uf ? ` / ${consultando.uf}` : ''}</div>}
+              {consultando.cep && <div><strong style={{ color: '#1F3A5F' }}>CEP:</strong> {consultando.cep}</div>}
+              {consultando.nome_pai && <div><strong style={{ color: '#1F3A5F' }}>Nome do pai:</strong> {consultando.nome_pai}</div>}
+              {consultando.nome_mae && <div><strong style={{ color: '#1F3A5F' }}>Nome da mãe:</strong> {consultando.nome_mae}</div>}
+              <div>
+                <strong style={{ color: '#1F3A5F' }}>Situação:</strong>{' '}
+                <span style={{ background: (CORES_SITUACAO[consultando.situacao] || { bg: '#F5F0E6', cor: '#8A8A8A' }).bg, color: (CORES_SITUACAO[consultando.situacao] || { bg: '#F5F0E6', cor: '#8A8A8A' }).cor, padding: '3px 8px', borderRadius: 999, fontSize: 12 }}>
+                  {SITUACAO_ROTULO[consultando.situacao] || consultando.situacao}
+                </span>
+              </div>
+              <div>
+                <strong style={{ color: '#1F3A5F' }}>Observações:</strong>{' '}
+                {consultando.observacoes ? (
+                  <span style={{ whiteSpace: 'pre-line', color: '#2E2E2E' }}>{consultando.observacoes}</span>
+                ) : '—'}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: 20 }}>
+              <button
+                onClick={() => setConsultando(null)}
+                style={{ flex: 1, padding: '12px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Fechar
+              </button>
+              {podeEditar && (
+                <a
+                  href={`/membros/editar?id=${consultando.id}`}
+                  style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}
+                >
+                  Editar cadastro
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {inativando && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+          <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', maxWidth: 420, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#1F3A5F', marginBottom: 6 }}>Inativar membro</div>
+            <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 16px' }}>
+              Informe o motivo da saída de <strong>{inativando.nome}</strong>. O cadastro será preservado e movido para a pasta Inativos.
+            </p>
+            <select
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              style={{ width: '100%', padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, marginBottom: 16, boxSizing: 'border-box', fontFamily: 'inherit' }}
+            >
+              {MOTIVOS.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={confirmarInativacao}
+                disabled={salvando}
+                style={{ flex: 1, padding: '12px', background: '#B7791F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                {salvando ? 'Salvando...' : 'Confirmar inativação'}
+              </button>
+              <button
+                onClick={() => { setInativando(null); setMotivo(MOTIVOS[0]) }}
+                style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {excluindo && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+          <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', maxWidth: 420, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#B71C1C', marginBottom: 6 }}>Excluir cadastro definitivamente</div>
+            <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 16px' }}>
+              Você deseja excluir o cadastro de <strong>{excluindo.nome}</strong> definitivamente? Esta ação <strong>não pode ser desfeita</strong> e todos os dados do membro serão apagados.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={confirmarExclusao}
+                disabled={salvando}
+                style={{ flex: 1, padding: '12px', background: '#B71C1C', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                {salvando ? 'Excluindo...' : 'Sim, excluir definitivamente'}
+              </button>
+              <button
+                onClick={() => setExcluindo(null)}
+                style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
