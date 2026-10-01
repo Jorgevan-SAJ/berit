@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import * as XLSX from 'xlsx'
 import { supabase } from '../../lib/supabase'
-import { getPerfil } from '../../lib/perfil'
+import { getPerfil, getStatusPlano } from '../../lib/perfil'
 function formatarCelular(valor) {
   const d = (valor || '').replace(/\D/g, '').slice(0, 11)
   if (d.length <= 2) return d
@@ -90,8 +90,12 @@ export default function MembrosPage() {
   const [consultando, setConsultando] = useState(null)
   const [salvando, setSalvando] = useState(false)
   const [pendentesAutocadastro, setPendentesAutocadastro] = useState(0)
+  // Item 11 — status do plano para o bloqueio funcional
+  const [planoBloqueado, setPlanoBloqueado] = useState(false)
+  const [trialTerminaEm, setTrialTerminaEm] = useState(null)
   const podeVer = perfilAtual && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(perfilAtual.perfil)
-  const podeEditar = perfilAtual && ['admin_master', 'secretaria'].includes(perfilAtual.perfil)
+  // Bloqueio: perfis de edição só operam com o plano regularizado
+  const podeEditar = perfilAtual && ['admin_master', 'secretaria'].includes(perfilAtual.perfil) && !planoBloqueado
   const ehSomenteLeitura = perfilAtual && ['tesouraria', 'conselho_fiscal'].includes(perfilAtual.perfil)
   async function carregar() {
     setCarregando(true)
@@ -108,10 +112,16 @@ export default function MembrosPage() {
     setCarregando(false)
   }
   useEffect(() => {
-    getPerfil().then((p) => {
+    getPerfil().then(async (p) => {
       setPerfilAtual(p)
       setVerificando(false)
-      if (p && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(p.perfil)) carregar()
+      if (p && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(p.perfil)) {
+        // Item 11 — verificação centralizada do status do plano
+        const st = await getStatusPlano()
+        setPlanoBloqueado(!!st.bloqueado)
+        setTrialTerminaEm(st.trialTerminaEm || null)
+        carregar()
+      }
       if (p && ['admin_master', 'secretaria'].includes(p.perfil)) {
         supabase
           .from('solicitacoes_membros')
@@ -238,6 +248,14 @@ export default function MembrosPage() {
         </a>
       </header>
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '2rem 1.5rem' }}>
+        {planoBloqueado && (
+          <div style={{ background: '#FDECEC', border: '1px solid #F0C9C9', borderRadius: 10, padding: '12px 14px', marginBottom: '1.5rem', fontSize: 13, color: '#B71C1C', lineHeight: 1.5 }}>
+            ⛔ <strong>O período de teste encerrou em {formatarData(trialTerminaEm)}.</strong>{' '}
+            As funções de cadastro e edição estão bloqueadas. A consulta aos dados permanece liberada.{' '}
+            Regularize seu plano para retomar o uso completo do Berit — fale com a Equipe Berit em{' '}
+            <a href="mailto:beritinovacoes@gmail.com?subject=Regulariza%C3%A7%C3%A3o%20de%20plano%20Berit" style={{ color: '#B71C1C', fontWeight: 700 }}>beritinovacoes@gmail.com</a>.
+          </div>
+        )}
         {pendentesAutocadastro > 0 && (
           <div
             onClick={() => { window.location.href = '/membros/autocadastros' }}
