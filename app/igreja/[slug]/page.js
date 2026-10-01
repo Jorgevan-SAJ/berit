@@ -121,9 +121,6 @@ function ReclamarIgreja() {
 }
 
 // ===== Canal de acolhimento — conversa guiada com envio híbrido =====
-// Prioridade: WhatsApp da igreja quando configurado (número ou grupo);
-// sem WhatsApp configurado, o pedido é registrado no painel da igreja (Berit);
-// igreja sem administração recebe orientação e convite aos líderes.
 function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
   const [etapa, setEtapa] = useState('nome')
   const [historico, setHistorico] = useState([])
@@ -195,7 +192,6 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
   const podeEnviar = etapa === 'resumo' && autoriza !== null && retorno !== null
   const semAdministracao = igreja.aguarda_confirmacao || (igreja.origem === 'indicacao' && !igreja.publico_verificado)
 
-  // Envio pelo WhatsApp da igreja (número)
   function enviar() {
     if (!numeroDestino || !podeEnviar) return
     const url = `https://wa.me/${numeroDestino}?text=${encodeURIComponent(montarMensagem())}`
@@ -203,14 +199,12 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
     aoFechar()
   }
 
-  // Envio por grupo: copia a mensagem e orienta o usuário a colar no grupo
   async function enviarGrupo() {
     if (!linkGrupo || !podeEnviar) return
     try { await navigator.clipboard.writeText(montarMensagem()) } catch {}
     avancar('grupo', null, 'Copiei a sua mensagem para a área de transferência. Siga os passos abaixo para enviá-la ao grupo.')
   }
 
-  // Envio pelo Berit: registra o pedido no painel da igreja
   async function enviarBerit() {
     if (!podeEnviar) return
     setEnviandoBerit(true)
@@ -522,20 +516,41 @@ export default function PaginaPublicaIgreja() {
   return (
     <main style={estilo.main}>
       <header style={estilo.header}>
-        <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
           <a href="/igrejas" style={estilo.logo}>Berit</a>
-          <a href="/igrejas" style={{ color: '#FFFFFF', fontSize: 13, textDecoration: 'none' }}>Voltar ao Diretório</a>
+          <div style={{ marginTop: 6 }}>
+            <a href="/igrejas" style={{ color: '#FFFFFF', fontSize: 13, textDecoration: 'none' }}>← Voltar ao Diretório</a>
+          </div>
         </div>
       </header>
 
       <div style={estilo.hero}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <h1 style={{ margin: '0 0 8px', fontSize: 28 }}>{igreja.nome}</h1>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14 }}>
-              {igreja.cidade || ''}{igreja.cidade && igreja.uf ? `, ${igreja.uf}` : igreja.uf || ''}
-            </span>
-            {igreja.publico_verificado && <SeloVerificado />}
+        <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, flexWrap: 'wrap' }}>
+          {igreja.foto_url ? (
+            <img
+              src={igreja.foto_url}
+              alt={`Foto da ${igreja.nome}`}
+              style={{ width: 96, height: 96, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,255,255,0.5)', flexShrink: 0 }}
+            />
+          ) : (
+            <div
+              style={{
+                width: 96, height: 96, borderRadius: '50%', background: 'rgba(255,255,255,0.15)',
+                border: '3px solid rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 40, color: '#FFFFFF', fontWeight: 700, flexShrink: 0,
+              }}
+            >
+              {(igreja.nome || '?').charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div style={{ textAlign: 'center' }}>
+            <h1 style={{ margin: '0 0 8px', fontSize: 28 }}>{igreja.nome}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14 }}>
+                {igreja.cidade || ''}{igreja.cidade && igreja.uf ? `, ${igreja.uf}` : igreja.uf || ''}
+              </span>
+              {igreja.publico_verificado && <SeloVerificado />}
+            </div>
           </div>
         </div>
       </div>
