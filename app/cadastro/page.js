@@ -146,8 +146,8 @@ export default function CadastroInicial() {
             Aceito os Termos de Uso e a Política de Privacidade
           </label>
           <div style={estilo.aviso}>
-            Ao criar a conta, sua igreja entra em período de teste gratuito de 30 dias. No primeiro acesso, você completa os dados (endereço e bairro são obrigatórios) e, se a igreja já estiver cadastrada no diretório, poderá assumir a gestão dela.
-          </div>
+           Ao criar a conta, sua igreja entra em período de teste gratuito. No primeiro acesso, você completa os dados (endereço e bairro são obrigatórios) e, se a igreja já estiver cadastrada no diretório, poderá assumir a gestão dela. A data de encerramento do teste fica visível nas Configurações da igreja.
+           </div>
           <button type="submit" disabled={enviando} style={{ ...estilo.botao, opacity: enviando ? 0.6 : 1 }}>
             {enviando ? 'Criando conta...' : 'Criar conta e igreja'}
           </button>
