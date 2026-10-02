@@ -78,18 +78,24 @@ export default function ConfiguracoesIgreja() {
   const [alterandoSenha, setAlterandoSenha] = useState(false)
   const [msgSenha, setMsgSenha] = useState('')
   const [erroSenha, setErroSenha] = useState('')
+  // Exclusão do cadastro da igreja (LGPD — art. 18, VI)
+  const [modalExcluir1, setModalExcluir1] = useState(false)
+  const [modalExcluir2, setModalExcluir2] = useState(false)
+  const [senhaExclusao, setSenhaExclusao] = useState('')
+  const [excluindo, setExcluindo] = useState(false)
+  const [erroExclusao, setErroExclusao] = useState('')
   useEffect(() => {
     carregar()
   }, [])
   function pendenciaPublicacao() {
-  const faltando = []
-  if (!form.nome.trim()) faltando.push('Nome da igreja')
-  if (!form.cidade.trim()) faltando.push('Cidade')
-  if (!form.uf.trim()) faltando.push('UF')
-  if (!form.endereco_publico.trim()) faltando.push('Endereço')
-  if (!form.bairro.trim()) faltando.push('Bairro')
-  return faltando
-}
+    const faltando = []
+    if (!form.nome.trim()) faltando.push('Nome da igreja')
+    if (!form.cidade.trim()) faltando.push('Cidade')
+    if (!form.uf.trim()) faltando.push('UF')
+    if (!form.endereco_publico.trim()) faltando.push('Endereço')
+    if (!form.bairro.trim()) faltando.push('Bairro')
+    return faltando
+  }
   async function carregar() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -389,6 +395,44 @@ export default function ConfiguracoesIgreja() {
     setNovaSenha('')
     setConfirmarSenha('')
   }
+  // Exclusão do cadastro da igreja — LGPD (art. 18, VI)
+  async function confirmarExclusao(e) {
+    e.preventDefault()
+    setErroExclusao('')
+    if (!senhaExclusao) {
+      setErroExclusao('Informe sua senha de acesso para confirmar.')
+      return
+    }
+    setExcluindo(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.email) {
+      setExcluindo(false)
+      setErroExclusao('Sessão expirada. Faça login novamente.')
+      return
+    }
+    // Valida a senha de acesso antes de qualquer exclusão
+    const { error: erroSenha } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: senhaExclusao,
+    })
+    if (erroSenha) {
+      setExcluindo(false)
+      setErroExclusao('Senha incorreta. A exclusão não foi realizada.')
+      return
+    }
+    // Executa a exclusão no banco (transação única)
+    const { data, error } = await supabase.rpc('excluir_cadastro_igreja', {
+      p_igreja_id: perfil.igreja_id,
+    })
+    setExcluindo(false)
+    if (error || !data?.ok) {
+      setErroExclusao('Não foi possível excluir o cadastro: ' + (error?.message || data?.erro || 'erro desconhecido'))
+      return
+    }
+    // Encerra a sessão e volta ao início
+    await supabase.auth.signOut()
+    window.location.href = '/'
+  }
   if (carregando) return <div className="p-8">Carregando...</div>
   const inputClasse = 'w-full border border-gray-300 rounded-lg px-3 py-2'
   const rotuloClasse = 'block text-sm font-medium text-gray-700 mb-1'
@@ -556,11 +600,11 @@ export default function ConfiguracoesIgreja() {
           </div>
           <div className="border-t pt-4">
             <p className="text-xs text-gray-500 mb-3">
-            Para publicar a igreja no diretório é obrigatório: <strong>Nome da igreja</strong>,{' '}
-            <strong>Cidade</strong>, <strong>UF</strong>, <strong>Endereço</strong> e <strong>Bairro</strong>.
-            Os demais campos são opcionais.
+              Para publicar a igreja no diretório é obrigatório: <strong>Nome da igreja</strong>,{' '}
+              <strong>Cidade</strong>, <strong>UF</strong>, <strong>Endereço</strong> e <strong>Bairro</strong>.
+              Os demais campos são opcionais.
             </p>
-          {msgPublico && <p className="text-green-600 mb-3 text-sm">{msgPublico}</p>}
+            {msgPublico && <p className="text-green-600 mb-3 text-sm">{msgPublico}</p>}
             {erroPublico && <p className="text-red-600 mb-3 text-sm">{erroPublico}</p>}
             <label className="flex items-center gap-2 mb-3 cursor-pointer">
               <input
@@ -900,6 +944,85 @@ export default function ConfiguracoesIgreja() {
           </button>
         </form>
       </div>
+      {ehAdmin && (
+        <div className="border-t pt-4 mt-6">
+          <button
+            type="button"
+            onClick={() => { setModalExcluir1(true); setErroExclusao('') }}
+            className="w-full border border-red-300 text-red-700 rounded-lg py-2.5 text-sm font-semibold hover:bg-red-50"
+          >
+            Excluir Cadastro da Igreja
+          </button>
+        </div>
+      )}
+      {modalExcluir1 && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
+            <h2 className="text-lg font-bold text-gray-800 mb-3">Excluir cadastro da igreja</h2>
+            <p className="text-sm text-gray-600 mb-6">
+              ⚠️ Atenção: se você confirmar, todos os dados serão excluídos permanentemente. Deseja continuar?
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => { setModalExcluir1(false); setSenhaExclusao(''); setErroExclusao('') }}
+                className="flex-1 border border-gray-300 rounded-lg py-2.5 text-sm font-semibold"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => { setModalExcluir1(false); setModalExcluir2(true) }}
+                className="flex-1 bg-red-600 text-white rounded-lg py-2.5 text-sm font-semibold"
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {modalExcluir2 && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
+            <h2 className="text-lg font-bold text-red-700 mb-3">Confirmação final</h2>
+            <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+              Os dados da igreja serão excluídos permanentemente e deixará de aparecer no Diretório Público.
+              Caso volte a utilizar o BERIT será necessário informar todos os dados novamente e nenhuma informação
+              atual poderá ser resgatada. Confirme sua decisão com a senha de acesso.
+            </p>
+            {erroExclusao && <p className="text-red-600 text-sm mb-3">{erroExclusao}</p>}
+            <form onSubmit={confirmarExclusao} className="space-y-4">
+              <div>
+                <label className={rotuloClasse}>Senha de acesso</label>
+                <input
+                  type="password"
+                  value={senhaExclusao}
+                  onChange={(e) => setSenhaExclusao(e.target.value)}
+                  className={inputClasse}
+                  autoComplete="current-password"
+                  required
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setModalExcluir2(false); setSenhaExclusao(''); setErroExclusao('') }}
+                  className="flex-1 border border-gray-300 rounded-lg py-2.5 text-sm font-semibold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={excluindo}
+                  className="flex-1 bg-red-600 text-white rounded-lg py-2.5 text-sm font-semibold disabled:opacity-50"
+                >
+                  {excluindo ? 'Excluindo...' : 'Excluir permanentemente'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
