@@ -2,6 +2,26 @@
 import { useState } from 'react'
 const SECOES = [
   {
+    modulo: 'Plano e Período de Teste',
+    icone: '⏳',
+    itens: [
+      { p: 'Como funciona o período de teste?', r: 'Ao criar a conta, a igreja entra em período de teste gratuito por um prazo definido no cadastro (a data de encerramento fica visível nas Configurações da Igreja). Durante esse período, todos os módulos funcionam normalmente.' },
+      { p: 'O que é o banner do período de teste no dashboard?', r: 'É o aviso exibido no topo da Área da Igreja. Ele aparece em azul quando o teste ainda tem mais de 1 dia ("X dias restantes"), em âmbar no último dia e em vermelho quando o período já encerrou. Igrejas com plano vitalício não veem o banner.' },
+      { p: 'O que acontece quando o período de teste encerra?', r: 'As funções de cadastro e edição ficam bloqueadas: em Membros (novo, editar, inativar, excluir, importar, exportar, autocadastro), em Finanças (novo lançamento, editar, excluir, consolidar, contribuições, renomear abas) e em Agenda (novo evento, editar, excluir). A consulta aos dados continua liberada em todos os módulos, e o banner vermelho orienta a regularização.' },
+      { p: 'Como regularizar o plano após o término do teste?', r: 'Entre em contato com a Equipe Berit pelo e-mail beritinovacoes@gmail.com. Após a regularização, as funções de cadastro e edição voltam a funcionar normalmente.' },
+    ],
+  },
+  {
+    modulo: 'Área da Igreja',
+    icone: '🏠',
+    itens: [
+      { p: 'O que é a Área da Igreja?', r: 'É o painel principal após o login, com acesso restrito a usuários cadastrados e autorizados pela administração. Ela reúne os atalhos para os módulos (Membros, Finanças, Agenda, Perfis de Acesso, Diretório Público) e painéis com aniversariantes, próximos eventos e pedidos de acolhimento.' },
+      { p: 'O que são os avisos de pendências que aparecem no topo?', r: 'São avisos automáticos que direcionam para onde agir: vermelho/azul quando há pendências na Central de Auditoria de Finanças, e verde quando há cadastros de autocadastro aguardando confirmação em Membros. Clique no aviso para ir direto ao local.' },
+      { p: 'Quem vê os painéis de aniversariantes, eventos e pedidos?', r: 'Os perfis Administrador e Secretaria. O Conselho Fiscal e a Tesouraria não veem os painéis, apenas os atalhos dos módulos (com selo "Somente leitura" quando aplicável).' },
+      { p: 'O que é o selo "Somente leitura"?', r: 'Indica que o módulo está em modo consulta para o seu perfil (Tesouraria e Conselho Fiscal em Membros/Agenda; Conselho Fiscal em Finanças). Você pode ver e pesquisar, mas não cadastra nem edita.' },
+    ],
+  },
+  {
     modulo: 'Membros',
     icone: '👥',
     itens: [
@@ -12,6 +32,8 @@ const SECOES = [
       { p: 'Como excluir um cadastro definitivamente?', r: 'Clique em "Excluir" na linha do membro e confirme. A ação não pode ser desfeita e apaga todos os dados do membro. Prefira a inativação quando houver histórico a preservar.' },
       { p: 'Como importar membros de uma planilha?', r: 'Use o botão "Importar dados" (disponível para Administrador e Secretaria). O sistema aceita arquivos .xlsx, .xls e .csv, mostra uma pré-visualização antes de processar e gera um relatório da importação.' },
       { p: 'Como exportar a lista de membros?', r: 'Clique em "Exportar". O sistema gera um arquivo .xlsx com os membros filtrados na tela, incluindo idade, faixa etária e datas. Disponível para Administrador e Secretaria.' },
+      { p: 'O que é o Autocadastro e como funciona a confirmação?', r: 'É o cadastro feito pelo próprio visitante pela página pública da igreja. Ele entra como pendente e aparece para Administrador e Secretaria confirmarem. Quando há cadastros aguardando, um aviso aparece na Área da Igreja, um selo laranja aparece no card Membros e um contador no botão "Autocadastro".' },
+      { p: 'Por que não vejo os botões de cadastro e edição?', r: 'Pode ser por dois motivos: (1) seu perfil é de somente leitura (Tesouraria ou Conselho Fiscal, que consultam mas não editam), ou (2) o período de teste da igreja encerrou e as funções de escrita estão bloqueadas até a regularização do plano. A consulta continua liberada nos dois casos.' },
       { p: 'O Conselho Fiscal pode cadastrar ou editar membros?', r: 'Não. O Conselho Fiscal tem acesso somente leitura ao módulo Membros: pode consultar a listagem, usar os filtros e abrir a ficha completa (botão "Consultar"), mas não vê os botões de cadastrar, editar, inativar, excluir, importar ou exportar.' },
     ],
   },
@@ -28,6 +50,7 @@ const SECOES = [
       { p: 'Como gerar relatórios?', r: 'Clique em "Relatórios" no topo de Finanças. Escolha o período (dia, mês ou período) e o conteúdo (completo em formato extrato, só entradas ou só saídas), e baixe em PDF ou Excel. No relatório do dia há área de assinaturas dos representantes da comissão. O Conselho Fiscal também pode consultar os relatórios, em somente leitura.' },
       { p: 'O que é o relatório de Contribuições?', r: 'Exclusivo do Tesouraria. Mostra o comportamento dos membros em relação às contribuições no ano: meses com contribuição, total e classificação automática — Não Ofertante (0 meses), Ofertante Esporádico (1 a 5), Ofertante Frequente (6 a 8) ou Dizimista (9 a 12).' },
       { p: 'Como ver as observações de um lançamento?', r: 'Clique em "Consultar" na linha do lançamento. O modal mostra todos os dados, incluindo observações, forma de pagamento, membro vinculado e a nota permanente, se houver.' },
+      { p: 'Por que não vejo os botões de lançar, editar e consolidar?', r: 'Se seu perfil é o Conselho Fiscal, o módulo é somente leitura por padrão. Se seu perfil é Tesouraria ou Administrador e mesmo assim os botões sumiram, o período de teste da igreja encerrou e as funções de escrita estão bloqueadas até a regularização do plano. Consulta, relatórios e auditoria continuam liberados.' },
       { p: 'O que o Conselho Fiscal pode fazer em Finanças?', r: 'Consultar tudo em modo somente leitura: lançamentos, relatórios e a Central de Auditoria (comparativo antes/depois e histórico). Não pode lançar, editar, consolidar, aprovar ou rejeitar alterações. É o perfil de fiscalização das contas da igreja.' },
     ],
   },
@@ -54,6 +77,7 @@ const SECOES = [
       { p: 'Como sair da página de Configurações?', r: 'Use o botão "Voltar" no topo da página ou aguarde: após salvar com sucesso, a página retorna sozinha à Área da Igreja.' },
       { p: 'Por que a mensagem de sucesso só aparece às vezes?', r: 'A mensagem verde só é exibida quando o banco confirma a gravação. Se a alteração for recusada por permissão, a tela mostra o erro em vermelho e nenhum dado é salvo — assim você nunca fica com a impressão de que salvou sem ter salvo.' },
       { p: 'Como alterar senha?', r: "Se você esqueceu sua senha, na área de acesso informe o e-mail e clique em 'Esqueci a senha'. Se você lembra a senha e deseja alterá-la, vá em Configurações da Igreja e procure a opção Alteração de Senha." },
+      { p: 'Como excluir o cadastro da igreja?', r: 'No final da página de Configurações (o último botão, abaixo de tudo), clique em "Excluir Cadastro da Igreja". O sistema exibe um primeiro aviso sobre a exclusão permanente; ao continuar, uma segunda confirmação pede a sua senha de acesso. Com a senha correta, todos os dados da igreja (membros, finanças, agenda, pedidos e perfis) são excluídos definitivamente e a igreja deixa de aparecer no Diretório Público. Ação irreversível: se a igreja voltar a usar o Berit, será necessário informar tudo novamente, sem resgate de dados antigos. Esse direito está previsto na LGPD (art. 18, inciso VI).' },
     ],
   },
   {
@@ -64,6 +88,18 @@ const SECOES = [
       { p: 'Qual a diferença entre evento permanente e específico?', r: 'Permanente (ou recorrente) repete toda semana — ex.: Culto de Celebração aos domingos. Específico tem data única — ex.: Conferência de Missões em 20/10. No cadastro, escolha o tipo e os campos se adaptam.' },
       { p: 'Eventos com data passada somem?', r: 'Sim. Eventos específicos com data passada saem automaticamente da agenda (pública e administrativa). Eventos permanentes nunca expiram.' },
       { p: 'Como editar ou excluir um evento?', r: 'Clique no evento no calendário ou na lista para abrir o modal de detalhes. Se o seu perfil gerencia a agenda (Administrador ou Secretaria), aparecem os botões Editar e Excluir. O Conselho Fiscal apenas visualiza.' },
+      { p: 'Por que não vejo o botão "+ Novo evento"?', r: 'Se seu perfil é somente leitura, a opção não existe por padrão. Se seu perfil é Administrador ou Secretaria e mesmo assim o botão sumiu, o período de teste da igreja encerrou e a criação e edição de eventos estão bloqueadas até a regularização do plano. A visualização do calendário continua liberada.' },
+    ],
+  },
+  {
+    modulo: 'Página Pública e Diretório',
+    icone: '🌐',
+    itens: [
+      { p: 'Como o visitante encontra a igreja e envia pedidos?', r: 'Pela página pública (link /igreja/slug) ou pelo Diretório, o visitante acessa os dados da igreja e pode enviar pedidos de acolhimento: Oração ou Orientação espiritual. O pedido chega no painel "Pedidos de acolhimento" da Área da Igreja, onde Administrador e Secretaria podem iniciar o atendimento e compartilhar no grupo de WhatsApp da igreja (o texto é copiado pronto e o WhatsApp abre para escolher o grupo).' },
+      { p: 'Como funcionam os grupos de WhatsApp da página pública?', r: 'A igreja cadastra, em Configurações, o número (formato 55 + DDD + número) ou o link do grupo para pedidos de oração e outro para perguntas/orientações. Na página pública, o visitante escolhe o canal e o pedido é encaminhado de forma organizada para a igreja.' },
+      { p: 'Como funciona a verificação no Google Maps?', r: 'Em Configurações, o botão "Verificar no Maps" abre o Google Maps com a busca "Nome da igreja + endereço + cidade + UF" — a mesma fórmula usada na página pública. É uma forma de conferir se o endereço cadastrado aponta para o lugar certo antes de publicar.' },
+      { p: 'Como funciona o botão "Dizimar/Ofertar"?', r: 'Se a igreja cadastrar uma chave Pix em Configurações, a página pública exibe o botão "Dizimar/Ofertar". Ao clicar, a chave é copiada para o visitante colar no aplicativo do banco e fazer a doação.' },
+      { p: 'O que é o selo de verificado no Diretório?', r: 'É o selo exibido na página pública quando a igreja confirma os dados públicos (nome, cidade, UF, endereço e bairro) pelo botão "Confirmar dados públicos" em Configurações. Ele aumenta a confiança de quem visita o perfil.' },
     ],
   },
 ]
@@ -124,7 +160,7 @@ export default function AjudaPage() {
           type="text"
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar na ajuda (ex.: consolidar, inativar, evento...)"
+          placeholder="Buscar na ajuda (ex.: consolidar, inativar, evento, teste, excluir...)"
           style={{ width: '100%', padding: '12px 14px', border: '1px solid #E4DED2', borderRadius: 10, fontSize: 14, boxSizing: 'border-box', marginBottom: '1.5rem', fontFamily: 'inherit' }}
         />
         {filtradas.length === 0 ? (
