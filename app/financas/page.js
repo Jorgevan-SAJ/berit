@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import { getPerfil } from '../../lib/perfil'
+import { getPerfil, getStatusPlano } from '../../lib/perfil'
 function formatarMoeda(valor) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0)
 }
@@ -205,11 +205,18 @@ export default function FinancasPage() {
   const [excluindo, setExcluindo] = useState(null)
   const [consultando, setConsultando] = useState(null)
   const [salvando, setSalvando] = useState(false)
+  // Item 11 — status do plano para o bloqueio funcional
+  const [planoBloqueado, setPlanoBloqueado] = useState(false)
+  const [trialTerminaEm, setTrialTerminaEm] = useState(null)
   useEffect(() => {
-    getPerfil().then((p) => {
+    getPerfil().then(async (p) => {
       setPerfilAtual(p)
       setVerificando(false)
       if (p && ['admin_master', 'tesouraria', 'conselho_fiscal'].includes(p.perfil)) {
+        // Item 11 — verificação centralizada do status do plano
+        const st = await getStatusPlano()
+        setPlanoBloqueado(!!st.bloqueado)
+        setTrialTerminaEm(st.trialTerminaEm || null)
         carregarDados(p.igreja_id)
       }
     })
@@ -267,11 +274,12 @@ export default function FinancasPage() {
   const totalSaidas = filtrados.filter((l) => l.tipo === 'saida').reduce((s, l) => s + Number(l.valor), 0)
   const saldo = totalEntradas - totalSaidas
   const dadosGrafico = agregarPorMes(lancamentosDaAba, ultimosMeses(6))
-  // Permissões por perfil
-  const podeLancar = perfilAtual && perfilAtual.perfil === 'tesouraria'
+  // Permissões por perfil — Item 11: escrita bloqueada com trial expirado
+  const podeLancar = perfilAtual && perfilAtual.perfil === 'tesouraria' && !planoBloqueado
   const podeConferir = perfilAtual && ['admin_master', 'tesouraria'].includes(perfilAtual.perfil)
   const ehConselhoFiscal = perfilAtual && perfilAtual.perfil === 'conselho_fiscal'
-  const podeRenomearAba = perfilAtual && ['admin_master', 'tesouraria'].includes(perfilAtual.perfil)
+  const podeRenomearAba = perfilAtual && ['admin_master', 'tesouraria'].includes(perfilAtual.perfil) && !planoBloqueado
+  const dataFimTrial = trialTerminaEm ? new Date(trialTerminaEm).toLocaleDateString('pt-BR') : ''
   async function salvarNomeAba() {
     if (!editandoAba) return
     const nome = editandoAba.valor.trim()
@@ -317,7 +325,7 @@ export default function FinancasPage() {
       </main>
     )
   }
-if (!perfilAtual || !['admin_master', 'tesouraria', 'conselho_fiscal'].includes(perfilAtual.perfil)) {
+  if (!perfilAtual || !['admin_master', 'tesouraria', 'conselho_fiscal'].includes(perfilAtual.perfil)) {
     return (
       <main style={estilo.main}>
         <header style={estilo.header}>
@@ -341,6 +349,14 @@ if (!perfilAtual || !['admin_master', 'tesouraria', 'conselho_fiscal'].includes(
         <a href="/area" style={estilo.botaoVoltar}>Voltar</a>
       </header>
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '2rem 1.5rem' }}>
+        {planoBloqueado && (
+          <div style={{ background: '#FDECEC', border: '1px solid #F0C9C9', borderRadius: 10, padding: '12px 14px', marginBottom: '1.5rem', fontSize: 13, color: '#B71C1C', lineHeight: 1.5 }}>
+            ⛔ <strong>O período de teste encerrou em {dataFimTrial}.</strong>{' '}
+            As funções de lançamento e edição estão bloqueadas. A consulta aos dados permanece liberada.{' '}
+            Regularize seu plano para retomar o uso completo do Berit — fale com a Equipe Berit em{' '}
+            <a href="mailto:beritinovacoes@gmail.com?subject=Regulariza%C3%A7%C3%A3o%20de%20plano%20Berit" style={{ color: '#B71C1C', fontWeight: 700 }}>beritinovacoes@gmail.com</a>.
+          </div>
+        )}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
           <div>
             <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Finanças e Tesouraria</h1>
@@ -498,7 +514,7 @@ if (!perfilAtual || !['admin_master', 'tesouraria', 'conselho_fiscal'].includes(
                           🔒 Consolidado
                         </span>
                       )}
-</td>
+                    </td>
                     <td style={{ padding: '12px 16px', fontWeight: 600, color: '#2E2E2E', verticalAlign: 'top' }}>
                       {l.descricao || (l.tipo === 'entrada' && l.membro_id ? nomeMembro(l.membro_id) : '—')}
                       {l.nota_permanente && (
