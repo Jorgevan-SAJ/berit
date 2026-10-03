@@ -24,6 +24,17 @@ export default function ModeracaoIgrejas() {
   const [salvandoId, setSalvandoId] = useState(null)
   const [excluindoId, setExcluindoId] = useState(null)
 
+  // Estado da rotina LGPD (exclusão total de conta)
+  const [emailTitular, setEmailTitular] = useState('')
+  const [buscandoTitular, setBuscandoTitular] = useState(false)
+  const [titular, setTitular] = useState(null)
+  const [motivo, setMotivo] = useState('')
+  const [senhaOperador, setSenhaOperador] = useState('')
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false)
+  const [excluindoConta, setExcluindoConta] = useState(false)
+  const [protocolo, setProtocolo] = useState('')
+  const [erroLgpd, setErroLgpd] = useState('')
+
   async function carregar() {
     setCarregando(true)
     setErro('')
@@ -91,6 +102,76 @@ export default function ModeracaoIgrejas() {
     }
     setMsg(`"${ig.nome}" foi excluída do diretório.`)
     setIgrejas(igrejas.filter((x) => x.id !== ig.id))
+  }
+
+  // --- Rotina LGPD: exclusão total de conta ---
+  async function buscarTitular() {
+    setErroLgpd('')
+    setTitular(null)
+    setProtocolo('')
+    if (!emailTitular.trim()) {
+      setErroLgpd('Informe o e-mail do titular.')
+      return
+    }
+    setBuscandoTitular(true)
+    const { data, error } = await supabase.rpc('buscar_titular_para_exclusao', {
+      p_email: emailTitular.trim(),
+    })
+    setBuscandoTitular(false)
+    if (error || !data || !data.ok) {
+      setErroLgpd(data?.mensagem || 'Não foi possível localizar o titular.')
+      return
+    }
+    setTitular(data.titular)
+  }
+
+  async function confirmarExclusaoTotal() {
+    setErroLgpd('')
+    if (!titular) return
+    // Confirmação dupla: e-mail do titular + senha do operador
+    if (emailTitular.trim().toLowerCase() !== titular.email.toLowerCase()) {
+      setErroLgpd('Digite o e-mail completo do titular para confirmar.')
+      return
+    }
+    if (!senhaOperador) {
+      setErroLgpd('Informe sua senha de operador para confirmar.')
+      return
+    }
+    setConfirmandoExclusao(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.email) {
+      setConfirmandoExclusao(false)
+      setErroLgpd('Sessão expirada. Faça login novamente.')
+      return
+    }
+    // Valida a senha do operador antes de qualquer exclusão
+    const { error: erroSenha } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: senhaOperador,
+    })
+    if (erroSenha) {
+      setConfirmandoExclusao(false)
+      setErroLgpd('Senha de operador incorreta. A exclusão não foi realizada.')
+      return
+    }
+    // Executa a exclusão total (dados + login + auditoria)
+    setExcluindoConta(true)
+    const { data, error } = await supabase.rpc('excluir_conta_titular', {
+      p_email: titular.email,
+      p_motivo: motivo.trim() || 'Solicitação do titular (LGPD, art. 18, VI)',
+    })
+    setExcluindoConta(false)
+    setConfirmandoExclusao(false)
+    if (error || !data || !data.ok) {
+      setErroLgpd(data?.mensagem || 'Não foi possível excluir a conta.')
+      return
+    }
+    setProtocolo(data.protocolo)
+    setTitular(null)
+    setEmailTitular('')
+    setMotivo('')
+    setSenhaOperador('')
+    setMsg(`Conta de ${data.email} excluída permanentemente. Protocolo: ${data.protocolo}`)
   }
 
   return (
@@ -188,6 +269,87 @@ export default function ModeracaoIgrejas() {
             </div>
           ))
         )}
+
+        {/* Seção LGPD — Exclusão total de conta */}
+        <div style={{ ...estilo.card, border: '1px solid #F0C4C4', marginTop: '2rem' }}>
+          <h2 style={{ margin: '0 0 4px', fontSize: 17, color: '#B71C1C' }}>Exclusão total de conta (LGPD)</h2>
+          <p style={{ fontSize: 13, color: '#5A5A5A', margin: '0 0 16px', lineHeight: 1.5 }}>
+            Atende ao direito de eliminação de dados (LGPD, art. 18, VI). Remove permanentemente os dados do titular,
+            a igreja vinculada e o login de acesso. Ação irreversível — use apenas mediante solicitação do titular.
+          </p>
+
+          {erroLgpd && <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 12 }}>{erroLgpd}</div>}
+          {protocolo && (
+            <div style={{ background: '#EAF4EE', color: '#4C8C6E', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 12 }}>
+              Exclusão concluída. <strong>Protocolo de atendimento: {protocolo}</strong> — guarde para comprovação perante a ANPD.
+            </div>
+          )}
+
+          {!titular && !protocolo && (
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <input
+                type="email"
+                value={emailTitular}
+                onChange={(e) => setEmailTitular(e.target.value)}
+                placeholder="E-mail do titular"
+                style={{ ...estilo.campo, maxWidth: 320 }}
+              />
+              <button type="button" onClick={buscarTitular} disabled={buscandoTitular} style={{ ...estilo.botao, opacity: buscandoTitular ? 0.6 : 1 }}>
+                {buscandoTitular ? 'Buscando...' : 'Buscar titular'}
+              </button>
+            </div>
+          )}
+
+          {titular && (
+            <div style={{ background: '#FFF8F0', border: '1px solid #F0D9A8', borderRadius: 10, padding: '14px', marginTop: 12 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#1F3A5F', marginBottom: 8 }}>Resumo do titular</div>
+              <div style={{ display: 'grid', gap: '0.4rem', fontSize: 13, color: '#5A5A5A', marginBottom: 12 }}>
+                <div><strong>E-mail:</strong> {titular.email}</div>
+                <div><strong>Nome:</strong> {titular.nome || '—'}</div>
+                <div><strong>Igreja vinculada:</strong> {titular.igreja_nome || '—'}</div>
+                <div><strong>Conta criada em:</strong> {titular.criado_em ? new Date(titular.criado_em).toLocaleDateString('pt-BR') : '—'}</div>
+                <div><strong>Registros a eliminar:</strong> {titular.qtd_membros} membros · {titular.qtd_lancamentos} lançamentos · {titular.qtd_eventos} eventos</div>
+              </div>
+              <div style={{ display: 'grid', gap: '0.75rem', marginBottom: 12 }}>
+                <input
+                  type="text"
+                  value={motivo}
+                  onChange={(e) => setMotivo(e.target.value)}
+                  placeholder="Motivo (opcional, ex.: solicitação do titular)"
+                  style={estilo.campo}
+                />
+                <input
+                  type="password"
+                  value={senhaOperador}
+                  onChange={(e) => setSenhaOperador(e.target.value)}
+                  placeholder="Sua senha de operador para confirmar"
+                  style={estilo.campo}
+                  autoComplete="current-password"
+                />
+              </div>
+              <p style={{ fontSize: 12, color: '#B71C1C', margin: '0 0 12px', lineHeight: 1.5 }}>
+                Para confirmar, digite o e-mail completo do titular no campo acima e sua senha de operador. Esta ação não pode ser desfeita.
+              </p>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={confirmarExclusaoTotal}
+                  disabled={confirmandoExclusao || excluindoConta}
+                  style={{ ...estilo.botaoExcluir, opacity: confirmandoExclusao || excluindoConta ? 0.6 : 1 }}
+                >
+                  {excluindoConta ? 'Excluindo...' : 'Excluir permanentemente'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setTitular(null); setMotivo(''); setSenhaOperador(''); setErroLgpd('') }}
+                  style={{ padding: '10px 18px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </main>
   )
