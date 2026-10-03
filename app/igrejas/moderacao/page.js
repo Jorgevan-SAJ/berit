@@ -128,7 +128,6 @@ export default function ModeracaoIgrejas() {
   async function confirmarExclusaoTotal() {
     setErroLgpd('')
     if (!titular) return
-    // Confirmação dupla: e-mail do titular + senha do operador
     if (emailTitular.trim().toLowerCase() !== titular.email.toLowerCase()) {
       setErroLgpd('Digite o e-mail completo do titular para confirmar.')
       return
@@ -144,7 +143,6 @@ export default function ModeracaoIgrejas() {
       setErroLgpd('Sessão expirada. Faça login novamente.')
       return
     }
-    // Valida a senha do operador antes de qualquer exclusão
     const { error: erroSenha } = await supabase.auth.signInWithPassword({
       email: user.email,
       password: senhaOperador,
@@ -154,7 +152,6 @@ export default function ModeracaoIgrejas() {
       setErroLgpd('Senha de operador incorreta. A exclusão não foi realizada.')
       return
     }
-    // Executa a exclusão total (dados + login + auditoria)
     setExcluindoConta(true)
     const { data, error } = await supabase.rpc('excluir_conta_titular', {
       p_email: titular.email,
@@ -192,86 +189,8 @@ export default function ModeracaoIgrejas() {
         {msg && <div style={{ background: '#EAF4EE', color: '#4C8C6E', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{msg}</div>}
         {erro && <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>}
 
-        {carregando ? (
-          <div style={{ textAlign: 'center', padding: '3rem 0', color: '#8A8A8A', fontSize: 14 }}>Carregando...</div>
-        ) : igrejas.length === 0 ? (
-          <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '2.5rem', textAlign: 'center', border: '1px solid #E4DED2' }}>
-            <p style={{ fontSize: 15, color: '#5A5A5A', margin: 0 }}>Nenhuma igreja indicada para moderar.</p>
-          </div>
-        ) : (
-          igrejas.map((ig) => (
-            <div key={ig.id} style={estilo.card}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: 12 }}>
-                <div>
-                  <h2 style={{ margin: 0, fontSize: 16, color: '#1F3A5F' }}>{ig.nome}</h2>
-                  <div style={{ fontSize: 12, color: '#8A8A8A' }}>
-                    {ig.cidade || ''}{ig.cidade && ig.uf ? `, ${ig.uf}` : ig.uf || ''}
-                    {ig.aguarda_confirmacao ? ' · aguardando confirmação' : ig.publico_verificado ? ' · verificada' : ''}
-                  </div>
-                </div>
-                <a href={`/igreja/${ig.slug}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#1F3A5F' }}>Ver página</a>
-              </div>
-              <div style={{ display: 'grid', gap: '0.75rem', marginBottom: 12 }}>
-                <input
-                  type="text"
-                  value={ig.nome || ''}
-                  onChange={(e) => alterar(ig.id, 'nome', e.target.value)}
-                  placeholder="Nome da igreja *"
-                  style={estilo.campo}
-                />
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.75rem' }}>
-                  <input
-                    type="text"
-                    value={ig.cidade || ''}
-                    onChange={(e) => alterar(ig.id, 'cidade', e.target.value)}
-                    placeholder="Cidade *"
-                    style={estilo.campo}
-                  />
-                  <select
-                    value={ig.uf || ''}
-                    onChange={(e) => alterar(ig.id, 'uf', e.target.value)}
-                    style={estilo.campo}
-                  >
-                    <option value="">UF *</option>
-                    {UFS.map((u) => <option key={u} value={u}>{u}</option>)}
-                  </select>
-                </div>
-                <input
-                  type="text"
-                  value={ig.endereco_publico || ''}
-                  onChange={(e) => alterar(ig.id, 'endereco_publico', e.target.value)}
-                  placeholder="Endereço (rua, número)"
-                  style={estilo.campo}
-                />
-                <input
-                  type="text"
-                  value={ig.bairro || ''}
-                  onChange={(e) => alterar(ig.id, 'bairro', e.target.value)}
-                  placeholder="Bairro"
-                  style={estilo.campo}
-                />
-                <input
-                  type="text"
-                  value={ig.contato || ''}
-                  onChange={(e) => alterar(ig.id, 'contato', e.target.value)}
-                  placeholder="Contato (telefone ou e-mail)"
-                  style={estilo.campo}
-                />
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <button type="button" onClick={() => salvar(ig)} disabled={salvandoId === ig.id} style={{ ...estilo.botao, opacity: salvandoId === ig.id ? 0.6 : 1 }}>
-                  {salvandoId === ig.id ? 'Salvando...' : 'Salvar alterações'}
-                </button>
-                <button type="button" onClick={() => excluir(ig)} disabled={excluindoId === ig.id} style={{ ...estilo.botaoExcluir, opacity: excluindoId === ig.id ? 0.6 : 1 }}>
-                  {excluindoId === ig.id ? 'Excluindo...' : 'Excluir igreja'}
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-
-        {/* Seção LGPD — Exclusão total de conta */}
-        <div style={{ ...estilo.card, border: '1px solid #F0C4C4', marginTop: '2rem' }}>
+        {/* Seção LGPD — Exclusão total de conta (no topo, para acesso rápido) */}
+        <div style={{ ...estilo.card, border: '1px solid #F0C4C4', marginBottom: '2rem' }}>
           <h2 style={{ margin: '0 0 4px', fontSize: 17, color: '#B71C1C' }}>Exclusão total de conta (LGPD)</h2>
           <p style={{ fontSize: 13, color: '#5A5A5A', margin: '0 0 16px', lineHeight: 1.5 }}>
             Atende ao direito de eliminação de dados (LGPD, art. 18, VI). Remove permanentemente os dados do titular,
@@ -350,6 +269,85 @@ export default function ModeracaoIgrejas() {
             </div>
           )}
         </div>
+
+        {/* Lista de igrejas indicadas */}
+        {carregando ? (
+          <div style={{ textAlign: 'center', padding: '3rem 0', color: '#8A8A8A', fontSize: 14 }}>Carregando...</div>
+        ) : igrejas.length === 0 ? (
+          <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '2.5rem', textAlign: 'center', border: '1px solid #E4DED2' }}>
+            <p style={{ fontSize: 15, color: '#5A5A5A', margin: 0 }}>Nenhuma igreja indicada para moderar.</p>
+          </div>
+        ) : (
+          igrejas.map((ig) => (
+            <div key={ig.id} style={estilo.card}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginBottom: 12 }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 16, color: '#1F3A5F' }}>{ig.nome}</h2>
+                  <div style={{ fontSize: 12, color: '#8A8A8A' }}>
+                    {ig.cidade || ''}{ig.cidade && ig.uf ? `, ${ig.uf}` : ig.uf || ''}
+                    {ig.aguarda_confirmacao ? ' · aguardando confirmação' : ig.publico_verificado ? ' · verificada' : ''}
+                  </div>
+                </div>
+                <a href={`/igreja/${ig.slug}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#1F3A5F' }}>Ver página</a>
+              </div>
+              <div style={{ display: 'grid', gap: '0.75rem', marginBottom: 12 }}>
+                <input
+                  type="text"
+                  value={ig.nome || ''}
+                  onChange={(e) => alterar(ig.id, 'nome', e.target.value)}
+                  placeholder="Nome da igreja *"
+                  style={estilo.campo}
+                />
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.75rem' }}>
+                  <input
+                    type="text"
+                    value={ig.cidade || ''}
+                    onChange={(e) => alterar(ig.id, 'cidade', e.target.value)}
+                    placeholder="Cidade *"
+                    style={estilo.campo}
+                  />
+                  <select
+                    value={ig.uf || ''}
+                    onChange={(e) => alterar(ig.id, 'uf', e.target.value)}
+                    style={estilo.campo}
+                  >
+                    <option value="">UF *</option>
+                    {UFS.map((u) => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                </div>
+                <input
+                  type="text"
+                  value={ig.endereco_publico || ''}
+                  onChange={(e) => alterar(ig.id, 'endereco_publico', e.target.value)}
+                  placeholder="Endereço (rua, número)"
+                  style={estilo.campo}
+                />
+                <input
+                  type="text"
+                  value={ig.bairro || ''}
+                  onChange={(e) => alterar(ig.id, 'bairro', e.target.value)}
+                  placeholder="Bairro"
+                  style={estilo.campo}
+                />
+                <input
+                  type="text"
+                  value={ig.contato || ''}
+                  onChange={(e) => alterar(ig.id, 'contato', e.target.value)}
+                  placeholder="Contato (telefone ou e-mail)"
+                  style={estilo.campo}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <button type="button" onClick={() => salvar(ig)} disabled={salvandoId === ig.id} style={{ ...estilo.botao, opacity: salvandoId === ig.id ? 0.6 : 1 }}>
+                  {salvandoId === ig.id ? 'Salvando...' : 'Salvar alterações'}
+                </button>
+                <button type="button" onClick={() => excluir(ig)} disabled={excluindoId === ig.id} style={{ ...estilo.botaoExcluir, opacity: excluindoId === ig.id ? 0.6 : 1 }}>
+                  {excluindoId === ig.id ? 'Excluindo...' : 'Excluir igreja'}
+                </button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </main>
   )
