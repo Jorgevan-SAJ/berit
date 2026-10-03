@@ -190,8 +190,7 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
   const numeroDestino = normalizarWhats(campoWhats)
   const linkGrupo = extrairLinkGrupo(campoWhats)
   const podeEnviar = etapa === 'resumo' && autoriza !== null && retorno !== null
-  const semAdministracao = igreja.aguarda_confirmacao || (igreja.origem === 'indicacao' && !igreja.publico_verificado)
-
+  const semAdministracao = !igreja.tem_administracao
   function enviar() {
     if (!numeroDestino || !podeEnviar) return
     const url = `https://wa.me/${numeroDestino}?text=${encodeURIComponent(montarMensagem())}`
