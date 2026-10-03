@@ -429,6 +429,20 @@ export default function ConfiguracoesIgreja() {
       setErroExclusao('Não foi possível excluir o cadastro: ' + (error?.message || data?.erro || 'erro desconhecido'))
       return
     }
+    // NOTIFICAÇÃO: avisa a equipe Berit para limpar o e-mail de acesso na moderação (LGPD)
+    try {
+      await fetch('/api/notificar-exclusao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nomeIgreja: form.nome,
+          emailTitular: user.email,
+          dataExclusao: new Date().toLocaleDateString('pt-BR'),
+        }),
+      })
+    } catch {
+      // Se o e-mail falhar, a exclusão já foi concluída — não bloqueia o fluxo
+    }
     // Encerra a sessão e volta ao início
     await supabase.auth.signOut()
     window.location.href = '/'
