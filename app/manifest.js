@@ -1,8 +1,8 @@
 export default function manifest() {
   return {
-    name: 'Berit — Gestão simples para igrejas',
+    name: 'Berit — Gestão Eclesiástica',
     short_name: 'Berit',
-    description: 'Gestão simples para igrejas',
+    description: 'Simples e Eficiente',
     start_url: '/',
     display: 'standalone',
     background_color: '#FAF6EF',
