@@ -1,5 +1,4 @@
 'use client'
-import AtivarNotificacoes from '../../components/AtivarNotificacoes'
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
@@ -261,7 +260,6 @@ export default function DiretorioIgrejas() {
             style={{ display: 'inline-block', background: '#D9A441', color: '#1F3A5F', borderRadius: 8, padding: '10px 20px', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}
           >
             Cadastre Sua Igreja
-            <AtivarNotificacoes />
           </a>
         </div>
       </div>
