@@ -33,7 +33,7 @@ export default function AdminPage() {
   return (
     <main className="min-h-screen bg-cream">
       <header className="bg-navy text-white px-6 py-4 flex items-center justify-between">
-        <div className="font-bold text-xl">Berit <span className="text-gold text-xs font-normal">Gestão simples para igrejas</span></div>
+        <div className="font-bold text-xl">Berit <span className="text-gold text-xs font-normal">Gestão Eclesiástica</span></div>
         <div className="text-sm">{user.email}</div>
       </header>
       <div className="max-w-6xl mx-auto px-6 py-8 grid md:grid-cols-[220px_1fr] gap-6">
