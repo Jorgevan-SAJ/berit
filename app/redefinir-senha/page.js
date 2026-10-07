@@ -52,7 +52,7 @@ export default function RedefinirSenha() {
             Berit
           </div>
           <div style={{ fontSize: 13, color: '#8A8A8A', marginTop: 4 }}>
-            Gestão simples para igrejas
+            Gestão Eclesiástica
           </div>
         </div>
 
