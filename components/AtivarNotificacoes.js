@@ -44,13 +44,11 @@ export default function AtivarNotificacoes() {
         ),
       })
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      const dados = { inscricao: inscricao.toJSON() }
+      if (user) dados.user_id = user.id
       const { error } = await supabase
         .from('push_inscricoes')
-        .upsert(
-          { user_id: user.id, inscricao: inscricao.toJSON() },
-          { onConflict: 'user_id,inscricao' }
-        )
+        .upsert(dados, { onConflict: 'inscricao' })
       if (!error) setEstado('ativo')
     } catch (e) {
       console.error('Erro ao ativar notificações:', e)
