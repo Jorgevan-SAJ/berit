@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
+import BotaoFavoritarIgreja from '../../../components/BotaoFavoritarIgreja'
 
 const DIAS_ORDEM = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 
@@ -549,6 +550,7 @@ export default function PaginaPublicaIgreja() {
                 {igreja.cidade || ''}{igreja.cidade && igreja.uf ? `, ${igreja.uf}` : igreja.uf || ''}
               </span>
               {igreja.publico_verificado && <SeloVerificado />}
+              <BotaoFavoritarIgreja igrejaId={igreja.id} temAdmin={igreja.tem_administracao} />
             </div>
           </div>
         </div>
