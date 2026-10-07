@@ -1,3 +1,5 @@
+self.addEventListener('fetch', () => {})
+
 self.addEventListener('push', (event) => {
   let dados = {}
   try {
