@@ -2,7 +2,7 @@ import RegistrarSW from './registrar-sw'
 import "./globals.css";
 
 export const metadata = {
-  title: "Berit — Gestão simples para igrejas",
+  title: "Berit — Gestão Eclesiástica",
   description: "Plataforma de gestão eclesiástica e diretório de igrejas.",
 };
 
