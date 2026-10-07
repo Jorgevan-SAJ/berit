@@ -341,7 +341,7 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
                     Esta igreja ainda não possui administração no Berit, por isso não há como registrar seu pedido com segurança. Você pode ajudar: envie aos líderes/pastores a apresentação do Berit para que adquiram a plataforma e configurem este canal de acolhimento.
                   </div>
                   <a
-                    href={`https://wa.me/?text=${encodeURIComponent(`Olá, Pastor! Conheça o Berit, uma plataforma de gestão simples para igrejas: diretório público, gestão de membros, tesouraria com relatórios e agenda. Cadastre os dados e funções da igreja neste link: ${typeof window !== 'undefined' ? window.location.origin : ''}/cadastro. É rápido e gratuito para começar.`)}`}
+                    href={`https://wa.me/?text=${encodeURIComponent(`Olá, Pastor! Conheça o Berit, uma plataforma de gestão eclesiástica para igrejas: diretório público, gestão de membros, tesouraria com relatórios e agenda. Cadastre os dados e funções da igreja neste link: ${typeof window !== 'undefined' ? window.location.origin : ''}/cadastro. É rápido e gratuito para começar.`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ padding: '12px', background: '#25D366', color: '#FFFFFF', borderRadius: 8, fontSize: 14, fontWeight: 700, textDecoration: 'none', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
@@ -349,7 +349,7 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
                     <IconeWhatsApp tamanho={18} /> Enviar apresentação ao pastor/líder
                   </a>
                   <button
-                    onClick={() => copiarTexto(`Olá, Pastor! Conheça o Berit, uma plataforma de gestão simples para igrejas: diretório público, gestão de membros, tesouraria com relatórios e agenda. Cadastre os dados e funções da igreja neste link: ${typeof window !== 'undefined' ? window.location.origin : ''}/cadastro. É rápido e gratuito para começar.`, 'Mensagem copiada!')}
+                    onClick={() => copiarTexto(`Olá, Pastor! Conheça o Berit, uma plataforma de gestão eclesiástica para igrejas: diretório público, gestão de membros, tesouraria com relatórios e agenda. Cadastre os dados e funções da igreja neste link: ${typeof window !== 'undefined' ? window.location.origin : ''}/cadastro. É rápido e gratuito para começar.`, 'Mensagem copiada!')}
                     style={{ padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
                   >
                     Copiar mensagem
@@ -726,7 +726,7 @@ export default function PaginaPublicaIgreja() {
       </div>
 
       <footer style={{ borderTop: '1px solid #E4DED2', padding: '1.5rem', textAlign: 'center', fontSize: 12, color: '#8A8A8A' }}>
-        Berit, Gestão simples para igrejas
+        Berit, Gestão Eclesiástica
       </footer>
 
       {chatAberto && (
