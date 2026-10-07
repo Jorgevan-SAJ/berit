@@ -1,5 +1,4 @@
 'use client'
-import AtivarNotificacoes from '../../components/AtivarNotificacoes'
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getPerfil, perfilLabel } from '../../lib/perfil'
@@ -364,7 +363,6 @@ export default function AreaPage() {
         </p>
         <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 2rem' }}>
           Bem-vindo {perfil?.nome || usuario?.user_metadata?.nome || usuario?.email || ''}.{' '}
-          <AtivarNotificacoes />
           {perfil ? `Perfil ${perfilLabel(perfil.perfil)}.` : ''} Gestão Eclesiástica.
           {igreja?.cnpj && (
             <span style={{ display: 'block', marginTop: 6 }}>
