@@ -1,4 +1,5 @@
 'use client'
+import AtivarNotificacoes from '../components/AtivarNotificacoes'
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getPerfil, perfilLabel } from '../../lib/perfil'
