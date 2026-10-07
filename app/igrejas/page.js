@@ -81,7 +81,7 @@ export default function DiretorioIgrejas() {
   function mensagemApresentacao() {
     const origem = typeof window !== 'undefined' ? window.location.origin : ''
     const link = `${origem}/cadastro`
-    return `Olá, Pastor! Indiquei a nossa igreja no Berit, uma plataforma de gestão simples para igrejas. Por meio dela, a igreja ganha um diretório público, gestão de membros, tesouraria com relatórios e agenda. Cadastre os dados e funções da igreja neste link: ${link}. É rápido e gratuito para começar.`
+    return `Olá, Pastor! Indiquei a nossa igreja no Berit, uma plataforma de gestão eclesiástica para igrejas. Por meio dela, a igreja ganha um diretório público, gestão de membros, tesouraria com relatórios e agenda. Cadastre os dados e funções da igreja neste link: ${link}. É rápido e gratuito para começar.`
   }
   async function copiarTexto(texto, rotulo) {
     try {
@@ -381,7 +381,7 @@ export default function DiretorioIgrejas() {
         )}
       </div>
       <footer style={{ borderTop: '1px solid #E4DED2', padding: '1.5rem', textAlign: 'center', fontSize: 12, color: '#8A8A8A' }}>
-        Berit, Gestão simples para igrejas
+        Berit, Gestão Eclesiástica
       </footer>
       {apresentacaoAberta && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, padding: '1rem' }}>
@@ -411,7 +411,7 @@ export default function DiretorioIgrejas() {
                 Enviar por WhatsApp
               </a>
               <a
-                href={`mailto:?subject=${encodeURIComponent('Conheça o Berit — Gestão simples para igrejas')}&body=${encodeURIComponent(mensagemApresentacao())}`}
+                href={`mailto:?subject=${encodeURIComponent('Conheça o Berit — Gestão Eclesiástica')}&body=${encodeURIComponent(mensagemApresentacao())}`}
                 style={{ display: 'block', textAlign: 'center', padding: '12px', background: '#1F3A5F', color: '#FFFFFF', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none' }}
               >
                 Enviar por e-mail
