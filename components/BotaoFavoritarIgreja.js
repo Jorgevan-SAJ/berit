@@ -26,14 +26,22 @@ export default function BotaoFavoritarIgreja({ igrejaId, temAdmin }) {
   const [verificando, setVerificando] = useState(true)
   const [ocupado, setOcupado] = useState(false)
   const [mensagem, setMensagem] = useState('')
+  const [tipoMensagem, setTipoMensagem] = useState('ok')
+
+  function mostrar(texto, tipo = 'ok') {
+    setMensagem(texto)
+    setTipoMensagem(tipo)
+    setTimeout(() => setMensagem(''), 8000)
+  }
 
   useEffect(() => {
     const deviceId = obterDeviceId()
     if (!deviceId || !igrejaId) return
     supabase
       .rpc('verificar_favorito', { p_igreja_id: igrejaId, p_device_id: deviceId })
-      .then(({ data }) => {
-        setFavoritado(!!data)
+      .then(({ data, error }) => {
+        if (error) mostrar('Erro ao verificar: ' + error.message, 'erro')
+        else setFavoritado(!!data)
         setVerificando(false)
       })
   }, [igrejaId])
@@ -44,8 +52,7 @@ export default function BotaoFavoritarIgreja({ igrejaId, temAdmin }) {
       const deviceId = obterDeviceId()
       const permissao = await Notification.requestPermission()
       if (permissao !== 'granted') {
-        setMensagem('Notificações bloqueadas no navegador — libere nas configurações para acompanhar esta igreja.')
-        setTimeout(() => setMensagem(''), 6000)
+        mostrar('Notificações bloqueadas no navegador — libere nas configurações para acompanhar esta igreja.', 'erro')
         return
       }
       const registro = await navigator.serviceWorker.ready
@@ -60,17 +67,18 @@ export default function BotaoFavoritarIgreja({ igrejaId, temAdmin }) {
         p_device_id: deviceId,
         p_inscricao: sub.toJSON(),
       })
-      if (!error) {
-        setFavoritado(true)
-        setMensagem(
-          temAdmin
-            ? '✅ Notificações desta igreja ativadas neste dispositivo'
-            : '❤️ Igreja adicionada aos favoritos. Ela ainda não tem administrador — você receberá as notificações de atividades assim que ela adquirir o Berit.'
-        )
-        setTimeout(() => setMensagem(''), 6000)
+      if (error) {
+        mostrar('Erro ao salvar: ' + error.message, 'erro')
+        return
       }
+      setFavoritado(true)
+      mostrar(
+        temAdmin
+          ? '✅ Notificações desta igreja ativadas neste dispositivo'
+          : '❤️ Igreja adicionada aos favoritos. Ela ainda não tem administrador — você receberá as notificações de atividades assim que ela adquirir o Berit.'
+      )
     } catch (e) {
-      console.error('Erro ao favoritar:', e)
+      mostrar('Erro: ' + (e.message || String(e)), 'erro')
     } finally {
       setOcupado(false)
     }
@@ -79,11 +87,12 @@ export default function BotaoFavoritarIgreja({ igrejaId, temAdmin }) {
   async function desfavoritar() {
     setOcupado(true)
     const deviceId = obterDeviceId()
-    await supabase.rpc('desfavoritar_igreja', {
+    const { error } = await supabase.rpc('desfavoritar_igreja', {
       p_igreja_id: igrejaId,
       p_device_id: deviceId,
     })
-    setFavoritado(false)
+    if (error) mostrar('Erro ao remover: ' + error.message, 'erro')
+    else setFavoritado(false)
     setOcupado(false)
   }
 
@@ -92,7 +101,7 @@ export default function BotaoFavoritarIgreja({ igrejaId, temAdmin }) {
   return (
     <div style={{ width: '100%', maxWidth: 480, margin: '16px auto', textAlign: 'center' }}>
       {mensagem && (
-        <div style={{ padding: '10px 14px', borderRadius: 8, backgroundColor: '#EAF4EC', color: '#2E6B46', fontSize: 14, marginBottom: 10 }}>
+        <div style={{ padding: '10px 14px', borderRadius: 8, marginBottom: 10, fontSize: 13, lineHeight: 1.5, backgroundColor: tipoMensagem === 'erro' ? '#FDECEC' : '#EAF4EC', color: tipoMensagem === 'erro' ? '#B71C1C' : '#2E6B46' }}>
           {mensagem}
         </div>
       )}
