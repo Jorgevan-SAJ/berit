@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
+const CHAVE_VAPID = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+
 function urlBase64ParaUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
@@ -49,6 +51,10 @@ export default function BotaoFavoritarIgreja({ igrejaId, temAdmin }) {
   async function favoritar() {
     setOcupado(true)
     try {
+      if (!CHAVE_VAPID) {
+        mostrar('Chave VAPID não encontrada neste build. Confira o nome exato da variável NEXT_PUBLIC_VAPID_PUBLIC_KEY na Vercel e faça um Redeploy.', 'erro')
+        return
+      }
       const deviceId = obterDeviceId()
       const permissao = await Notification.requestPermission()
       if (permissao !== 'granted') {
@@ -58,9 +64,7 @@ export default function BotaoFavoritarIgreja({ igrejaId, temAdmin }) {
       const registro = await navigator.serviceWorker.ready
       const sub = await registro.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ParaUint8Array(
-          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-        ),
+        applicationServerKey: urlBase64ParaUint8Array(CHAVE_VAPID),
       })
       const { error } = await supabase.rpc('favoritar_igreja', {
         p_igreja_id: igrejaId,
