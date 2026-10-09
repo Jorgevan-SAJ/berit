@@ -78,9 +78,9 @@ export async function POST(request) {
 
     for (const item of lista) {
       try {
-        await webpush.sendNotification(item.inscricao, JSON.stringify({
-          titulo: igreja?.nome || 'Berit',
-          corpo: textoCorpo,
+          await webpush.sendNotification(item.inscricao, JSON.stringify({
+          title: igreja?.nome || 'Berit',
+          body: textoCorpo,
           url: igreja?.slug ? `/igreja/${igreja.slug}` : '/igrejas',
         }))
         enviados++
