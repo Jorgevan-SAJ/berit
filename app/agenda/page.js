@@ -48,6 +48,10 @@ export default function AgendaPage() {
   const [selecionado, setSelecionado] = useState(null)
   const [excluindo, setExcluindo] = useState(null)
   const [salvando, setSalvando] = useState(false)
+  const [notificando, setNotificando] = useState(null)
+  const [enviandoNotificacao, setEnviandoNotificacao] = useState(false)
+  const [resultadoNotificacao, setResultadoNotificacao] = useState(null)
+  const [mensagemExtra, setMensagemExtra] = useState('')
   // Item 11 — status do plano para o bloqueio funcional
   const [planoBloqueado, setPlanoBloqueado] = useState(false)
   const [trialTerminaEm, setTrialTerminaEm] = useState(null)
@@ -129,6 +133,32 @@ export default function AgendaPage() {
       setExcluindo(null)
       setSelecionado(null)
       carregar()
+    }
+  }
+    async function enviarNotificacao(evento) {
+    setEnviandoNotificacao(true)
+    setResultadoNotificacao(null)
+    try {
+      const { data: sessao } = await supabase.auth.getSession()
+      const token = sessao?.session?.access_token
+      if (!token) {
+        setResultadoNotificacao({ ok: false, mensagem: 'Sessão expirada. Faça login novamente.' })
+        return
+      }
+      const resposta = await fetch('/api/notificar-evento', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ p_evento_id: evento.id, p_mensagem: mensagemExtra }),
+      })
+      const dados = await resposta.json()
+      setResultadoNotificacao(dados)
+    } catch (e) {
+      setResultadoNotificacao({ ok: false, mensagem: 'Não foi possível conectar ao servidor de envio.' })
+    } finally {
+      setEnviandoNotificacao(false)
     }
   }
   const dataFimTrial = trialTerminaEm ? new Date(trialTerminaEm).toLocaleDateString('pt-BR') : ''
@@ -286,19 +316,53 @@ export default function AgendaPage() {
                     </div>
                     {e.descricao && <div style={{ fontSize: 13, color: '#5A5A5A', marginTop: 8, whiteSpace: 'pre-line', lineHeight: 1.5 }}>{e.descricao}</div>}
                     {podeGerenciar && (
-                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: 12 }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: 12, flexWrap: 'wrap' }}>
+                       <button onClick={() => { setMensagemExtra(''); setNotificando(e) }} style={{ padding: '8px 14px', background: '#E8F0FA', color: '#1F3A5F', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
+                        🔔 Notificar
+                       </button>
                         <a href={`/agenda/editar?id=${e.id}`} style={{ padding: '8px 14px', background: '#F5F0E6', color: '#1F3A5F', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-                          Editar
-                        </a>
-                        <button onClick={() => setExcluindo(e)} style={{ padding: '8px 14px', background: '#FDECEC', color: '#B71C1C', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
-                          Excluir
-                        </button>
-                      </div>
-                    )}
+                         Editar
+                          </a>
+                          <button onClick={() => setExcluindo(e)} style={{ padding: '8px 14px', background: '#FDECEC', color: '#B71C1C', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
+                           Excluir
+                          </button>
+                        </div>
+                      )}
                   </div>
                 )
               })}
             </div>
+          </div>
+        </div>
+      )}
+      {notificando && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+          <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', maxWidth: 460, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#1F3A5F', marginBottom: 6 }}>🔔 Notificar fiéis</div>
+            <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 12px' }}>
+              Enviar notificação no celular de quem acompanha a igreja sobre o evento <strong>{notificando.titulo}</strong>?
+            </p>
+            <label style={{ fontSize: 13, color: '#2E2E2E', display: 'block', marginBottom: 6 }}>Mensagem extra (opcional)</label>
+            <textarea value={mensagemExtra} onChange={(e) => setMensagemExtra(e.target.value)} rows={2} placeholder="ex.: Traga um lanche para a confraternização..." style={{ width: '100%', padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: 16 }} />
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button onClick={() => enviarNotificacao(notificando)} disabled={enviandoNotificacao} style={{ flex: 1, padding: '12px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                {enviandoNotificacao ? 'Enviando...' : 'Enviar notificação'}
+              </button>
+              <button onClick={() => setNotificando(null)} disabled={enviandoNotificacao} style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {resultadoNotificacao && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+          <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', maxWidth: 420, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', textAlign: 'center' }}>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>{resultadoNotificacao.ok ? '✅' : '⚠️'}</div>
+            <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 16px' }}>{resultadoNotificacao.mensagem}</p>
+            <button onClick={() => { setResultadoNotificacao(null); setNotificando(null) }} style={{ width: '100%', padding: '12px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+              Fechar
+            </button>
           </div>
         </div>
       )}
