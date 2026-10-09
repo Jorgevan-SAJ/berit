@@ -344,6 +344,7 @@ export default function DiretorioIgrejas() {
             {UFS.map((u) => <option key={u} value={u}>{u}</option>)}
           </select>
           <button type="submit" style={estilo.botao}>Buscar</button>
+          <a href="/igrejas/favoritas" style={{ color: '#B26A00', fontSize: 13, fontWeight: 600, textDecoration: 'underline', whiteSpace: 'nowrap' }}>❤️ Minhas igrejas</a>
           <button
             type="button"
             onClick={() => { setMostrarForm(!mostrarForm); setMsgForm(''); setErroForm('') }}
