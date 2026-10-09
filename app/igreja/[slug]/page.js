@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 import BotaoFavoritarIgreja from '../../../components/BotaoFavoritarIgreja'
-import SeloFavorita from '../../../components/SeloFavorita'
 
 const DIAS_ORDEM = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
 
@@ -547,7 +546,6 @@ export default function PaginaPublicaIgreja() {
           <div style={{ textAlign: 'center' }}>
             <h1 style={{ margin: '0 0 8px', fontSize: 28 }}>
               {igreja.nome}
-              <SeloFavorita igrejaId={igreja.id} />
             </h1>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
               <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14 }}>
