@@ -28,11 +28,13 @@ function BadgeComunidade() {
     </span>
   )
 }
-function CardIgreja({ ig }) {
+function CardIgreja({ ig, ehFavorita }) {
   return (
     <div style={estilo.card}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <h2 style={{ margin: 0, fontSize: 17, color: '#1F3A5F' }}>{ig.nome}</h2>
+        <h2 style={{ margin: 0, fontSize: 17, color: '#1F3A5F' }}>
+          {ehFavorita ? '❤️ ' : ''}{ig.nome}
+        </h2>
         {ig.aguarda_confirmacao ? <BadgeComunidade /> : ig.publico_verificado ? <SeloVerificado /> : null}
       </div>
       <div style={{ fontSize: 13, color: '#8A8A8A' }}>
@@ -77,6 +79,8 @@ export default function DiretorioIgrejas() {
   const [pos, setPos] = useState(0)
   const [vitrine, setVitrine] = useState([])
   const [pausado, setPausado] = useState(false)
+  // Item 13 — ids das igrejas favoritadas neste aparelho (para o coração nos cartões)
+  const [favoritas, setFavoritas] = useState([])
   // Item 7 — monta a mensagem de apresentação com o link do Berit
   function mensagemApresentacao() {
     const origem = typeof window !== 'undefined' ? window.location.origin : ''
@@ -147,6 +151,21 @@ export default function DiretorioIgrejas() {
     })
     buscar('', '', '')
     obterLocalizacao().then((loc) => setLocalizacao(loc))
+  }, [])
+  // Item 13 — carrega os favoritos do aparelho e atualiza quando o usuário volta para a aba
+  useEffect(() => {
+    function carregarFavoritas() {
+      const deviceId = localStorage.getItem('berit_device_id')
+      if (!deviceId) return
+      supabase
+        .from('favoritos_igrejas')
+        .select('igreja_id')
+        .eq('device_id', deviceId)
+        .then(({ data }) => setFavoritas((data || []).map((f) => f.igreja_id)))
+    }
+    carregarFavoritas()
+    window.addEventListener('focus', carregarFavoritas)
+    return () => window.removeEventListener('focus', carregarFavoritas)
   }, [])
   useEffect(() => {
     if (modoBusca) return
@@ -351,7 +370,7 @@ export default function DiretorioIgrejas() {
           </div>
         ) : modoBusca ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-            {igrejas.map((ig) => <CardIgreja key={ig.slug} ig={ig} />)}
+            {igrejas.map((ig) => <CardIgreja key={ig.slug} ig={ig} ehFavorita={favoritas.includes(ig.id)} />)}
           </div>
         ) : (
           <div>
@@ -372,7 +391,7 @@ export default function DiretorioIgrejas() {
               onTouchStart={() => setPausado(true)}
               onTouchEnd={() => setPausado(false)}
             >
-              {vitrine.map((ig) => <CardIgreja key={ig.slug} ig={ig} />)}
+              {vitrine.map((ig) => <CardIgreja key={ig.slug} ig={ig} ehFavorita={favoritas.includes(ig.id)} />)}
             </div>
             <p style={{ marginTop: '0.75rem', fontSize: 12, color: '#8A8A8A', textAlign: 'center' }}>
               Use a busca acima para ver todas as igrejas cadastradas.
