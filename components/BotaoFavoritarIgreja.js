@@ -40,10 +40,13 @@ export default function BotaoFavoritarIgreja({ igrejaId, temAdmin }) {
     const deviceId = obterDeviceId()
     if (!deviceId || !igrejaId) return
     supabase
-      .rpc('verificar_favorito', { p_igreja_id: igrejaId, p_device_id: deviceId })
-      .then(({ data, error }) => {
-        if (error) mostrar('Erro ao verificar: ' + error.message, 'erro')
-        else setFavoritado(!!data)
+      .from('favoritos_igrejas')
+      .select('id')
+      .eq('igreja_id', igrejaId)
+      .eq('device_id', deviceId)
+      .limit(1)
+      .then(({ data }) => {
+        setFavoritado(!!data && data.length > 0)
         setVerificando(false)
       })
   }, [igrejaId])
@@ -66,15 +69,29 @@ export default function BotaoFavoritarIgreja({ igrejaId, temAdmin }) {
         userVisibleOnly: true,
         applicationServerKey: urlBase64ParaUint8Array(CHAVE_VAPID),
       })
-      const { error } = await supabase.rpc('favoritar_igreja', {
-        p_igreja_id: igrejaId,
-        p_device_id: deviceId,
-        p_inscricao: sub.toJSON(),
-      })
-      if (error) {
-        mostrar('Erro ao salvar: ' + error.message, 'erro')
+
+      // Limpa registros antigos deste dispositivo nesta igreja (evita duplicidade)
+      await supabase.from('favoritos_igrejas').delete().eq('igreja_id', igrejaId).eq('device_id', deviceId)
+      await supabase.from('push_inscricoes').delete().eq('igreja_id', igrejaId).eq('device_id', deviceId)
+
+      // Grava o favorito
+      const { error: erroFavorito } = await supabase
+        .from('favoritos_igrejas')
+        .insert({ igreja_id: igrejaId, device_id: deviceId })
+      if (erroFavorito) {
+        mostrar('Erro ao salvar favorito: ' + erroFavorito.message, 'erro')
         return
       }
+
+      // Grava a inscrição de push SEMPRE com a igreja (era aqui que faltava)
+      const { error: erroInscricao } = await supabase
+        .from('push_inscricoes')
+        .insert({ igreja_id: igrejaId, device_id: deviceId, inscricao: sub.toJSON() })
+      if (erroInscricao) {
+        mostrar('Erro ao salvar inscrição: ' + erroInscricao.message, 'erro')
+        return
+      }
+
       setFavoritado(true)
       mostrar(
         temAdmin
@@ -91,12 +108,9 @@ export default function BotaoFavoritarIgreja({ igrejaId, temAdmin }) {
   async function desfavoritar() {
     setOcupado(true)
     const deviceId = obterDeviceId()
-    const { error } = await supabase.rpc('desfavoritar_igreja', {
-      p_igreja_id: igrejaId,
-      p_device_id: deviceId,
-    })
-    if (error) mostrar('Erro ao remover: ' + error.message, 'erro')
-    else setFavoritado(false)
+    await supabase.from('favoritos_igrejas').delete().eq('igreja_id', igrejaId).eq('device_id', deviceId)
+    await supabase.from('push_inscricoes').delete().eq('igreja_id', igrejaId).eq('device_id', deviceId)
+    setFavoritado(false)
     setOcupado(false)
   }
 
