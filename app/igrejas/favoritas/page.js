@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { supabase } from '../../lib/supabase'
+import { supabase } from '../../../lib/supabase'
 
 const estilo = {
   main: { minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" },
