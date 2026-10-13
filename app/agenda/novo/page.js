@@ -1,9 +1,7 @@
 'use client'
-
 import { useEffect, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { getPerfil } from '../../../lib/perfil'
-
 const TIPOS = [
   { v: 'culto', r: 'Culto' },
   { v: 'ensaio', r: 'Ensaio' },
@@ -12,7 +10,6 @@ const TIPOS = [
   { v: 'campanha', r: 'Campanha' },
   { v: 'outro', r: 'Outro' },
 ]
-
 const DIAS_SEMANA_OPCOES = [
   { v: '0', r: 'Domingo' },
   { v: '1', r: 'Segunda-feira' },
@@ -22,12 +19,27 @@ const DIAS_SEMANA_OPCOES = [
   { v: '5', r: 'Sexta-feira' },
   { v: '6', r: 'Sábado' },
 ]
-
+const ANTECEDENCIAS = [
+  { v: '1dia', r: '1 dia antes' },
+  { v: '3h', r: '3 horas antes' },
+  { v: '30min', r: '30 minutos antes' },
+  { v: 'horario', r: 'No horário do evento' },
+]
+const MS_ANTECEDENCIA = { '1dia': 24 * 60 * 60 * 1000, '3h': 3 * 60 * 60 * 1000, '30min': 30 * 60 * 1000, horario: 0 }
+function mensagemPadrao(ant, titulo) {
+  const t = titulo && titulo.trim() ? titulo.trim() : 'nosso evento'
+  if (ant === '1dia') return `É amanhã: ${t}. Venha participar conosco!`
+  if (ant === '3h') return `Começa em 3 horas: ${t}. Venha participar conosco!`
+  if (ant === '30min') return `Já vai começar: ${t}. Venha participar conosco!`
+  return `É agora: ${t}. Venha participar conosco!`
+}
 export default function NovoEvento() {
   const [perfilAtual, setPerfilAtual] = useState(null)
   const [verificando, setVerificando] = useState(true)
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
+  const [antecedencia, setAntecedencia] = useState('1dia')
+  const [mensagemEditada, setMensagemEditada] = useState(false)
   const [form, setForm] = useState({
     titulo: '',
     tipo: 'culto',
@@ -40,15 +52,28 @@ export default function NovoEvento() {
     local: '',
     responsavel: '',
     descricao: '',
+    notificacao_automatica: false,
+    mensagem_notificacao: '',
   })
-
   useEffect(() => {
     getPerfil().then((p) => {
       setPerfilAtual(p)
       setVerificando(false)
     })
   }, [])
-
+  // Preenche a mensagem automaticamente enquanto o usuário não editar manualmente
+  useEffect(() => {
+    if (form.notificacao_automatica && !mensagemEditada) {
+      setForm((f) => ({ ...f, mensagem_notificacao: mensagemPadrao(antecedencia, f.titulo) }))
+    }
+  }, [form.notificacao_automatica, antecedencia, form.titulo, mensagemEditada])
+  function calcularHorarioNotificacao() {
+    if (!form.notificacao_automatica || form.tipo_evento !== 'especifico' || !form.data_inicio) return null
+    const [h, m] = (form.hora_inicio || '19:00').split(':').map(Number)
+    const inicio = new Date(`${form.data_inicio}T00:00:00`)
+    inicio.setHours(h || 0, m || 0, 0, 0)
+    return new Date(inicio.getTime() - (MS_ANTECEDENCIA[antecedencia] ?? 0)).toISOString()
+  }
   async function salvar(e) {
     e.preventDefault()
     setErro('')
@@ -63,6 +88,22 @@ export default function NovoEvento() {
     if (form.tipo_evento === 'especifico' && !form.data_inicio) {
       setErro('Informe a data do evento.')
       return
+    }
+    let horarioNotifISO = null
+    if (form.notificacao_automatica && form.tipo_evento === 'especifico') {
+      horarioNotifISO = calcularHorarioNotificacao()
+      if (!horarioNotifISO) {
+        setErro('Não foi possível calcular o horário do aviso. Verifique a data e a hora do evento.')
+        return
+      }
+      if (new Date(horarioNotifISO).getTime() <= Date.now()) {
+        setErro('O horário do aviso automático já passou. Ajuste a data/hora do evento ou escolha uma antecedência menor.')
+        return
+      }
+      if (!form.mensagem_notificacao.trim()) {
+        setErro('Escreva a mensagem da notificação.')
+        return
+      }
     }
     const permanente = form.tipo_evento === 'permanente'
     setCarregando(true)
@@ -79,6 +120,9 @@ export default function NovoEvento() {
         local: form.local.trim() || '',
         responsavel: form.responsavel.trim() || '',
         descricao: form.descricao.trim() || '',
+        notificacao_automatica: !!horarioNotifISO,
+        horario_notificacao: horarioNotifISO,
+        mensagem_notificacao: horarioNotifISO ? form.mensagem_notificacao.trim() : null,
       },
     ])
     setCarregando(false)
@@ -88,13 +132,11 @@ export default function NovoEvento() {
       window.location.href = '/agenda'
     }
   }
-
   const campo = {
     width: '100%', padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8,
     fontSize: 14, marginBottom: 16, boxSizing: 'border-box', fontFamily: 'inherit',
   }
   const rotulo = { fontSize: 13, color: '#2E2E2E', display: 'block', marginBottom: 6 }
-
   if (verificando) {
     return (
       <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -104,7 +146,6 @@ export default function NovoEvento() {
       </main>
     )
   }
-
   if (!perfilAtual || (perfilAtual.perfil !== 'admin_master' && perfilAtual.perfil !== 'secretaria')) {
     return (
       <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -119,33 +160,27 @@ export default function NovoEvento() {
       </main>
     )
   }
-
   return (
     <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
       <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <a href="/area" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF', textDecoration: 'none' }}>Berit</a>
         <a href="/agenda" style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' }}>Voltar</a>
       </header>
-
       <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem' }}>
         <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Novo evento</h1>
         <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 1.5rem' }}>Cadastre uma programação na agenda da igreja.</p>
-
         {erro && (
           <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>
         )}
-
         <form onSubmit={salvar} style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', border: '1px solid #E4DED2' }}>
           <label style={rotulo}>Título *</label>
           <input type="text" value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} placeholder="ex.: Culto de Celebração" required style={campo} />
-
           <label style={rotulo}>Tipo</label>
           <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })} style={campo}>
             {TIPOS.map((t) => (
               <option key={t.v} value={t.v}>{t.r}</option>
             ))}
           </select>
-
           <label style={rotulo}>Tipo de evento</label>
           <div style={{ display: 'flex', gap: '0.75rem', marginBottom: 16 }}>
             <button
@@ -171,7 +206,6 @@ export default function NovoEvento() {
               Permanente (recorrente)
             </button>
           </div>
-
           {form.tipo_evento === 'especifico' ? (
             <>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 1rem' }}>
@@ -211,16 +245,48 @@ export default function NovoEvento() {
               </div>
             </div>
           )}
-
           <label style={rotulo}>Local</label>
           <input type="text" value={form.local} onChange={(e) => setForm({ ...form, local: e.target.value })} placeholder="ex.: Templo principal, salão social..." style={campo} />
-
           <label style={rotulo}>Responsável</label>
           <input type="text" value={form.responsavel} onChange={(e) => setForm({ ...form, responsavel: e.target.value })} placeholder="ex.: Pr. João, Ministério de Louvor..." style={campo} />
-
           <label style={rotulo}>Descrição</label>
           <textarea value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} rows={3} placeholder="Detalhes da programação..." style={campo} />
-
+          <div style={{ background: '#F5F0E6', borderRadius: 10, padding: '14px', marginBottom: 16 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: '#1F3A5F', fontWeight: 600, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={form.notificacao_automatica}
+                onChange={(e) => setForm({ ...form, notificacao_automatica: e.target.checked })}
+                style={{ width: 18, height: 18 }}
+              />
+              🔔 Avisar automaticamente quem acompanha a igreja
+            </label>
+            {form.tipo_evento === 'permanente' && (
+              <p style={{ fontSize: 12, color: '#8A8A8A', margin: '8px 0 0' }}>O aviso automático está disponível apenas para eventos com data única.</p>
+            )}
+            {form.notificacao_automatica && form.tipo_evento === 'especifico' && (
+              <div style={{ marginTop: 12 }}>
+                <label style={rotulo}>Avisar com antecedência</label>
+                <select value={antecedencia} onChange={(e) => setAntecedencia(e.target.value)} style={{ ...campo, marginBottom: 12 }}>
+                  {ANTECEDENCIAS.map((a) => (
+                    <option key={a.v} value={a.v}>{a.r}</option>
+                  ))}
+                </select>
+                <label style={rotulo}>Mensagem da notificação</label>
+                <textarea
+                  value={form.mensagem_notificacao}
+                  onChange={(e) => { setForm({ ...form, mensagem_notificacao: e.target.value }); setMensagemEditada(true) }}
+                  rows={2}
+                  style={{ ...campo, marginBottom: 8 }}
+                />
+                {calcularHorarioNotificacao() && (
+                  <p style={{ fontSize: 12, color: '#8A8A8A', margin: 0 }}>
+                    O aviso sai automaticamente em {new Date(calcularHorarioNotificacao()).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: 4 }}>
             <button type="submit" disabled={carregando} style={{ flex: 1, padding: '12px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
               {carregando ? 'Salvando...' : 'Salvar evento'}
