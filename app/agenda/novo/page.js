@@ -20,26 +20,18 @@ const DIAS_SEMANA_OPCOES = [
   { v: '6', r: 'Sábado' },
 ]
 const ANTECEDENCIAS = [
-  { v: '1dia', r: '1 dia antes' },
-  { v: '3h', r: '3 horas antes' },
-  { v: '30min', r: '30 minutos antes' },
-  { v: 'horario', r: 'No horário do evento' },
+  { v: '1dia', r: '1 dia antes', ms: 24 * 60 * 60 * 1000, frase: (t) => `É amanhã: ${t}. Venha participar conosco!` },
+  { v: '3h', r: '3 horas antes', ms: 3 * 60 * 60 * 1000, frase: (t) => `Começa em 3 horas: ${t}. Venha participar conosco!` },
+  { v: '30min', r: '30 minutos antes', ms: 30 * 60 * 1000, frase: (t) => `Já vai começar: ${t}. Venha participar conosco!` },
+  { v: 'horario', r: 'No horário do evento', ms: 0, frase: (t) => `É agora: ${t}. Venha participar conosco!` },
 ]
-const MS_ANTECEDENCIA = { '1dia': 24 * 60 * 60 * 1000, '3h': 3 * 60 * 60 * 1000, '30min': 30 * 60 * 1000, horario: 0 }
-function mensagemPadrao(ant, titulo) {
-  const t = titulo && titulo.trim() ? titulo.trim() : 'nosso evento'
-  if (ant === '1dia') return `É amanhã: ${t}. Venha participar conosco!`
-  if (ant === '3h') return `Começa em 3 horas: ${t}. Venha participar conosco!`
-  if (ant === '30min') return `Já vai começar: ${t}. Venha participar conosco!`
-  return `É agora: ${t}. Venha participar conosco!`
-}
 export default function NovoEvento() {
   const [perfilAtual, setPerfilAtual] = useState(null)
   const [verificando, setVerificando] = useState(true)
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
-  const [antecedencia, setAntecedencia] = useState('1dia')
-  const [mensagemEditada, setMensagemEditada] = useState(false)
+  const [antecedencias, setAntecedencias] = useState([])
+  const [mensagemLembrete, setMensagemLembrete] = useState('')
   const [form, setForm] = useState({
     titulo: '',
     tipo: 'culto',
@@ -52,8 +44,6 @@ export default function NovoEvento() {
     local: '',
     responsavel: '',
     descricao: '',
-    notificacao_automatica: false,
-    mensagem_notificacao: '',
   })
   useEffect(() => {
     getPerfil().then((p) => {
@@ -61,18 +51,23 @@ export default function NovoEvento() {
       setVerificando(false)
     })
   }, [])
-  // Preenche a mensagem automaticamente enquanto o usuário não editar manualmente
-  useEffect(() => {
-    if (form.notificacao_automatica && !mensagemEditada) {
-      setForm((f) => ({ ...f, mensagem_notificacao: mensagemPadrao(antecedencia, f.titulo) }))
-    }
-  }, [form.notificacao_automatica, antecedencia, form.titulo, mensagemEditada])
-  function calcularHorarioNotificacao() {
-    if (!form.notificacao_automatica || form.tipo_evento !== 'especifico' || !form.data_inicio) return null
+  function alternarAntecedencia(v) {
+    setAntecedencias((atual) => (atual.includes(v) ? atual.filter((x) => x !== v) : [...atual, v]))
+  }
+  function calcularLembretes() {
+    if (!form.notificacaoAutomatica || form.tipo_evento !== 'especifico' || !form.data_inicio || antecedencias.length === 0) return []
     const [h, m] = (form.hora_inicio || '19:00').split(':').map(Number)
-    const inicio = new Date(`${form.data_inicio}T00:00:00`)
-    inicio.setHours(h || 0, m || 0, 0, 0)
-    return new Date(inicio.getTime() - (MS_ANTECEDENCIA[antecedencia] ?? 0)).toISOString()
+    const titulo = form.titulo.trim() || 'nosso evento'
+    return antecedencias
+      .map((v) => ANTECEDENCIAS.find((a) => a.v === v))
+      .filter(Boolean)
+      .map((a) => {
+        const inicio = new Date(`${form.data_inicio}T00:00:00`)
+        inicio.setHours(h || 0, m || 0, 0, 0)
+        const horario = new Date(inicio.getTime() - a.ms)
+        return { ant: a.v, rotulo: a.r, horario, mensagem: mensagemLembrete.trim() || a.frase(titulo) }
+      })
+      .sort((x, y) => x.horario - y.horario)
   }
   async function salvar(e) {
     e.preventDefault()
@@ -89,48 +84,70 @@ export default function NovoEvento() {
       setErro('Informe a data do evento.')
       return
     }
-    let horarioNotifISO = null
-    if (form.notificacao_automatica && form.tipo_evento === 'especifico') {
-      horarioNotifISO = calcularHorarioNotificacao()
-      if (!horarioNotifISO) {
-        setErro('Não foi possível calcular o horário do aviso. Verifique a data e a hora do evento.')
+    let lembretes = []
+    if (form.notificacaoAutomatica && form.tipo_evento === 'especifico') {
+      if (antecedencias.length === 0) {
+        setErro('Escolha pelo menos um momento para o aviso (ex.: 1 dia antes).')
         return
       }
-      if (new Date(horarioNotifISO).getTime() <= Date.now()) {
-        setErro('O horário do aviso automático já passou. Ajuste a data/hora do evento ou escolha uma antecedência menor.')
-        return
-      }
-      if (!form.mensagem_notificacao.trim()) {
-        setErro('Escreva a mensagem da notificação.')
+      lembretes = calcularLembretes()
+      const vencido = lembretes.find((l) => l.horario.getTime() <= Date.now())
+      if (vencido) {
+        setErro(`O aviso "${vencido.rotulo}" já teria saído. Ajuste a data/hora do evento ou os momentos escolhidos.`)
         return
       }
     }
     const permanente = form.tipo_evento === 'permanente'
     setCarregando(true)
-    const { error } = await supabase.from('eventos').insert([
-      {
-        titulo: form.titulo.trim(),
-        tipo: form.tipo,
-        tipo_evento: form.tipo_evento,
-        dia_semana: permanente ? Number(form.dia_semana) : null,
-        data_inicio: permanente ? null : form.data_inicio,
-        hora_inicio: form.hora_inicio || '19:00',
-        data_fim: permanente ? null : (form.data_fim || null),
-        hora_fim: permanente ? null : (form.hora_fim || null),
-        local: form.local.trim() || '',
-        responsavel: form.responsavel.trim() || '',
-        descricao: form.descricao.trim() || '',
-        notificacao_automatica: !!horarioNotifISO,
-        horario_notificacao: horarioNotifISO,
-        mensagem_notificacao: horarioNotifISO ? form.mensagem_notificacao.trim() : null,
-      },
-    ])
-    setCarregando(false)
+    const { data: novoEvento, error } = await supabase
+      .from('eventos')
+      .insert([
+        {
+          titulo: form.titulo.trim(),
+          tipo: form.tipo,
+          tipo_evento: form.tipo_evento,
+          dia_semana: permanente ? Number(form.dia_semana) : null,
+          data_inicio: permanente ? null : form.data_inicio,
+          hora_inicio: form.hora_inicio || '19:00',
+          data_fim: permanente ? null : (form.data_fim || null),
+          hora_fim: permanente ? null : (form.hora_fim || null),
+          local: form.local.trim() || '',
+          responsavel: form.responsavel.trim() || '',
+          descricao: form.descricao.trim() || '',
+          notificacao_automatica: lembretes.length > 0,
+        },
+      ])
+      .select('id, igreja_id')
+      .single()
     if (error) {
+      setCarregando(false)
       setErro(error.message || 'Não foi possível salvar o evento.')
-    } else {
-      window.location.href = '/agenda'
+      return
     }
+    if (lembretes.length > 0) {
+      if (!novoEvento?.igreja_id) {
+        await supabase.from('eventos').delete().eq('id', novoEvento.id)
+        setCarregando(false)
+        setErro('Não foi possível identificar a igreja para agendar os avisos. Tente novamente ou fale com a Equipe Berit.')
+        return
+      }
+      const { error: erroLembretes } = await supabase.from('eventos_lembretes').insert(
+        lembretes.map((l) => ({
+          evento_id: novoEvento.id,
+          igreja_id: novoEvento.igreja_id,
+          horario_notificacao: l.horario.toISOString(),
+          mensagem_notificacao: l.mensagem,
+        }))
+      )
+      if (erroLembretes) {
+        await supabase.from('eventos').delete().eq('id', novoEvento.id)
+        setCarregando(false)
+        setErro('Houve um problema ao agendar os avisos e o evento não foi salvo. Tente novamente.')
+        return
+      }
+    }
+    setCarregando(false)
+    window.location.href = '/agenda'
   }
   const campo = {
     width: '100%', padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8,
@@ -160,6 +177,7 @@ export default function NovoEvento() {
       </main>
     )
   }
+  const lembretesPrevistos = calcularLembretes()
   return (
     <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
       <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -255,8 +273,8 @@ export default function NovoEvento() {
             <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: '#1F3A5F', fontWeight: 600, cursor: 'pointer' }}>
               <input
                 type="checkbox"
-                checked={form.notificacao_automatica}
-                onChange={(e) => setForm({ ...form, notificacao_automatica: e.target.checked })}
+                checked={!!form.notificacaoAutomatica}
+                onChange={(e) => setForm({ ...form, notificacaoAutomatica: e.target.checked })}
                 style={{ width: 18, height: 18 }}
               />
               🔔 Avisar automaticamente quem acompanha a igreja
@@ -264,25 +282,36 @@ export default function NovoEvento() {
             {form.tipo_evento === 'permanente' && (
               <p style={{ fontSize: 12, color: '#8A8A8A', margin: '8px 0 0' }}>O aviso automático está disponível apenas para eventos com data única.</p>
             )}
-            {form.notificacao_automatica && form.tipo_evento === 'especifico' && (
+            {form.notificacaoAutomatica && form.tipo_evento === 'especifico' && (
               <div style={{ marginTop: 12 }}>
-                <label style={rotulo}>Avisar com antecedência</label>
-                <select value={antecedencia} onChange={(e) => setAntecedencia(e.target.value)} style={{ ...campo, marginBottom: 12 }}>
-                  {ANTECEDENCIAS.map((a) => (
-                    <option key={a.v} value={a.v}>{a.r}</option>
-                  ))}
-                </select>
-                <label style={rotulo}>Mensagem da notificação</label>
+                <label style={{ ...rotulo, fontWeight: 600 }}>Avisar em (pode marcar mais de um):</label>
+                {ANTECEDENCIAS.map((a) => (
+                  <label key={a.v} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: '#2E2E2E', cursor: 'pointer', marginBottom: 6 }}>
+                    <input
+                      type="checkbox"
+                      checked={antecedencias.includes(a.v)}
+                      onChange={() => alternarAntecedencia(a.v)}
+                      style={{ width: 17, height: 17 }}
+                    />
+                    {a.r}
+                  </label>
+                ))}
+                <label style={rotulo}>Mensagem da notificação (opcional)</label>
                 <textarea
-                  value={form.mensagem_notificacao}
-                  onChange={(e) => { setForm({ ...form, mensagem_notificacao: e.target.value }); setMensagemEditada(true) }}
+                  value={mensagemLembrete}
+                  onChange={(e) => setMensagemLembrete(e.target.value)}
                   rows={2}
+                  placeholder="Deixe em branco para mensagens automáticas (ex.: 'É amanhã: Culto...') ou escreva uma mensagem para todos os avisos."
                   style={{ ...campo, marginBottom: 8 }}
                 />
-                {calcularHorarioNotificacao() && (
-                  <p style={{ fontSize: 12, color: '#8A8A8A', margin: 0 }}>
-                    O aviso sai automaticamente em {new Date(calcularHorarioNotificacao()).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}.
-                  </p>
+                {lembretesPrevistos.length > 0 && (
+                  <div style={{ fontSize: 12, color: '#8A8A8A', lineHeight: 1.6 }}>
+                    {lembretesPrevistos.map((l) => (
+                      <div key={l.ant}>
+                        • {l.rotulo} → sai em {l.horario.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
