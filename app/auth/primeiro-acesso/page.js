@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { supabase } from '../../lib/supabase'
+import { supabase } from '../../../lib/supabase'
 
 export default function PrimeiroAcessoPage() {
   const [verificando, setVerificando] = useState(true)
@@ -15,7 +15,7 @@ export default function PrimeiroAcessoPage() {
     supabase.auth.getUser().then(({ data }) => {
       const user = data.user
       if (!user) {
-        window.location.href = '/acesso'
+        window.location.href = '/login'
         return
       }
       if (!user.app_metadata?.primeiro_acesso) {
