@@ -12,7 +12,7 @@ function chaveBrevo() {
 
 // Remetente dos e-mails (deve ser o e-mail verificado na Brevo)
 function remetenteBrevo() {
-  return process.env.BREVO_REMETENTE || 'beritinovacoes@gmail.com'
+return process.env.BREVO_FROM_EMAIL || process.env.BREVO_REMETENTE || 'beritinovacoes@gmail.com'
 }
 
 // Gera uma senha provisória forte: 10 caracteres com letras, números e símbolo
