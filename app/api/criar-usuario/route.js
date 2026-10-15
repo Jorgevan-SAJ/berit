@@ -35,6 +35,10 @@ function gerarSenha() {
 // Envia o e-mail de boas-vindas com a senha provisória em destaque
 async function enviarEmailBoasVindas(destinatario, nome, senhaProvisoria) {
   if (!chaveBrevo()) return false
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL
+  const botaoAcesso = appUrl
+    ? `<a href="${appUrl}/login" style="display: inline-block; background: #1F3A5F; color: #FFFFFF; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: bold; font-size: 15px; margin: 8px 0 20px;">Acessar o Berit agora</a>`
+    : ''
   const resposta = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: {
@@ -55,7 +59,8 @@ async function enviarEmailBoasVindas(destinatario, nome, senhaProvisoria) {
             <p style="margin: 0 0 8px; font-size: 14px; color: #1F3A5F; font-weight: bold; letter-spacing: 0.05em;">SENHA PROVISÓRIA: UTILIZE NO SEU PRIMEIRO ACESSO</p>
             <p style="margin: 0; font-size: 26px; font-weight: bold; color: #1F3A5F; font-family: monospace;">${senhaProvisoria}</p>
           </div>
-          <p>No primeiro acesso, o sistema vai pedir para você <strong>criar sua senha pessoal</strong>. Depois disso, esta senha provisória deixa de valer.</p>
+          <p style="text-align: center;">${botaoAcesso}</p>
+          <p>Como funciona: clique no botão acima, entre com o seu e-mail e a senha provisória destacada. O sistema vai pedir para você <strong>criar sua senha pessoal</strong>. Depois disso, esta senha provisória deixa de valer.</p>
           <p style="color: #8A8A8A; font-size: 13px;">Se você não esperava este e-mail, apenas ignore esta mensagem.</p>
           <p style="color: #1F3A5F; font-weight: bold;">Equipe Berit</p>
         </div>
@@ -64,7 +69,6 @@ async function enviarEmailBoasVindas(destinatario, nome, senhaProvisoria) {
   })
   return resposta.ok
 }
-
 export async function POST(request) {
   try {
     const corpo = await request.json()
