@@ -129,7 +129,7 @@ export async function POST(request) {
       const { error: erroSenha } = await admin.auth.admin.updateUserById(usuarioId, {
         password: novaSenha,
         email_confirm: true,
-        user_metadata: { ...(alvo.user.user_metadata || {}), primeiro_acesso: true },
+       app_metadata: { ...(alvo.user.app_metadata || {}), primeiro_acesso: true },
       })
       if (erroSenha) {
         return Response.json({ ok: false, mensagem: 'Não foi possível gerar o novo acesso: ' + erroSenha.message }, { status: 500 })
@@ -182,7 +182,8 @@ export async function POST(request) {
       const { error: erroSenha } = await admin.auth.admin.updateUserById(usuarioAchado.id, {
         password: senhaProvisoria,
         email_confirm: true,
-        user_metadata: { ...(usuarioAchado.user_metadata || {}), nome, primeiro_acesso: true },
+        user_metadata: { ...(usuarioAchado.user_metadata || {}), nome },
+        app_metadata: { ...(usuarioAchado.app_metadata || {}), primeiro_acesso: true },
       })
       if (erroSenha) {
         return Response.json({ ok: false, mensagem: 'Não foi possível preparar o acesso: ' + erroSenha.message }, { status: 500 })
@@ -206,7 +207,8 @@ export async function POST(request) {
       email,
       password: senhaProvisoria,
       email_confirm: true,
-      user_metadata: { nome, primeiro_acesso: true },
+      user_metadata: { nome },
+      app_metadata: { primeiro_acesso: true },
     })
 
     if (error || !data?.user) {
