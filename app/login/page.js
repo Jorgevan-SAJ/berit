@@ -23,13 +23,16 @@ function LoginForm() {
       return
     }
     setCarregando(true)
-    const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim().toLowerCase(),
       password: senha,
     })
     setCarregando(false)
     if (error) {
       setErro('E-mail ou senha inválidos. Verifique e tente novamente.')
+    } else if (data.user?.app_metadata?.primeiro_acesso) {
+      // Primeiro acesso com senha provisória: manda criar a senha pessoal
+      window.location.href = '/auth/primeiro-acesso'
     } else {
       window.location.href = voltar
     }
