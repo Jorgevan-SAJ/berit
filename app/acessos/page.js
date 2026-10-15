@@ -2,14 +2,12 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getPerfil } from '../../lib/perfil'
-
 const PERFIS_DISPONIVEIS = [
   { valor: 'admin_master', rotulo: 'Administrador' },
   { valor: 'secretaria', rotulo: 'Secretaria' },
   { valor: 'tesouraria', rotulo: 'Tesouraria' },
   { valor: 'conselho_fiscal', rotulo: 'Conselho Fiscal' },
 ]
-
 export default function AcessosPage() {
   const [perfilAtual, setPerfilAtual] = useState(null)
   const [verificando, setVerificando] = useState(true)
@@ -22,6 +20,7 @@ export default function AcessosPage() {
   const [meuId, setMeuId] = useState(null)
   const [excluindo, setExcluindo] = useState(null)
   const [salvando, setSalvando] = useState(false)
+  const [reenviando, setReenviando] = useState(null)
   const [chaveDefinida, setChaveDefinida] = useState(false)
   const [verificandoChave, setVerificandoChave] = useState(true)
   const [mostrarFormChave, setMostrarFormChave] = useState(false)
@@ -29,7 +28,6 @@ export default function AcessosPage() {
   const [fraseConfirmacao, setFraseConfirmacao] = useState('')
   const [salvandoChave, setSalvandoChave] = useState(false)
   const [fraseExibida, setFraseExibida] = useState(null)
-
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setMeuId(data.user?.id || null)
@@ -43,7 +41,6 @@ export default function AcessosPage() {
       }
     })
   }, [])
-
   async function carregarUsuarios() {
     setCarregando(true)
     const { data, error } = await supabase
@@ -57,7 +54,6 @@ export default function AcessosPage() {
     }
     setCarregando(false)
   }
-
   async function verificarChave() {
     setVerificandoChave(true)
     const { data, error } = await supabase.rpc('chave_recuperacao_definida')
@@ -66,7 +62,6 @@ export default function AcessosPage() {
     }
     setVerificandoChave(false)
   }
-
   async function criarUsuario(e) {
     e.preventDefault()
     setErro('')
@@ -106,7 +101,37 @@ export default function AcessosPage() {
     setNovo({ nome: '', email: '', perfil: 'secretaria' })
     carregarUsuarios()
   }
-
+  async function reenviarAcesso(usuario) {
+    setErro('')
+    setAviso('')
+    if (usuario.id === meuId) {
+      setErro('Você não pode reenviar o acesso do próprio usuário.')
+      return
+    }
+    if (!window.confirm(`Gerar um novo acesso provisório para ${usuario.email}? A senha atual deixará de valer.`)) return
+    setReenviando(usuario.id)
+    const { data: sessao } = await supabase.auth.getSession()
+    const token = sessao?.session?.access_token || ''
+    let resposta
+    try {
+      resposta = await fetch('/api/criar-usuario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ acao: 'reenviar', usuario_id: usuario.id }),
+      })
+    } catch (erroRede) {
+      setReenviando(null)
+      setErro('Não foi possível contatar o servidor. Tente novamente.')
+      return
+    }
+    const dados = await resposta.json()
+    setReenviando(null)
+    if (!dados.ok) {
+      setErro(dados.mensagem || 'Não foi possível reenviar o acesso.')
+      return
+    }
+    setAviso(dados.mensagem || `Novo acesso provisório enviado para ${usuario.email}.`)
+  }
   async function mudarPerfil(usuario, perfil) {
     setErro('')
     setAviso('')
@@ -123,7 +148,6 @@ export default function AcessosPage() {
       carregarUsuarios()
     }
   }
-
   async function alternarAtivo(usuario) {
     setErro('')
     setAviso('')
@@ -141,7 +165,6 @@ export default function AcessosPage() {
       carregarUsuarios()
     }
   }
-
   async function confirmarExclusao() {
     if (!excluindo) return
     setSalvando(true)
@@ -171,7 +194,6 @@ export default function AcessosPage() {
     setExcluindo(null)
     carregarUsuarios()
   }
-
   async function salvarChave(e) {
     e.preventDefault()
     setErro('')
@@ -197,7 +219,6 @@ export default function AcessosPage() {
       setChaveDefinida(true)
     }
   }
-
   const estilo = {
     main: { minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" },
     header: { background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
@@ -208,7 +229,6 @@ export default function AcessosPage() {
     rotulo: { fontSize: 13, color: '#2E2E2E', display: 'block', marginBottom: 6 },
     botaoPrimario: { padding: '12px 20px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: 'pointer' },
   }
-
   if (verificando) {
     return (
       <main style={estilo.main}>
@@ -218,7 +238,6 @@ export default function AcessosPage() {
       </main>
     )
   }
-
   if (!perfilAtual || perfilAtual.perfil !== 'admin_master') {
     return (
       <main style={estilo.main}>
@@ -236,7 +255,6 @@ export default function AcessosPage() {
       </main>
     )
   }
-
   return (
     <main style={estilo.main}>
       <header style={estilo.header}>
@@ -251,7 +269,7 @@ export default function AcessosPage() {
         <div style={{ ...estilo.card, marginBottom: '1.5rem' }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 8 }}>Novo usuário</div>
           <div style={{ background: '#E8F0FA', color: '#1F3A5F', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
-            <strong>Como funciona o primeiro acesso:</strong> o administrador cadastra o usuário e o sistema envia um e-mail de convite com um link para o usuário definir a própria senha. Após clicar no link enviado pelo Berit Inovações, ele será redirecionado para a área de acesso, deve informar o e-mail cadastrado e clicar em <strong>"Esqueci minha senha"</strong>; um novo e-mail será enviado para o cadastramento da senha. O administrador não define nem vê a senha de nenhum usuário.
+            <strong>Como funciona o primeiro acesso:</strong> o administrador cadastra o usuário informando apenas nome, e-mail e perfil. O sistema gera automaticamente uma <strong>senha provisória forte</strong> e a envia por e-mail em destaque ("SENHA PROVISÓRIA: UTILIZE NO SEU PRIMEIRO ACESSO"). No primeiro login com essa senha, o próprio sistema pede a criação da senha pessoal do usuário. A opção <strong>"Esqueci minha senha"</strong> na tela de acesso fica reservada para recuperações futuras. O administrador não define nem vê a senha de nenhum usuário. Se o e-mail não chegar, oriente o usuário a verificar o spam ou use o botão <strong>"Reenviar acesso"</strong> na lista abaixo.
           </div>
           <div style={{ background: '#FDF3E3', color: '#B26A00', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
             <strong>Dica de segurança:</strong> cadastre sempre pelo menos um segundo usuário com o perfil Administrador. Assim, se o administrador principal ficar impossibilitado de acessar (saída, falecimento ou outro motivo), a igreja mantém o controle da plataforma.
@@ -404,6 +422,9 @@ export default function AcessosPage() {
                       <td style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                         {u.id !== meuId && (
                           <>
+                            <button onClick={() => reenviarAcesso(u)} disabled={reenviando === u.id} style={{ background: 'none', border: 'none', color: '#1F3A5F', fontSize: 13, cursor: 'pointer', marginRight: 12 }}>
+                              {reenviando === u.id ? 'Enviando...' : 'Reenviar acesso'}
+                            </button>
                             <button onClick={() => alternarAtivo(u)} style={{ background: 'none', border: 'none', color: u.ativo === false ? '#4C8C6E' : '#B7791F', fontSize: 13, cursor: 'pointer', marginRight: 12 }}>
                               {u.ativo === false ? 'Reativar' : 'Inativar'}
                             </button>
