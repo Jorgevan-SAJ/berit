@@ -129,7 +129,7 @@ export default function AreaPage() {
           setIgreja(ig)
         }
         setCarregando(false)
-        if (p && ['admin_master', 'tesouraria'].includes(p.perfil)) {
+        if (p && ['admin_master', 'tesoureiro'].includes(p.perfil)) {
           const { count } = await supabase
             .from('solicitacoes_alteracao')
             .select('id', { count: 'exact', head: true })
@@ -137,7 +137,7 @@ export default function AreaPage() {
             .neq('solicitado_por', data.session.user.id)
           setPendentes(count || 0)
         }
-        if (p && ['admin_master', 'secretaria'].includes(p.perfil)) {
+if (p && ['admin_master', 'secretaria'].includes(p.perfil)) {
           const { count: countAuto } = await supabase
             .from('solicitacoes_membros')
             .select('id', { count: 'exact', head: true })
@@ -232,10 +232,11 @@ export default function AreaPage() {
   const cardTexto = { fontSize: 13, color: '#8A8A8A', margin: 0 }
   const ehAdmin = perfil && perfil.perfil === 'admin_master'
   const ehConselhoFiscal = perfil && perfil.perfil === 'conselho_fiscal'
-  const ehSomenteLeitura = perfil && ['tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
-  const podeFinancas = perfil && ['admin_master', 'tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
-  const podeMembros = perfil && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
-  const podeAgenda = perfil && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
+  const ehMultimidia = perfil && perfil.perfil === 'multimidia'
+  const ehSomenteLeitura = perfil && ['tesoureiro', 'conselho_fiscal', 'multimidia'].includes(perfil.perfil)
+  const podeFinancas = perfil && ['admin_master', 'tesoureiro', 'conselho_fiscal'].includes(perfil.perfil)
+  const podeMembros = perfil && ['admin_master', 'secretaria', 'tesoureiro', 'conselho_fiscal'].includes(perfil.perfil)
+  const podeAgenda = perfil && ['admin_master', 'secretaria', 'tesoureiro', 'conselho_fiscal', 'multimidia'].includes(perfil.perfil)
   const podePainel = perfil && ['admin_master', 'secretaria'].includes(perfil.perfil)
   const seloLeitura = { display: 'inline-block', background: '#E8F0FA', color: '#1F3A5F', padding: '2px 8px', borderRadius: 999, fontSize: 11, marginBottom: 6 }
   const statusPlano = calcularStatusPlano(igreja)
@@ -372,6 +373,11 @@ export default function AreaPage() {
           {ehConselhoFiscal && (
             <span style={{ display: 'block', marginTop: 6, color: '#4C8C6E' }}>
               🔍 Acesso de consulta em todos os módulos, em modo somente leitura (fiscalização).
+            </span>
+          )}
+          {ehMultimidia && (
+            <span style={{ display: 'block', marginTop: 6, color: '#4C8C6E' }}>
+              🎬 Acesso de consulta à Agenda, em modo somente leitura (equipe de Multimídia).
             </span>
           )}
         </p>
