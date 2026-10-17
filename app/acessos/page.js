@@ -2,12 +2,15 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { getPerfil } from '../../lib/perfil'
+
 const PERFIS_DISPONIVEIS = [
   { valor: 'admin_master', rotulo: 'Administrador' },
   { valor: 'secretaria', rotulo: 'Secretaria' },
-  { valor: 'tesouraria', rotulo: 'Tesouraria' },
+  { valor: 'tesoureiro', rotulo: 'Tesoureiro' },
   { valor: 'conselho_fiscal', rotulo: 'Conselho Fiscal' },
+  { valor: 'multimidia', rotulo: 'Multimídia' },
 ]
+
 export default function AcessosPage() {
   const [perfilAtual, setPerfilAtual] = useState(null)
   const [verificando, setVerificando] = useState(true)
@@ -28,6 +31,7 @@ export default function AcessosPage() {
   const [fraseConfirmacao, setFraseConfirmacao] = useState('')
   const [salvandoChave, setSalvandoChave] = useState(false)
   const [fraseExibida, setFraseExibida] = useState(null)
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setMeuId(data.user?.id || null)
@@ -41,6 +45,7 @@ export default function AcessosPage() {
       }
     })
   }, [])
+
   async function carregarUsuarios() {
     setCarregando(true)
     const { data, error } = await supabase
@@ -54,6 +59,7 @@ export default function AcessosPage() {
     }
     setCarregando(false)
   }
+
   async function verificarChave() {
     setVerificandoChave(true)
     const { data, error } = await supabase.rpc('chave_recuperacao_definida')
@@ -62,6 +68,7 @@ export default function AcessosPage() {
     }
     setVerificandoChave(false)
   }
+
   async function criarUsuario(e) {
     e.preventDefault()
     setErro('')
@@ -101,6 +108,7 @@ export default function AcessosPage() {
     setNovo({ nome: '', email: '', perfil: 'secretaria' })
     carregarUsuarios()
   }
+
   async function reenviarAcesso(usuario) {
     setErro('')
     setAviso('')
@@ -132,6 +140,7 @@ export default function AcessosPage() {
     }
     setAviso(dados.mensagem || `Novo acesso provisório enviado para ${usuario.email}.`)
   }
+
   async function mudarPerfil(usuario, perfil) {
     setErro('')
     setAviso('')
@@ -148,6 +157,7 @@ export default function AcessosPage() {
       carregarUsuarios()
     }
   }
+
   async function alternarAtivo(usuario) {
     setErro('')
     setAviso('')
@@ -165,6 +175,7 @@ export default function AcessosPage() {
       carregarUsuarios()
     }
   }
+
   async function confirmarExclusao() {
     if (!excluindo) return
     setSalvando(true)
@@ -194,6 +205,7 @@ export default function AcessosPage() {
     setExcluindo(null)
     carregarUsuarios()
   }
+
   async function salvarChave(e) {
     e.preventDefault()
     setErro('')
@@ -219,6 +231,7 @@ export default function AcessosPage() {
       setChaveDefinida(true)
     }
   }
+
   const estilo = {
     main: { minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" },
     header: { background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
@@ -229,6 +242,7 @@ export default function AcessosPage() {
     rotulo: { fontSize: 13, color: '#2E2E2E', display: 'block', marginBottom: 6 },
     botaoPrimario: { padding: '12px 20px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: 'pointer' },
   }
+
   if (verificando) {
     return (
       <main style={estilo.main}>
@@ -238,6 +252,7 @@ export default function AcessosPage() {
       </main>
     )
   }
+
   if (!perfilAtual || perfilAtual.perfil !== 'admin_master') {
     return (
       <main style={estilo.main}>
@@ -255,6 +270,7 @@ export default function AcessosPage() {
       </main>
     )
   }
+
   return (
     <main style={estilo.main}>
       <header style={estilo.header}>
@@ -266,6 +282,7 @@ export default function AcessosPage() {
         <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 1.5rem' }}>
           Crie usuários e controle as permissões de cada operador da plataforma.
         </p>
+
         <div style={{ ...estilo.card, marginBottom: '1.5rem' }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 8 }}>Novo usuário</div>
           <div style={{ background: '#E8F0FA', color: '#1F3A5F', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
@@ -276,6 +293,9 @@ export default function AcessosPage() {
           </div>
           <div style={{ background: '#EAF4EE', color: '#4C8C6E', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
             <strong>Conselho Fiscal:</strong> perfil com acesso <strong>somente leitura</strong> ao módulo de Finanças (consulta de lançamentos, relatórios e histórico da auditoria), sem qualquer poder de lançamento, edição, consolidação ou conferência. Ideal para a fiscalização estatutária das contas da igreja.
+          </div>
+          <div style={{ background: '#EAF4EE', color: '#4C8C6E', padding: '12px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
+            <strong>Multimídia:</strong> perfil com acesso <strong>somente leitura</strong> à Agenda (consulta de eventos e escalas da igreja), sem poder de criação ou edição. Ideal para a equipe de mídia acompanhar a programação e se preparar para cultos e eventos.
           </div>
           <form onSubmit={criarUsuario} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0 1rem' }}>
             <div>
@@ -301,12 +321,14 @@ export default function AcessosPage() {
             </div>
           </form>
         </div>
+
         {erro && (
           <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>
         )}
         {aviso && (
           <div style={{ background: '#EAF4EE', color: '#4C8C6E', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{aviso}</div>
         )}
+
         <div style={{ ...estilo.card, marginBottom: '1.5rem' }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 8 }}>Chave de recuperação de administrador</div>
           <p style={{ fontSize: 13, color: '#5A5A5A', margin: '0 0 12px', lineHeight: 1.5 }}>
@@ -359,6 +381,7 @@ export default function AcessosPage() {
             </>
           )}
         </div>
+
         <div style={estilo.card}>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 8 }}>Usuários cadastrados</div>
           {carregando ? (
@@ -445,6 +468,7 @@ export default function AcessosPage() {
           )}
         </div>
       </div>
+
       {excluindo && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
           <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', maxWidth: 420, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
