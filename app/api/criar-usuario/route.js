@@ -83,7 +83,8 @@ export async function POST(request) {
     const token = (request.headers.get('authorization') || '').replace('Bearer ', '').trim()
     const urlApp = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || request.headers.get('origin') || new URL(request.url).origin
 
-    if (!email.includes('@')) {
+    // A validação de e-mail só se aplica à criação; o reenvio usa usuario_id
+    if (acao !== 'reenviar' && !email.includes('@')) {
       return Response.json({ ok: false, mensagem: 'Informe um e-mail válido.' }, { status: 400 })
     }
 
