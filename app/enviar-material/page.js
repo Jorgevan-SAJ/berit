@@ -4,6 +4,12 @@ import { supabase } from '../../lib/supabase'
 
 const LIMITE_ARQUIVO = 50 * 1024 * 1024 // 50 MB por arquivo
 
+function formatarTamanho(bytes) {
+  if (!bytes) return ''
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 export default function EnviarMaterialPage() {
   const [carregando, setCarregando] = useState(true)
   const [evento, setEvento] = useState(null)
@@ -39,15 +45,26 @@ export default function EnviarMaterialPage() {
       })
   }, [])
 
+  // Correção: cada seleção ACRESCENTA os arquivos à lista (não substitui os anteriores)
   function escolherArquivos(e) {
-    const lista = Array.from(e.target.files || [])
-    const grande = lista.find((a) => a.size > LIMITE_ARQUIVO)
+    const novos = Array.from(e.target.files || [])
+    e.target.value = '' // permite reselecionar o mesmo arquivo depois
+    if (novos.length === 0) return
+    const grande = novos.find((a) => a.size > LIMITE_ARQUIVO)
     if (grande) {
       setErro(`O arquivo "${grande.name}" passa de 50 MB. Envie vídeos muito grandes por link (YouTube/Drive) na descrição.`)
       return
     }
     setErro('')
-    setArquivos(lista)
+    setArquivos((atual) => {
+      const existentes = new Set(atual.map((a) => `${a.name}|${a.size}`))
+      const adicionados = novos.filter((n) => !existentes.has(`${n.name}|${n.size}`))
+      return [...atual, ...adicionados]
+    })
+  }
+
+  function removerArquivo(i) {
+    setArquivos((atual) => atual.filter((_, idx) => idx !== i))
   }
 
   async function enviar(e) {
@@ -71,7 +88,7 @@ export default function EnviarMaterialPage() {
           .upload(caminho, arquivo)
         if (erroUpload) {
           setEnviando(false)
-          setErro(`Não foi possível enviar o arquivo "${arquivo.name}". Tente novamente.`)
+          setErro(`Não foi possível enviar o arquivo "${arquivo.name}" (${erroUpload.message}). Tente novamente.`)
           return
         }
         const { error: erroRegistro } = await supabase
@@ -88,7 +105,7 @@ export default function EnviarMaterialPage() {
           })
         if (erroRegistro) {
           setEnviando(false)
-          setErro(`O arquivo "${arquivo.name}" foi enviado, mas houve um problema ao registrar. Tente novamente.`)
+          setErro(`O arquivo "${arquivo.name}" foi enviado, mas houve um problema ao registrar (${erroRegistro.message}). Tente novamente.`)
           return
         }
       }
@@ -147,7 +164,7 @@ export default function EnviarMaterialPage() {
 
             <form onSubmit={enviar} style={estilo.card}>
               {erro && (
-                <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{erro}</div>
+                <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16, wordBreak: 'break-word' }}>{erro}</div>
               )}
               <label style={estilo.rotulo}>Seu nome *</label>
               <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome completo" required style={estilo.campo} />
@@ -161,19 +178,35 @@ export default function EnviarMaterialPage() {
                 placeholder="ex.: Playback das músicas 1 e 3 · Fotos do trabalho missionário · Link do vídeo no YouTube"
                 style={estilo.campo}
               />
-              <label style={estilo.rotulo}>Arquivos (pode selecionar vários)</label>
+              <label style={estilo.rotulo}>Adicionar arquivos (clique quantas vezes quiser — eles se acumulam na lista)</label>
               <input
                 type="file"
                 multiple
                 onChange={escolherArquivos}
                 style={{ width: '100%', fontSize: 13, marginBottom: 6, boxSizing: 'border-box' }}
               />
-              <p style={{ fontSize: 12, color: '#8A8A8A', margin: '0 0 16px', lineHeight: 1.5 }}>
+              <p style={{ fontSize: 12, color: '#8A8A8A', margin: '0 0 12px', lineHeight: 1.5 }}>
                 Aceita fotos, vídeos, áudios (MP3), PDF e apresentações. Limite de 50 MB por arquivo — vídeos maiores podem ir por link (YouTube/Drive) na descrição.
               </p>
               {arquivos.length > 0 && (
-                <div style={{ fontSize: 13, color: '#4C8C6E', marginBottom: 16 }}>
-                  {arquivos.length} arquivo(s) selecionado(s)
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 13, color: '#4C8C6E', fontWeight: 700, marginBottom: 6 }}>
+                    {arquivos.length} arquivo(s) pronto(s) para envio
+                  </div>
+                  {arquivos.map((a, i) => (
+                    <div key={`${a.name}-${i}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '6px 10px', background: '#F5F0E6', borderRadius: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, color: '#2E2E2E', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        📎 {a.name} <span style={{ color: '#8A8A8A' }}>({formatarTamanho(a.size)})</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removerArquivo(i)}
+                        style={{ background: 'none', border: 'none', color: '#B71C1C', fontSize: 14, cursor: 'pointer', flexShrink: 0 }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
               <button type="submit" disabled={enviando} style={estilo.botao}>
