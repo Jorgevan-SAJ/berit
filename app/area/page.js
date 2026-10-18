@@ -237,6 +237,7 @@ if (p && ['admin_master', 'secretaria'].includes(p.perfil)) {
   const podeFinancas = perfil && ['admin_master', 'tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
   const podeMembros = perfil && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
   const podeAgenda = perfil && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal', 'multimidia'].includes(perfil.perfil)
+  const podeMultimidia = perfil && ['admin_master', 'multimidia'].includes(perfil.perfil)
   const podePainel = perfil && ['admin_master', 'secretaria'].includes(perfil.perfil)
   const seloLeitura = { display: 'inline-block', background: '#E8F0FA', color: '#1F3A5F', padding: '2px 8px', borderRadius: 999, fontSize: 11, marginBottom: 6 }
   const statusPlano = calcularStatusPlano(igreja)
@@ -455,6 +456,12 @@ if (p && ['admin_master', 'secretaria'].includes(p.perfil)) {
               <div style={cardTitulo}>Agenda</div>
               <p style={cardTexto}>Acesso restrito.</p>
             </div>
+          )}
+          {podeMultimidia && (
+            <a href="/multimidia" style={card}>
+              <div style={cardTitulo}>Multimídia</div>
+              <p style={cardTexto}>Posto da equipe de mídia: avise os fiéis quando a transmissão começar. Clique para acessar.</p>
+            </a>
           )}
           <a
             href={igreja?.slug ? `/igreja/${igreja.slug}` : '/igrejas'}
