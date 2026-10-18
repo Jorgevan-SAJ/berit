@@ -35,6 +35,8 @@ export default function EditarEvento() {
   const [antecedencias, setAntecedencias] = useState([])
   const [mensagemLembrete, setMensagemLembrete] = useState('')
   const [igrejaId, setIgrejaId] = useState(null)
+  // Entrega 3 — Sala de Material: lista de materiais do evento
+  const [materiais, setMateriais] = useState([])
   useEffect(() => {
     getPerfil().then((p) => {
       setPerfilAtual(p)
@@ -95,9 +97,26 @@ export default function EditarEvento() {
       descricao: data.descricao || '',
       notificacaoAutomatica: ativos.length > 0,
     })
+    // Entrega 3 — carrega a Sala de Material do evento
+    const { data: mats } = await supabase
+      .from('eventos_materiais')
+      .select('item, quantidade, observacao')
+      .eq('evento_id', id)
+      .order('criado_em')
+    setMateriais((mats || []).map((m) => ({ item: m.item || '', quantidade: m.quantidade || '', observacao: m.observacao || '' })))
   }
   function alternarAntecedencia(v) {
     setAntecedencias((atual) => (atual.includes(v) ? atual.filter((x) => x !== v) : [...atual, v]))
+  }
+  // Entrega 3 — funções da Sala de Material
+  function adicionarMaterial() {
+    setMateriais((atual) => [...atual, { item: '', quantidade: '', observacao: '' }])
+  }
+  function atualizarMaterial(i, campo, valor) {
+    setMateriais((atual) => atual.map((m, idx) => (idx === i ? { ...m, [campo]: valor } : m)))
+  }
+  function removerMaterial(i) {
+    setMateriais((atual) => atual.filter((_, idx) => idx !== i))
   }
   function calcularLembretes() {
     if (!form.notificacaoAutomatica || form.tipo_evento !== 'especifico' || !form.data_inicio || antecedencias.length === 0) return []
@@ -127,6 +146,12 @@ export default function EditarEvento() {
     }
     if (form.tipo_evento === 'especifico' && !form.data_inicio) {
       setErro('Informe a data do evento.')
+      return
+    }
+    // Entrega 3 — valida a Sala de Material
+    const materiaisValidos = materiais.filter((m) => m.item.trim() || m.quantidade.trim() || m.observacao.trim())
+    if (materiaisValidos.some((m) => !m.item.trim())) {
+      setErro('Há um material sem nome na Sala de Material. Preencha o item ou remova a linha.')
       return
     }
     let lembretes = []
@@ -188,6 +213,32 @@ export default function EditarEvento() {
       if (erroLembretes) {
         setCarregando(false)
         setErro('O evento foi salvo, mas houve um problema ao agendar os avisos. Abra o evento e salve novamente.')
+        return
+      }
+    }
+    // Entrega 3 — Sala de Material: substitui a lista inteira (rearmamento seguro)
+    const { error: erroApagarMateriais } = await supabase
+      .from('eventos_materiais')
+      .delete()
+      .eq('evento_id', id)
+    if (erroApagarMateriais) {
+      setCarregando(false)
+      setErro('O evento foi salvo, mas houve um problema ao atualizar os materiais. Tente salvar novamente.')
+      return
+    }
+    if (materiaisValidos.length > 0 && igrejaId) {
+      const { error: erroMateriais } = await supabase.from('eventos_materiais').insert(
+        materiaisValidos.map((m) => ({
+          evento_id: id,
+          igreja_id: igrejaId,
+          item: m.item.trim(),
+          quantidade: m.quantidade.trim() || null,
+          observacao: m.observacao.trim() || null,
+        }))
+      )
+      if (erroMateriais) {
+        setCarregando(false)
+        setErro('O evento foi salvo, mas houve um problema ao gravar os materiais. Tente salvar novamente.')
         return
       }
     }
@@ -379,6 +430,59 @@ export default function EditarEvento() {
                 )}
               </div>
             )}
+          </div>
+          <div style={{ background: '#F5F0E6', borderRadius: 10, padding: '14px', marginBottom: 16 }}>
+            <label style={{ fontSize: 14, color: '#1F3A5F', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+              📦 Sala de Material
+            </label>
+            <p style={{ fontSize: 12, color: '#8A8A8A', margin: '0 0 12px' }}>
+              Liste o que a equipe de Multimídia precisa preparar para este evento. A lista aparece no módulo Multimídia, na programação do dia.
+            </p>
+            {materiais.length === 0 ? (
+              <p style={{ fontSize: 13, color: '#8A8A8A', margin: '0 0 10px' }}>Nenhum material listado ainda.</p>
+            ) : (
+              materiais.map((m, i) => (
+                <div key={i} style={{ border: '1px solid #E4DED2', borderRadius: 8, padding: 10, marginBottom: 8, background: '#FFFFFF' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: 8 }}>
+                    <input
+                      type="text"
+                      value={m.item}
+                      onChange={(e) => atualizarMaterial(i, 'item', e.target.value)}
+                      placeholder="Item (ex.: Microfone sem fio)"
+                      style={{ flex: 1, padding: '8px 10px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 13, boxSizing: 'border-box', fontFamily: 'inherit' }}
+                    />
+                    <input
+                      type="text"
+                      value={m.quantidade}
+                      onChange={(e) => atualizarMaterial(i, 'quantidade', e.target.value)}
+                      placeholder="Qtd."
+                      style={{ width: 80, padding: '8px 10px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 13, boxSizing: 'border-box', fontFamily: 'inherit' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removerMaterial(i)}
+                      style={{ background: '#FDECEC', color: '#B71C1C', border: 'none', borderRadius: 8, width: 36, fontSize: 14, cursor: 'pointer' }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={m.observacao}
+                    onChange={(e) => atualizarMaterial(i, 'observacao', e.target.value)}
+                    placeholder="Observação (opcional — ex.: testar pilhas antes do culto)"
+                    style={{ width: '100%', padding: '8px 10px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 13, boxSizing: 'border-box', fontFamily: 'inherit' }}
+                  />
+                </div>
+              ))
+            )}
+            <button
+              type="button"
+              onClick={adicionarMaterial}
+              style={{ background: '#E8F0FA', color: '#1F3A5F', border: 'none', borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+            >
+              + Adicionar material
+            </button>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: 4 }}>
             <button type="submit" disabled={carregando} style={{ flex: 1, padding: '12px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
