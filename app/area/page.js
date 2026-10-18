@@ -129,7 +129,7 @@ export default function AreaPage() {
           setIgreja(ig)
         }
         setCarregando(false)
-        if (p && ['admin_master', 'tesoureiro'].includes(p.perfil)) {
+        if (p && ['admin_master', 'tesouraria'].includes(p.perfil)) {
           const { count } = await supabase
             .from('solicitacoes_alteracao')
             .select('id', { count: 'exact', head: true })
@@ -233,10 +233,10 @@ if (p && ['admin_master', 'secretaria'].includes(p.perfil)) {
   const ehAdmin = perfil && perfil.perfil === 'admin_master'
   const ehConselhoFiscal = perfil && perfil.perfil === 'conselho_fiscal'
   const ehMultimidia = perfil && perfil.perfil === 'multimidia'
-  const ehSomenteLeitura = perfil && ['tesoureiro', 'conselho_fiscal', 'multimidia'].includes(perfil.perfil)
-  const podeFinancas = perfil && ['admin_master', 'tesoureiro', 'conselho_fiscal'].includes(perfil.perfil)
-  const podeMembros = perfil && ['admin_master', 'secretaria', 'tesoureiro', 'conselho_fiscal'].includes(perfil.perfil)
-  const podeAgenda = perfil && ['admin_master', 'secretaria', 'tesoureiro', 'conselho_fiscal', 'multimidia'].includes(perfil.perfil)
+  const ehSomenteLeitura = perfil && ['tesouraria', 'conselho_fiscal', 'multimidia'].includes(perfil.perfil)
+  const podeFinancas = perfil && ['admin_master', 'tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
+  const podeMembros = perfil && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(perfil.perfil)
+  const podeAgenda = perfil && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal', 'multimidia'].includes(perfil.perfil)
   const podePainel = perfil && ['admin_master', 'secretaria'].includes(perfil.perfil)
   const seloLeitura = { display: 'inline-block', background: '#E8F0FA', color: '#1F3A5F', padding: '2px 8px', borderRadius: 999, fontSize: 11, marginBottom: 6 }
   const statusPlano = calcularStatusPlano(igreja)
