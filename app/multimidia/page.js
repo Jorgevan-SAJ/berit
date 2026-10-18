@@ -12,6 +12,7 @@ export default function MultimidiaPage() {
   const [perfilAtual, setPerfilAtual] = useState(null)
   const [verificando, setVerificando] = useState(true)
   const [eventosHoje, setEventosHoje] = useState([])
+  const [materiais, setMateriais] = useState({})
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
   const [modalAberto, setModalAberto] = useState(false)
@@ -41,12 +42,30 @@ export default function MultimidiaPage() {
       .order('hora_inicio')
     if (error) {
       setErro('Não foi possível carregar a programação de hoje.')
+      setMateriais({})
     } else {
       const lista = (data || []).filter((e) => {
         if (e.tipo_evento === 'permanente') return Number(e.dia_semana) === diaSemana
         return (e.data_inicio || '') === hojeISO
       })
       setEventosHoje(lista)
+      // Entrega 3 — carrega a Sala de Material dos eventos de hoje
+      if (lista.length > 0) {
+        const ids = lista.map((e) => e.id)
+        const { data: mats } = await supabase
+          .from('eventos_materiais')
+          .select('evento_id, item, quantidade, observacao')
+          .in('evento_id', ids)
+          .order('criado_em')
+        const mapa = {}
+        ;(mats || []).forEach((m) => {
+          if (!mapa[m.evento_id]) mapa[m.evento_id] = []
+          mapa[m.evento_id].push(m)
+        })
+        setMateriais(mapa)
+      } else {
+        setMateriais({})
+      }
     }
     setCarregando(false)
   }
@@ -165,19 +184,30 @@ export default function MultimidiaPage() {
                 <div
                   key={e.id}
                   style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem',
                     padding: '10px 0', borderTop: i === 0 ? 'none' : '1px solid #F0EAE0',
                   }}
                 >
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#2E2E2E' }}>{e.titulo}</div>
-                    <div style={{ fontSize: 12, color: '#8A8A8A', marginTop: 2 }}>
-                      {formatarHora(e.hora_inicio) ? `${formatarHora(e.hora_inicio)} · ` : ''}{e.local || 'Local não informado'}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#2E2E2E' }}>{e.titulo}</div>
+                      <div style={{ fontSize: 12, color: '#8A8A8A', marginTop: 2 }}>
+                        {formatarHora(e.hora_inicio) ? `${formatarHora(e.hora_inicio)} · ` : ''}{e.local || 'Local não informado'}
+                      </div>
                     </div>
+                    <span style={{ background: '#E8F0FA', color: '#1F3A5F', padding: '2px 8px', borderRadius: 999, fontSize: 11, whiteSpace: 'nowrap' }}>
+                      {e.tipo_evento === 'permanente' ? 'semanal' : 'hoje'}
+                    </span>
                   </div>
-                  <span style={{ background: '#E8F0FA', color: '#1F3A5F', padding: '2px 8px', borderRadius: 999, fontSize: 11, whiteSpace: 'nowrap' }}>
-                    {e.tipo_evento === 'permanente' ? 'semanal' : 'hoje'}
-                  </span>
+                  {(materiais[e.id] || []).length > 0 && (
+                    <div style={{ marginTop: 8, background: '#F5F0E6', borderRadius: 8, padding: '8px 10px' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#1F3A5F', marginBottom: 4 }}>📦 Sala de Material</div>
+                      {materiais[e.id].map((m, idx) => (
+                        <div key={idx} style={{ fontSize: 12, color: '#5A5A5A', lineHeight: 1.5 }}>
+                          • {m.item}{m.quantidade ? ` — ${m.quantidade}` : ''}{m.observacao ? ` (${m.observacao})` : ''}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
