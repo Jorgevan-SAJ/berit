@@ -35,8 +35,11 @@ export default function EditarEvento() {
   const [antecedencias, setAntecedencias] = useState([])
   const [mensagemLembrete, setMensagemLembrete] = useState('')
   const [igrejaId, setIgrejaId] = useState(null)
+  const [eventoId, setEventoId] = useState(null)
   // Entrega 3 — Sala de Material: lista de materiais do evento
   const [materiais, setMateriais] = useState([])
+  // Entrega 4 — feedback do link de envio
+  const [avisoLink, setAvisoLink] = useState('')
   useEffect(() => {
     getPerfil().then((p) => {
       setPerfilAtual(p)
@@ -53,13 +56,13 @@ export default function EditarEvento() {
       setNaoEncontrado(true)
       return
     }
+    setEventoId(id)
     const { data, error } = await supabase.from('eventos').select('*').eq('id', id).single()
     if (error || !data) {
       setNaoEncontrado(true)
       return
     }
     setIgrejaId(data.igreja_id || null)
-    // Descobre quais avisos estão ativos (os ainda não enviados)
     const { data: lems } = await supabase
       .from('eventos_lembretes')
       .select('*')
@@ -74,7 +77,6 @@ export default function EditarEvento() {
       const inicio = new Date(`${data.data_inicio}T00:00:00`)
       inicio.setHours(h || 0, m || 0, 0, 0)
       for (const l of lems) {
-        const diff = inicio.getTime() - new Date(l.horario_notificacao).getTime()
         const achou = ANTECEDENCIAS.find((a) => Math.abs(inicio.getTime() - a.ms - new Date(l.horario_notificacao).getTime()) < 60000)
         if (achou && !ativos.includes(achou.v)) ativos.push(achou.v)
         if (mensagemComum === null) mensagemComum = l.mensagem_notificacao
@@ -97,7 +99,6 @@ export default function EditarEvento() {
       descricao: data.descricao || '',
       notificacaoAutomatica: ativos.length > 0,
     })
-    // Entrega 3 — carrega a Sala de Material do evento
     const { data: mats } = await supabase
       .from('eventos_materiais')
       .select('item, quantidade, observacao')
@@ -108,7 +109,6 @@ export default function EditarEvento() {
   function alternarAntecedencia(v) {
     setAntecedencias((atual) => (atual.includes(v) ? atual.filter((x) => x !== v) : [...atual, v]))
   }
-  // Entrega 3 — funções da Sala de Material
   function adicionarMaterial() {
     setMateriais((atual) => [...atual, { item: '', quantidade: '', observacao: '' }])
   }
@@ -117,6 +117,25 @@ export default function EditarEvento() {
   }
   function removerMaterial(i) {
     setMateriais((atual) => atual.filter((_, idx) => idx !== i))
+  }
+  // Entrega 4 — copia o link de envio + mensagem pronta para WhatsApp
+  function copiarLinkEnvio() {
+    if (!form || !eventoId) return
+    const quando = form.tipo_evento === 'permanente'
+      ? 'evento semanal'
+      : `evento de ${(form.data_inicio || '').split('-').reverse().join('/')}`
+    const msg = [
+      `📢 ${form.titulo} (${quando})`,
+      '',
+      'Você vai participar deste momento? Envie antecipadamente o seu material (fotos, vídeos, playback, apresentações) para a equipe de Multimídia por este link:',
+      `${window.location.origin}/enviar-material?evento=${eventoId}`,
+    ].join('\n')
+    navigator.clipboard.writeText(msg).then(() => {
+      setAvisoLink('Link e mensagem copiados! Agora é só colar no WhatsApp e enviar aos participantes.')
+      setTimeout(() => setAvisoLink(''), 6000)
+    }).catch(() => {
+      setAvisoLink('Não foi possível copiar automaticamente. Copie o link: ' + `${window.location.origin}/enviar-material?evento=${eventoId}`)
+    })
   }
   function calcularLembretes() {
     if (!form.notificacaoAutomatica || form.tipo_evento !== 'especifico' || !form.data_inicio || antecedencias.length === 0) return []
@@ -148,7 +167,6 @@ export default function EditarEvento() {
       setErro('Informe a data do evento.')
       return
     }
-    // Entrega 3 — valida a Sala de Material
     const materiaisValidos = materiais.filter((m) => m.item.trim() || m.quantidade.trim() || m.observacao.trim())
     if (materiaisValidos.some((m) => !m.item.trim())) {
       setErro('Há um material sem nome na Sala de Material. Preencha o item ou remova a linha.')
@@ -169,8 +187,6 @@ export default function EditarEvento() {
     }
     const permanente = form.tipo_evento === 'permanente'
     setCarregando(true)
-    const params = new URLSearchParams(window.location.search)
-    const id = params.get('id')
     const { error } = await supabase.from('eventos').update({
       titulo: form.titulo.trim(),
       tipo: form.tipo,
@@ -184,17 +200,16 @@ export default function EditarEvento() {
       responsavel: form.responsavel.trim() || '',
       descricao: form.descricao.trim() || '',
       notificacao_automatica: lembretes.length > 0,
-    }).eq('id', id)
+    }).eq('id', eventoId)
     if (error) {
       setCarregando(false)
       setErro(error.message || 'Não foi possível salvar o evento.')
       return
     }
-    // Rearma os avisos: apaga os pendentes e grava a nova configuração
     const { error: erroApagar } = await supabase
       .from('eventos_lembretes')
       .delete()
-      .eq('evento_id', id)
+      .eq('evento_id', eventoId)
       .eq('lembrete_enviado', false)
     if (erroApagar) {
       setCarregando(false)
@@ -204,7 +219,7 @@ export default function EditarEvento() {
     if (lembretes.length > 0 && igrejaId) {
       const { error: erroLembretes } = await supabase.from('eventos_lembretes').insert(
         lembretes.map((l) => ({
-          evento_id: id,
+          evento_id: eventoId,
           igreja_id: igrejaId,
           horario_notificacao: l.horario.toISOString(),
           mensagem_notificacao: l.mensagem,
@@ -216,11 +231,10 @@ export default function EditarEvento() {
         return
       }
     }
-    // Entrega 3 — Sala de Material: substitui a lista inteira (rearmamento seguro)
     const { error: erroApagarMateriais } = await supabase
       .from('eventos_materiais')
       .delete()
-      .eq('evento_id', id)
+      .eq('evento_id', eventoId)
     if (erroApagarMateriais) {
       setCarregando(false)
       setErro('O evento foi salvo, mas houve um problema ao atualizar os materiais. Tente salvar novamente.')
@@ -229,7 +243,7 @@ export default function EditarEvento() {
     if (materiaisValidos.length > 0 && igrejaId) {
       const { error: erroMateriais } = await supabase.from('eventos_materiais').insert(
         materiaisValidos.map((m) => ({
-          evento_id: id,
+          evento_id: eventoId,
           igreja_id: igrejaId,
           item: m.item.trim(),
           quantidade: m.quantidade.trim() || null,
@@ -483,6 +497,22 @@ export default function EditarEvento() {
             >
               + Adicionar material
             </button>
+            <div style={{ borderTop: '1px solid #E4DED2', marginTop: 14, paddingTop: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#1F3A5F', marginBottom: 4 }}>🔗 Link de envio para participantes</div>
+              <p style={{ fontSize: 12, color: '#8A8A8A', margin: '0 0 10px', lineHeight: 1.5 }}>
+                Gera um link público (sem login) para os participantes do evento — membros ou convidados — enviarem fotos, vídeos, playbacks e apresentações antecipadamente. Envie por WhatsApp.
+              </p>
+              <button
+                type="button"
+                onClick={copiarLinkEnvio}
+                style={{ background: '#EAF4EE', color: '#4C8C6E', border: 'none', borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              >
+                📋 Copiar link + mensagem para WhatsApp
+              </button>
+              {avisoLink && (
+                <div style={{ fontSize: 12, color: '#4C8C6E', marginTop: 8, lineHeight: 1.5, wordBreak: 'break-word' }}>{avisoLink}</div>
+              )}
+            </div>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: 4 }}>
             <button type="submit" disabled={carregando} style={{ flex: 1, padding: '12px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
