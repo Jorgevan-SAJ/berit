@@ -55,15 +55,15 @@ export default function AgendaPage() {
   // Item 11 — status do plano para o bloqueio funcional
   const [planoBloqueado, setPlanoBloqueado] = useState(false)
   const [trialTerminaEm, setTrialTerminaEm] = useState(null)
-  const podeVer = perfilAtual && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(perfilAtual.perfil)
+  const podeVer = perfilAtual && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal', 'multimidia'].includes(perfilAtual.perfil)
   // Item 11 — escrita bloqueada com trial expirado
   const podeGerenciar = perfilAtual && ['admin_master', 'secretaria'].includes(perfilAtual.perfil) && !planoBloqueado
-  const ehSomenteLeitura = perfilAtual && ['tesouraria', 'conselho_fiscal'].includes(perfilAtual.perfil)
+  const ehSomenteLeitura = perfilAtual && ['tesouraria', 'conselho_fiscal', 'multimidia'].includes(perfilAtual.perfil)
   useEffect(() => {
     getPerfil().then(async (p) => {
       setPerfilAtual(p)
       setVerificando(false)
-      if (p && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(p.perfil)) {
+      if (p && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal', 'multimidia'].includes(p.perfil)) {
         // Item 11 — verificação centralizada do status do plano
         const st = await getStatusPlano()
         setPlanoBloqueado(!!st.bloqueado)
@@ -135,7 +135,7 @@ export default function AgendaPage() {
       carregar()
     }
   }
-    async function enviarNotificacao(evento) {
+  async function enviarNotificacao(evento) {
     setEnviandoNotificacao(true)
     setResultadoNotificacao(null)
     try {
@@ -189,7 +189,7 @@ export default function AgendaPage() {
         <div style={{ maxWidth: 560, margin: '0 auto', padding: '2rem 1.5rem', textAlign: 'center' }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: '#1F3A5F', marginBottom: 8 }}>Acesso restrito</div>
           <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 16px' }}>
-            Esta área é exclusiva dos perfis <strong>Administrador</strong>, <strong>Secretaria</strong>, <strong>Tesouraria</strong> e <strong>Conselho Fiscal</strong>.
+            Esta área é exclusiva dos perfis <strong>Administrador</strong>, <strong>Secretaria</strong>, <strong>Tesouraria</strong>, <strong>Conselho Fiscal</strong> e <strong>Multimídia</strong>.
           </p>
           <a href="/area" style={{ color: '#1F3A5F', fontSize: 14 }}>Voltar para o início</a>
         </div>
@@ -317,17 +317,17 @@ export default function AgendaPage() {
                     {e.descricao && <div style={{ fontSize: 13, color: '#5A5A5A', marginTop: 8, whiteSpace: 'pre-line', lineHeight: 1.5 }}>{e.descricao}</div>}
                     {podeGerenciar && (
                       <div style={{ display: 'flex', gap: '0.5rem', marginTop: 12, flexWrap: 'wrap' }}>
-                       <button onClick={() => { setMensagemExtra(''); setNotificando(e) }} style={{ padding: '8px 14px', background: '#E8F0FA', color: '#1F3A5F', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
-                        🔔 Notificar
-                       </button>
+                        <button onClick={() => { setMensagemExtra(''); setNotificando(e) }} style={{ padding: '8px 14px', background: '#E8F0FA', color: '#1F3A5F', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
+                          🔔 Notificar
+                        </button>
                         <a href={`/agenda/editar?id=${e.id}`} style={{ padding: '8px 14px', background: '#F5F0E6', color: '#1F3A5F', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-                         Editar
-                          </a>
-                          <button onClick={() => setExcluindo(e)} style={{ padding: '8px 14px', background: '#FDECEC', color: '#B71C1C', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
-                           Excluir
-                          </button>
-                        </div>
-                      )}
+                          Editar
+                        </a>
+                        <button onClick={() => setExcluindo(e)} style={{ padding: '8px 14px', background: '#FDECEC', color: '#B71C1C', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
+                          Excluir
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )
               })}
