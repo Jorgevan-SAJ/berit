@@ -8,14 +8,6 @@ const vapidPrivada = process.env.VAPID_PRIVATE_KEY
 
 const admin = createClient(url, chaveServico)
 
-const DIAS = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
-
-function formatarDataBR(iso) {
-  if (!iso) return ''
-  const p = String(iso).slice(0, 10).split('-')
-  return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : ''
-}
-
 export async function POST(request) {
   try {
     if (!vapidPublica || !vapidPrivada) {
@@ -34,42 +26,43 @@ export async function POST(request) {
     }
 
     const { data: perfil } = await admin.from('perfis').select('perfil, igreja_id, ativo').eq('user_id', usuario.id).maybeSingle()
-    if (!perfil || perfil.ativo === false || !['admin_master', 'secretaria'].includes(perfil.perfil)) {
+    if (!perfil || perfil.ativo === false || !['admin_master', 'multimidia'].includes(perfil.perfil)) {
       return Response.json({ ok: false, mensagem: 'Sem permissão para enviar notificações.' }, { status: 403 })
     }
+    if (!perfil.igreja_id) {
+      return Response.json({ ok: false, mensagem: 'Seu perfil não está vinculado a uma igreja.' }, { status: 400 })
+    }
 
-    const corpo = await request.json()
-    const eventoId = corpo?.p_evento_id
+    const corpo = await request.json().catch(() => ({}))
+    const eventoId = corpo?.p_evento_id || null
     const mensagemExtra = String(corpo?.p_mensagem || '').trim()
-    if (!eventoId) {
-      return Response.json({ ok: false, mensagem: 'Evento não informado.' }, { status: 400 })
+
+    // Evento vinculado (opcional): valida se pertence à igreja do usuário
+    let evento = null
+    if (eventoId) {
+      const { data: ev } = await admin.from('eventos').select('id, igreja_id, titulo, hora_inicio').eq('id', eventoId).maybeSingle()
+      if (!ev || ev.igreja_id !== perfil.igreja_id) {
+        return Response.json({ ok: false, mensagem: 'Evento vinculado inválido para a sua igreja.' }, { status: 400 })
+      }
+      evento = ev
     }
 
-    const { data: evento } = await admin.from('eventos').select('id, igreja_id, titulo, tipo_evento, data_inicio, hora_inicio, dia_semana, local').eq('id', eventoId).maybeSingle()
-    if (!evento) {
-      return Response.json({ ok: false, mensagem: 'Evento não encontrado.' }, { status: 404 })
-    }
-    if (evento.igreja_id !== perfil.igreja_id) {
-      return Response.json({ ok: false, mensagem: 'Este evento não pertence à sua igreja.' }, { status: 403 })
-    }
+    const { data: igreja } = await admin.from('igrejas').select('nome, slug').eq('id', perfil.igreja_id).maybeSingle()
 
-    const { data: igreja } = await admin.from('igrejas').select('nome, slug').eq('id', evento.igreja_id).maybeSingle()
-
-    const { data: inscricoes } = await admin.from('push_inscricoes').select('id, device_id, inscricao').eq('igreja_id', evento.igreja_id)
+    const { data: inscricoes } = await admin.from('push_inscricoes').select('id, device_id, inscricao').eq('igreja_id', perfil.igreja_id)
     const lista = inscricoes || []
 
     if (lista.length === 0) {
       return Response.json({ ok: true, enviados: 0, falhas: 0, mensagem: 'Nenhum aparelho inscrito nesta igreja ainda. Os fiéis que tocarem em "Acompanhar esta igreja" passarão a receber as notificações.' })
     }
 
-    let quando = ''
-    if (evento.tipo_evento === 'permanente') {
-      quando = `Todo ${DIAS[Number(evento.dia_semana)] || 'dia da semana'}${evento.hora_inicio ? `, às ${evento.hora_inicio}` : ''}`
-    } else {
-      quando = `${formatarDataBR(evento.data_inicio)}${evento.hora_inicio ? ` às ${evento.hora_inicio}` : ''}`
+    const titulo = igreja?.nome ? `🔴 Estamos ao vivo — ${igreja.nome}` : '🔴 Estamos ao vivo!'
+    let corpoTexto = evento
+      ? `${evento.titulo}${evento.hora_inicio ? ` (${String(evento.hora_inicio).slice(0, 5)})` : ''} está no ar. Acompanhe a transmissão!`
+      : 'A transmissão começou. Acompanhe agora mesmo!'
+    if (mensagemExtra) {
+      corpoTexto += `\n${mensagemExtra}`
     }
-
-    const textoCorpo = `${evento.titulo} — ${quando}${evento.local ? ` · ${evento.local}` : ''}${mensagemExtra ? `\n${mensagemExtra}` : ''}`
 
     webpush.setVapidDetails('mailto:beritinovacoes@gmail.com', vapidPublica, vapidPrivada)
 
@@ -78,31 +71,39 @@ export async function POST(request) {
 
     for (const item of lista) {
       try {
-          await webpush.sendNotification(item.inscricao, JSON.stringify({
-          title: igreja?.nome || 'Berit',
-          body: textoCorpo,
+        await webpush.sendNotification(item.inscricao, JSON.stringify({
+          title: titulo,
+          body: corpoTexto,
           url: igreja?.slug ? `/igreja/${igreja.slug}` : '/igrejas',
         }))
         enviados++
-        await admin.from('notificacoes_enviadas').insert({
-          evento_id: evento.id,
-          igreja_id: evento.igreja_id,
-          tipo: 'push',
-          destinatario: item.device_id || String(item.id),
-          status: 'sucesso',
-          enviado_em: new Date().toISOString(),
-        })
+        try {
+          await admin.from('notificacoes_enviadas').insert({
+            evento_id: evento ? evento.id : null,
+            igreja_id: perfil.igreja_id,
+            tipo: 'push',
+            destinatario: item.device_id || String(item.id),
+            status: 'sucesso',
+            enviado_em: new Date().toISOString(),
+          })
+        } catch (erroLog) {
+          console.error('Log de notificação não gravado (envio seguiu normalmente):', erroLog?.message || erroLog)
+        }
       } catch (e) {
         falhas++
-        await admin.from('notificacoes_enviadas').insert({
-          evento_id: evento.id,
-          igreja_id: evento.igreja_id,
-          tipo: 'push',
-          destinatario: item.device_id || String(item.id),
-          status: 'erro',
-          erro: String(e?.message || e).slice(0, 500),
-          enviado_em: new Date().toISOString(),
-        })
+        try {
+          await admin.from('notificacoes_enviadas').insert({
+            evento_id: evento ? evento.id : null,
+            igreja_id: perfil.igreja_id,
+            tipo: 'push',
+            destinatario: item.device_id || String(item.id),
+            status: 'erro',
+            erro: String(e?.message || e).slice(0, 500),
+            enviado_em: new Date().toISOString(),
+          })
+        } catch (erroLog) {
+          console.error('Log de notificação não gravado (envio seguiu normalmente):', erroLog?.message || erroLog)
+        }
       }
     }
 
