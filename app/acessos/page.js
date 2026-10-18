@@ -6,7 +6,7 @@ import { getPerfil } from '../../lib/perfil'
 const PERFIS_DISPONIVEIS = [
   { valor: 'admin_master', rotulo: 'Administrador' },
   { valor: 'secretaria', rotulo: 'Secretaria' },
-  { valor: 'tesoureiro', rotulo: 'Tesoureiro' },
+  { valor: 'tesouraria', rotulo: 'Tesouraria' },
   { valor: 'conselho_fiscal', rotulo: 'Conselho Fiscal' },
   { valor: 'multimidia', rotulo: 'Multimídia' },
 ]
