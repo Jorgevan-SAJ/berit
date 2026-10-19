@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../../lib/supabase'
 import { getPerfil } from '../../../lib/perfil'
-
 function formatarCelular(valor) {
   const d = (valor || '').replace(/\D/g, '').slice(0, 11)
   if (d.length <= 2) return d
@@ -10,24 +9,23 @@ function formatarCelular(valor) {
   if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
 }
-
 const UFS = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO']
-
 export default function EditarMembro() {
   const [perfilAtual, setPerfilAtual] = useState(null)
   const [verificando, setVerificando] = useState(true)
+  const [congregacoes, setCongregacoes] = useState([])
   const [form, setForm] = useState(null)
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
   const [naoEncontrado, setNaoEncontrado] = useState(false)
-
   const podeEditar = perfilAtual && ['admin_master', 'secretaria'].includes(perfilAtual.perfil)
-
   useEffect(() => {
-    getPerfil().then((p) => {
+    getPerfil().then(async (p) => {
       setPerfilAtual(p)
       setVerificando(false)
       if (!p || !['admin_master', 'secretaria'].includes(p.perfil)) return
+      const { data: cons } = await supabase.from('congregacoes').select('id, nome').order('nome')
+      setCongregacoes(cons || [])
       const params = new URLSearchParams(window.location.search)
       const id = params.get('id')
       if (!id) {
@@ -46,6 +44,7 @@ export default function EditarMembro() {
             data_nascimento: data.data_nascimento || '',
             data_batismo: data.data_batismo || '',
             data_recebimento: data.data_recebimento || '',
+            congregacao_id: data.congregacao_id || '',
             endereco: data.endereco || '',
             bairro: data.bairro || '',
             cidade: data.cidade || '',
@@ -60,11 +59,9 @@ export default function EditarMembro() {
       })
     })
   }, [])
-
   function atualizar(campo, valor) {
     setForm({ ...form, [campo]: valor })
   }
-
   async function salvar(e) {
     e.preventDefault()
     setErro('')
@@ -91,6 +88,7 @@ export default function EditarMembro() {
       data_nascimento: form.data_nascimento || null,
       data_batismo: form.data_batismo || null,
       data_recebimento: form.data_recebimento || null,
+      congregacao_id: form.congregacao_id || null,
       endereco: form.endereco.trim() || null,
       bairro: form.bairro.trim() || null,
       cidade: form.cidade.trim() || null,
@@ -108,13 +106,11 @@ export default function EditarMembro() {
       window.location.href = '/membros'
     }
   }
-
   const campo = {
     width: '100%', padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8,
     fontSize: 14, marginBottom: 16, boxSizing: 'border-box', fontFamily: 'inherit',
   }
   const rotulo = { fontSize: 13, color: '#2E2E2E', display: 'block', marginBottom: 6 }
-
   if (verificando) {
     return (
       <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -124,7 +120,6 @@ export default function EditarMembro() {
       </main>
     )
   }
-
   if (!perfilAtual || !podeEditar) {
     return (
       <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -142,7 +137,6 @@ export default function EditarMembro() {
       </main>
     )
   }
-
   if (naoEncontrado) {
     return (
       <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -153,7 +147,6 @@ export default function EditarMembro() {
       </main>
     )
   }
-
   if (!form) {
     return (
       <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
@@ -163,7 +156,6 @@ export default function EditarMembro() {
       </main>
     )
   }
-
   return (
     <main style={{ minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" }}>
       <header style={{ background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -179,32 +171,31 @@ export default function EditarMembro() {
         <form onSubmit={salvar} style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', border: '1px solid #E4DED2' }}>
           <label style={rotulo}>Nome *</label>
           <input type="text" value={form.nome} onChange={(e) => atualizar('nome', e.target.value)} placeholder="Nome completo" required style={campo} />
-
           <label style={rotulo}>E-mail</label>
           <input type="email" value={form.email} onChange={(e) => atualizar('email', e.target.value)} placeholder="email@exemplo.com" style={campo} />
-
           <label style={rotulo}>Celular</label>
           <input type="text" value={form.celular} onChange={(e) => atualizar('celular', formatarCelular(e.target.value))} placeholder="(00) 00000-0000" style={campo} />
-
           <label style={rotulo}>Sexo *</label>
           <select value={form.sexo} onChange={(e) => atualizar('sexo', e.target.value)} required style={campo}>
             <option value="">— Selecione —</option>
             <option value="masculino">Masculino</option>
             <option value="feminino">Feminino</option>
           </select>
-
           <label style={rotulo}>Data de nascimento *</label>
           <input type="date" value={form.data_nascimento} onChange={(e) => atualizar('data_nascimento', e.target.value)} required style={campo} />
-
           <label style={rotulo}>Data de batismo</label>
           <input type="date" value={form.data_batismo} onChange={(e) => atualizar('data_batismo', e.target.value)} style={campo} />
-
           <label style={rotulo}>Data de recebimento</label>
           <input type="date" value={form.data_recebimento} onChange={(e) => atualizar('data_recebimento', e.target.value)} style={campo} />
-
+          <label style={rotulo}>Congregação</label>
+          <select value={form.congregacao_id} onChange={(e) => atualizar('congregacao_id', e.target.value)} style={campo}>
+            <option value="">Sede (padrão)</option>
+            {congregacoes.map((c) => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
           <label style={rotulo}>Endereço</label>
           <input type="text" value={form.endereco} onChange={(e) => atualizar('endereco', e.target.value)} placeholder="Rua e número" style={campo} />
-
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <div style={{ flex: 1 }}>
               <label style={rotulo}>Bairro</label>
@@ -215,7 +206,6 @@ export default function EditarMembro() {
               <input type="text" value={form.cidade} onChange={(e) => atualizar('cidade', e.target.value)} placeholder="Cidade" style={campo} />
             </div>
           </div>
-
           <div style={{ display: 'flex', gap: '0.75rem' }}>
             <div style={{ width: 110 }}>
               <label style={rotulo}>UF</label>
@@ -231,23 +221,18 @@ export default function EditarMembro() {
               <input type="text" value={form.cep} onChange={(e) => atualizar('cep', e.target.value)} placeholder="00000-000" style={campo} />
             </div>
           </div>
-
           <label style={rotulo}>Nome do pai</label>
           <input type="text" value={form.nome_pai} onChange={(e) => atualizar('nome_pai', e.target.value)} placeholder="Nome do pai (opcional)" style={campo} />
-
           <label style={rotulo}>Nome da mãe</label>
           <input type="text" value={form.nome_mae} onChange={(e) => atualizar('nome_mae', e.target.value)} placeholder="Nome da mãe (opcional)" style={campo} />
-
           <label style={rotulo}>Situação</label>
           <select value={form.situacao} onChange={(e) => atualizar('situacao', e.target.value)} style={campo}>
             <option value="membro">Membro</option>
             <option value="congregado">Congregado</option>
             <option value="visitante">Visitante</option>
           </select>
-
           <label style={rotulo}>Observações</label>
           <textarea value={form.observacoes} onChange={(e) => atualizar('observacoes', e.target.value)} rows={3} placeholder="Anotações opcionais" style={campo} />
-
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: 4 }}>
             <button type="submit" disabled={carregando} style={{ flex: 1, padding: '12px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
               {carregando ? 'Salvando...' : 'Salvar alterações'}
