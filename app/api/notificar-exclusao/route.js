@@ -6,12 +6,12 @@ export async function POST(req) {
       return Response.json({ ok: false, mensagem: 'Nome da igreja é obrigatório.' }, { status: 400 })
     }
 
-    const BREVO_API_KEY = process.env.BREVO_API_KEY
+    const BREVO_API_KEY = process.env.BREVO_API_KEY_MODERADOR || process.env.BREVO_API_KEY
     if (!BREVO_API_KEY) {
       return Response.json({ ok: false, mensagem: 'Chave da API do Brevo não configurada (BREVO_API_KEY).' }, { status: 500 })
     }
 
-    const remetente = process.env.BREVO_FROM_EMAIL || 'jorge.van@hotmail.com'
+    const remetente = process.env.BREVO_FROM_EMAIL || 'beritinovacoes@gmail.com'
 
     const resposta = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
