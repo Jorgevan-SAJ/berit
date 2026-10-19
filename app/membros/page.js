@@ -78,6 +78,8 @@ export default function MembrosPage() {
   const [perfilAtual, setPerfilAtual] = useState(null)
   const [verificando, setVerificando] = useState(true)
   const [membros, setMembros] = useState([])
+  const [congregacoes, setCongregacoes] = useState([])
+  const [filtroCongregacao, setFiltroCongregacao] = useState('')
   const [busca, setBusca] = useState('')
   const [faixa, setFaixa] = useState('')
   const [sexo, setSexo] = useState('')
@@ -93,6 +95,13 @@ export default function MembrosPage() {
   // Item 11 — status do plano para o bloqueio funcional
   const [planoBloqueado, setPlanoBloqueado] = useState(false)
   const [trialTerminaEm, setTrialTerminaEm] = useState(null)
+  // Congregações — gestão (Administrador e Secretaria)
+  const [novaCongregacao, setNovaCongregacao] = useState('')
+  const [novaObservacao, setNovaObservacao] = useState('')
+  const [excluindoCongregacao, setExcluindoCongregacao] = useState(null)
+  const [salvandoCongregacao, setSalvandoCongregacao] = useState(false)
+  const mapaCongregacoes = {}
+  congregacoes.forEach((c) => { mapaCongregacoes[c.id] = c.nome })
   const podeVer = perfilAtual && ['admin_master', 'secretaria', 'tesouraria', 'conselho_fiscal'].includes(perfilAtual.perfil)
   // Bloqueio: perfis de edição só operam com o plano regularizado
   const podeEditar = perfilAtual && ['admin_master', 'secretaria'].includes(perfilAtual.perfil) && !planoBloqueado
@@ -111,6 +120,13 @@ export default function MembrosPage() {
     }
     setCarregando(false)
   }
+  async function carregarCongregacoes() {
+    const { data } = await supabase
+      .from('congregacoes')
+      .select('*')
+      .order('nome')
+    setCongregacoes(data || [])
+  }
   useEffect(() => {
     getPerfil().then(async (p) => {
       setPerfilAtual(p)
@@ -121,6 +137,7 @@ export default function MembrosPage() {
         setPlanoBloqueado(!!st.bloqueado)
         setTrialTerminaEm(st.trialTerminaEm || null)
         carregar()
+        carregarCongregacoes()
       }
       if (p && ['admin_master', 'secretaria'].includes(p.perfil)) {
         supabase
@@ -163,6 +180,72 @@ export default function MembrosPage() {
       carregar()
     }
   }
+  // Congregações — criar, renomear e excluir
+  async function adicionarCongregacao() {
+    if (!novaCongregacao.trim()) {
+      setErro('Informe o nome da congregação.')
+      return
+    }
+    setSalvandoCongregacao(true)
+    setErro('')
+    const { data: perfilIgreja } = await supabase
+      .from('perfis')
+      .select('igreja_id')
+      .eq('user_id', (await supabase.auth.getUser()).data.user.id)
+      .maybeSingle()
+    if (!perfilIgreja?.igreja_id) {
+      setSalvandoCongregacao(false)
+      setErro('Não foi possível identificar a igreja.')
+      return
+    }
+    const { error } = await supabase.from('congregacoes').insert({
+      igreja_id: perfilIgreja.igreja_id,
+      nome: novaCongregacao.trim(),
+      observacao: novaObservacao.trim() || null,
+    })
+    setSalvandoCongregacao(false)
+    if (error) {
+      setErro('Não foi possível criar a congregação. Tente novamente.')
+    } else {
+      setNovaCongregacao('')
+      setNovaObservacao('')
+      carregarCongregacoes()
+    }
+  }
+  async function renomearCongregacao(c) {
+    const novoNome = window.prompt('Novo nome da congregação:', c.nome)
+    if (novoNome === null) return
+    if (!novoNome.trim()) {
+      setErro('O nome da congregação não pode ficar vazio.')
+      return
+    }
+    const { error } = await supabase
+      .from('congregacoes')
+      .update({ nome: novoNome.trim() })
+      .eq('id', c.id)
+    if (error) {
+      setErro('Não foi possível renomear a congregação. Tente novamente.')
+    } else {
+      carregarCongregacoes()
+    }
+  }
+  async function confirmarExclusaoCongregacao() {
+    if (!excluindoCongregacao) return
+    setSalvandoCongregacao(true)
+    const { error } = await supabase
+      .from('congregacoes')
+      .delete()
+      .eq('id', excluindoCongregacao.id)
+    setSalvandoCongregacao(false)
+    if (error) {
+      setErro('Não foi possível excluir a congregação. Tente novamente.')
+    } else {
+      setExcluindoCongregacao(null)
+      if (filtroCongregacao === excluindoCongregacao.id) setFiltroCongregacao('')
+      carregarCongregacoes()
+      carregar()
+    }
+  }
   function exportar() {
     const dados = filtrados.map((m) => {
       const idade = calcularIdade(m.data_nascimento)
@@ -176,6 +259,7 @@ export default function MembrosPage() {
         'Data de Nascimento': formatarData(m.data_nascimento),
         'Data de Batismo': formatarData(m.data_batismo),
         'Data de Recebimento': formatarData(m.data_recebimento),
+        Congregação: m.congregacao_id ? (mapaCongregacoes[m.congregacao_id] || '—') : 'Sede',
         Endereço: m.endereco || '',
         Bairro: m.bairro || '',
         Cidade: m.cidade || '',
@@ -201,7 +285,10 @@ export default function MembrosPage() {
     const faixaOk = !faixa || faixaEtaria(idade) === faixa
     const sexoOk = !sexo || String(m.sexo || '').toLowerCase() === sexo
     const situacaoOk = !situacao || (m.situacao || '') === situacao
-    return nomeOk && faixaOk && sexoOk && situacaoOk
+    const congregacaoOk =
+      !filtroCongregacao ||
+      (filtroCongregacao === 'sede' ? !m.congregacao_id : m.congregacao_id === filtroCongregacao)
+    return nomeOk && faixaOk && sexoOk && situacaoOk && congregacaoOk
   })
   const rotuloSexo = (s) => {
     const v = String(s || '').toLowerCase()
@@ -317,6 +404,13 @@ export default function MembrosPage() {
             placeholder="Buscar por nome ou e-mail..."
             style={{ padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', width: '100%' }}
           />
+          <select value={filtroCongregacao} onChange={(e) => setFiltroCongregacao(e.target.value)} style={{ padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', width: '100%' }}>
+            <option value="">Todas as congregações</option>
+            <option value="sede">Sede</option>
+            {congregacoes.map((c) => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
           <select value={faixa} onChange={(e) => setFaixa(e.target.value)} style={{ padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', width: '100%' }}>
             {FAIXAS.map((f) => (
               <option key={f.valor} value={f.valor}>{f.rotulo}</option>
@@ -338,6 +432,65 @@ export default function MembrosPage() {
             {erro}
           </div>
         )}
+        {podeEditar && (
+          <div style={{ background: '#FFFFFF', borderRadius: 12, border: '1px solid #E4DED2', padding: '1.25rem', marginBottom: '1.5rem' }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 4 }}>🏛️ Congregações</div>
+            <p style={{ fontSize: 12, color: '#8A8A8A', margin: '0 0 12px' }}>
+              Cadastre as congregações da igreja para vincular membros a elas. Membros sem congregação pertencem à Sede. Excluir uma congregação devolve os membros dela para a Sede.
+            </p>
+            {congregacoes.length === 0 ? (
+              <p style={{ fontSize: 13, color: '#8A8A8A', margin: '0 0 10px' }}>Nenhuma congregação cadastrada ainda.</p>
+            ) : (
+              <div style={{ marginBottom: 12 }}>
+                {congregacoes.map((c) => (
+                  <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: '1px solid #F0EAE0', flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#2E2E2E' }}>{c.nome}</div>
+                      {c.observacao && <div style={{ fontSize: 12, color: '#8A8A8A' }}>{c.observacao}</div>}
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button
+                        onClick={() => renomearCongregacao(c)}
+                        style={{ background: 'none', border: 'none', color: '#1F3A5F', fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}
+                      >
+                        Renomear
+                      </button>
+                      <button
+                        onClick={() => setExcluindoCongregacao(c)}
+                        style={{ background: 'none', border: 'none', color: '#B71C1C', fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}
+                      >
+                        Excluir
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                value={novaCongregacao}
+                onChange={(e) => setNovaCongregacao(e.target.value)}
+                placeholder="Nome da congregação (ex.: Congregação do Bairro Novo)"
+                style={{ flex: 1, minWidth: 220, padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', fontFamily: 'inherit' }}
+              />
+              <input
+                type="text"
+                value={novaObservacao}
+                onChange={(e) => setNovaObservacao(e.target.value)}
+                placeholder="Observação (opcional)"
+                style={{ flex: 1, minWidth: 180, padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', fontFamily: 'inherit' }}
+              />
+              <button
+                onClick={adicionarCongregacao}
+                disabled={salvandoCongregacao}
+                style={{ background: '#E8F0FA', color: '#1F3A5F', border: 'none', borderRadius: 8, padding: '10px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              >
+                {salvandoCongregacao ? 'Salvando...' : '+ Adicionar congregação'}
+              </button>
+            </div>
+          </div>
+        )}
         {carregando ? (
           <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '2rem' }}>Carregando membros...</div>
         ) : filtrados.length === 0 ? (
@@ -346,10 +499,11 @@ export default function MembrosPage() {
           </div>
         ) : (
           <div style={{ background: '#FFFFFF', borderRadius: 12, border: '1px solid #E4DED2', overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 700 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 780 }}>
               <thead>
                 <tr style={{ background: '#F5F0E6', color: '#1F3A5F', textAlign: 'left' }}>
                   <th style={{ padding: '12px 16px' }}>Nome</th>
+                  <th style={{ padding: '12px 16px' }}>Congregação</th>
                   <th style={{ padding: '12px 16px' }}>Idade</th>
                   <th style={{ padding: '12px 16px' }}>Sexo</th>
                   <th style={{ padding: '12px 16px' }}>Celular</th>
@@ -370,6 +524,9 @@ export default function MembrosPage() {
                             Dados incompletos
                           </span>
                         )}
+                      </td>
+                      <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>
+                        {m.congregacao_id ? (mapaCongregacoes[m.congregacao_id] || '—') : 'Sede'}
                       </td>
                       <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{idade === null ? '—' : `${idade} anos`}</td>
                       <td style={{ padding: '12px 16px', color: '#5A5A5A' }}>{rotuloSexo(m.sexo)}</td>
@@ -412,6 +569,10 @@ export default function MembrosPage() {
             </div>
             <div style={{ display: 'grid', gap: '0.6rem', fontSize: 14 }}>
               <div><strong style={{ color: '#1F3A5F' }}>Nome:</strong> {consultando.nome}</div>
+              <div>
+                <strong style={{ color: '#1F3A5F' }}>Congregação:</strong>{' '}
+                {consultando.congregacao_id ? (mapaCongregacoes[consultando.congregacao_id] || '—') : 'Sede'}
+              </div>
               <div>
                 <strong style={{ color: '#1F3A5F' }}>Idade / Faixa:</strong>{' '}
                 {calcularIdade(consultando.data_nascimento) === null
@@ -513,6 +674,31 @@ export default function MembrosPage() {
               </button>
               <button
                 onClick={() => setExcluindo(null)}
+                style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {excluindoCongregacao && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+          <div style={{ background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', maxWidth: 420, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#B71C1C', marginBottom: 6 }}>Excluir congregação</div>
+            <p style={{ fontSize: 14, color: '#5A5A5A', margin: '0 0 16px' }}>
+              Excluir a congregação <strong>{excluindoCongregacao.nome}</strong>? Os membros vinculados a ela voltam automaticamente para a Sede. Os cadastros não são apagados.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={confirmarExclusaoCongregacao}
+                disabled={salvandoCongregacao}
+                style={{ flex: 1, padding: '12px', background: '#B71C1C', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                {salvandoCongregacao ? 'Excluindo...' : 'Sim, excluir'}
+              </button>
+              <button
+                onClick={() => setExcluindoCongregacao(null)}
                 style={{ flex: 1, padding: '12px', background: '#F5F0E6', color: '#1F3A5F', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
               >
                 Cancelar
