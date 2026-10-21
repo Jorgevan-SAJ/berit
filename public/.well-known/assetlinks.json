@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.berit.app",
+        "sha256_cert_fingerprints": ["7B:B8:93:57:EA:40:61:4D:7D:94:21:DD:63:66:9C:24:05:93:AA:2C:BA:E8:26:52:29:76:B8:99:F3:B9:C8:06"]
+      }
+    }]
