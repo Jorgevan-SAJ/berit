@@ -40,8 +40,6 @@ export default function ConfiguracoesIgreja() {
     nome: '',
     cnpj: '',
     contato: '',
-    whatsapp_oracoes: '',
-    whatsapp_orientacoes: '',
     sobre: '',
     cidade: '',
     uf: '',
@@ -49,7 +47,7 @@ export default function ConfiguracoesIgreja() {
     bairro: '',
     lead_publico: '',
     chave_pix: '',
-    publico_visivel: false,
+    publico_visivel: true,
     publico_verificado: false,
     publico_confirmado_em: null,
     slug: '',
@@ -126,8 +124,6 @@ export default function ConfiguracoesIgreja() {
           nome: igreja.nome || '',
           cnpj: igreja.cnpj || '',
           contato: igreja.contato || '',
-          whatsapp_oracoes: igreja.whatsapp_oracoes || '',
-          whatsapp_orientacoes: igreja.whatsapp_orientacoes || '',
           sobre: igreja.sobre || '',
           cidade: igreja.cidade || '',
           uf: igreja.uf || '',
@@ -135,7 +131,7 @@ export default function ConfiguracoesIgreja() {
           bairro: igreja.bairro || '',
           lead_publico: igreja.lead_publico || '',
           chave_pix: igreja.chave_pix || '',
-          publico_visivel: !!igreja.publico_visivel,
+          publico_visivel: igreja.publico_visivel !== false,
           publico_verificado: !!igreja.publico_verificado,
           publico_confirmado_em: igreja.publico_confirmado_em || null,
           slug: igreja.slug || '',
@@ -331,8 +327,6 @@ export default function ConfiguracoesIgreja() {
       nome: form.nome,
       cnpj: form.cnpj,
       contato: form.contato,
-      whatsapp_oracoes: form.whatsapp_oracoes,
-      whatsapp_orientacoes: form.whatsapp_orientacoes,
       redes_sociais_lista: redes,
       sobre: form.sobre,
       cidade: form.cidade,
@@ -348,7 +342,7 @@ export default function ConfiguracoesIgreja() {
       .from('igrejas')
       .update(dadosParaSalvar)
       .eq('id', perfilAtual.igreja_id)
-      .select('id, nome, cnpj, contato, whatsapp_oracoes, whatsapp_orientacoes, redes_sociais_lista, publico_visivel, slug')
+      .select('id, nome, cnpj, contato, redes_sociais_lista, publico_visivel, slug')
       .maybeSingle()
     setSalvando(false)
     if (error) {
@@ -357,13 +351,6 @@ export default function ConfiguracoesIgreja() {
     }
     if (!atualizada) {
       setErro('O banco recusou a alteração (permissão de gravação). Nenhum dado foi salvo.')
-      return
-    }
-    const whatsappOk =
-      String(atualizada.whatsapp_oracoes || '') === String(form.whatsapp_oracoes || '') &&
-      String(atualizada.whatsapp_orientacoes || '') === String(form.whatsapp_orientacoes || '')
-    if (!whatsappOk) {
-      setErro('Atenção: os grupos de WhatsApp não foram gravados no banco. Confirme que as colunas whatsapp_oracoes e whatsapp_orientacoes existem e tente salvar novamente.')
       return
     }
     if (atualizada.slug && !form.slug) {
@@ -515,34 +502,6 @@ export default function ConfiguracoesIgreja() {
             </p>
           </div>
           <div className="border-t pt-4">
-            <p className="text-sm font-semibold text-gray-700 mb-3">Grupos de WhatsApp</p>
-            <div className="space-y-3">
-              <div>
-                <label className={rotuloClasse}>Pedidos de oração</label>
-                <input
-                  type="text"
-                  value={form.whatsapp_oracoes}
-                  onChange={(e) => setForm({ ...form, whatsapp_oracoes: e.target.value })}
-                  className={inputClasse}
-                  placeholder="Número no formato 55 + DDD + número (ex.: 5575988038122) ou link de grupo"
-                />
-              </div>
-              <div>
-                <label className={rotuloClasse}>Perguntas e orientações</label>
-                <input
-                  type="text"
-                  value={form.whatsapp_orientacoes}
-                  onChange={(e) => setForm({ ...form, whatsapp_orientacoes: e.target.value })}
-                  className={inputClasse}
-                  placeholder="Número no formato 55 + DDD + número (ex.: 5575988038122) ou link de grupo"
-                />
-              </div>
-              <p className="text-xs text-gray-500">
-                Recomendado: cadastre o número de um responsável pelo canal (formato 55 + DDD + número, 13 dígitos para celular). O pedido do visitante chega pronto por mensagem. Links de grupo (chat.whatsapp.com) também são aceitos, mas exigem que o visitante cole a mensagem manualmente.
-              </p>
-            </div>
-          </div>
-          <div className="border-t pt-4">
             <p className="text-sm font-semibold text-gray-700 mb-3">Redes sociais</p>
             <div className="flex flex-col sm:flex-row gap-2 mb-3">
               <select
@@ -620,7 +579,7 @@ export default function ConfiguracoesIgreja() {
             </p>
             {msgPublico && <p className="text-green-600 mb-3 text-sm">{msgPublico}</p>}
             {erroPublico && <p className="text-red-600 mb-3 text-sm">{erroPublico}</p>}
-            <label className="flex items-center gap-2 mb-3 cursor-pointer">
+            <label className="flex items-center gap-2 mb-1 cursor-pointer">
               <input
                 type="checkbox"
                 checked={form.publico_visivel}
@@ -631,6 +590,9 @@ export default function ConfiguracoesIgreja() {
                 Incluir esta igreja no diretório público
               </span>
             </label>
+            <p className="text-xs text-gray-500 mb-3">
+              Se não deseja que sua igreja apareça no diretório público, desmarque.
+            </p>
             {igrejaOrigemIndicacao && igrejaAguardaConfirmacao && (
               <div style={{ background: '#FDF3E3', border: '1px solid #F0D9A8', borderRadius: 8, padding: '12px', marginBottom: 12 }}>
                 <p style={{ fontSize: 13, color: '#7A5A1E', margin: '0 0 8px', lineHeight: 1.5 }}>
