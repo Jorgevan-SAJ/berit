@@ -8,6 +8,7 @@ const SECOES = [
       { p: 'Como funciona o período de teste?', r: 'Ao criar a conta, a igreja entra em período de teste gratuito por um prazo definido no cadastro (a data de encerramento fica visível nas Configurações da Igreja). Durante esse período, todos os módulos funcionam normalmente.' },
       { p: 'O que é o banner do período de teste no dashboard?', r: 'É o aviso exibido no topo da Área da Igreja. Ele aparece em azul quando o teste ainda tem mais de 1 dia ("X dias restantes"), em âmbar no último dia e em vermelho quando o período já encerrou. Igrejas com plano vitalício não veem o banner.' },
       { p: 'O que acontece quando o período de teste encerra?', r: 'As funções de cadastro e edição ficam bloqueadas: em Membros (novo, editar, inativar, excluir, importar, exportar, autocadastro), em Finanças (novo lançamento, editar, excluir, consolidar, contribuições, renomear abas) e em Agenda (novo evento, editar, excluir). A consulta aos dados continua liberada em todos os módulos, e o banner vermelho orienta a regularização.' },
+      { p: 'Quais planos existem no Berit?', r: 'O Berit está organizado em três planos: Básico (gratuito, até 30 membros, com Membros e Perfis de Acesso), Essencial (Básico + Agenda + Multimídia) e Plus (todos os recursos e melhorias futuras). A assinatura é feita pelo próprio aplicativo. Em caso de dúvida sobre qual plano atende a sua igreja, fale com a Equipe Berit.' },
       { p: 'Como regularizar o plano após o término do teste?', r: 'Entre em contato com a Equipe Berit pelo e-mail beritinovacoes@gmail.com. Após a regularização, as funções de cadastro e edição voltam a funcionar normalmente.' },
     ],
   },
@@ -15,7 +16,7 @@ const SECOES = [
     modulo: 'Área da Igreja',
     icone: '🏠',
     itens: [
-      { p: 'O que é a Área da Igreja?', r: 'É o painel principal após o login, com acesso restrito a usuários cadastrados e autorizados pela administração. Ela reúne os atalhos para os módulos (Membros, Finanças, Agenda, Perfis de Acesso, Diretório Público) e painéis com aniversariantes, próximos eventos e pedidos de acolhimento.' },
+      { p: 'O que é a Área da Igreja?', r: 'É o painel principal após o login, com acesso restrito a usuários cadastrados e autorizados pela administração. Ela reúne os atalhos para os módulos (Membros, Finanças, Agenda, Multimídia, Perfis de Acesso, Diretório Público) e painéis com aniversariantes, próximos eventos e pedidos de acolhimento.' },
       { p: 'O que são os avisos de pendências que aparecem no topo?', r: 'São avisos automáticos que direcionam para onde agir: vermelho/azul quando há pendências na Central de Auditoria de Finanças, e verde quando há cadastros de autocadastro aguardando confirmação em Membros. Clique no aviso para ir direto ao local.' },
       { p: 'Quem vê os painéis de aniversariantes, eventos e pedidos?', r: 'Os perfis Administrador e Secretaria. O Conselho Fiscal e a Tesouraria não veem os painéis, apenas os atalhos dos módulos (com selo "Somente leitura" quando aplicável).' },
       { p: 'O que é o selo "Somente leitura"?', r: 'Indica que o módulo está em modo consulta para o seu perfil (Tesouraria e Conselho Fiscal em Membros/Agenda; Conselho Fiscal em Finanças). Você pode ver e pesquisar, mas não cadastra nem edita.' },
@@ -33,6 +34,9 @@ const SECOES = [
       { p: 'Como importar membros de uma planilha?', r: 'Use o botão "Importar dados" (disponível para Administrador e Secretaria). O sistema aceita arquivos .xlsx, .xls e .csv, mostra uma pré-visualização antes de processar e gera um relatório da importação.' },
       { p: 'Como exportar a lista de membros?', r: 'Clique em "Exportar". O sistema gera um arquivo .xlsx com os membros filtrados na tela, incluindo idade, faixa etária e datas. Disponível para Administrador e Secretaria.' },
       { p: 'O que é o Autocadastro e como funciona a confirmação?', r: 'É o cadastro feito pelo próprio visitante pela página pública da igreja. Ele entra como pendente e aparece para Administrador e Secretaria confirmarem. Quando há cadastros aguardando, um aviso aparece na Área da Igreja, um selo laranja aparece no card Membros e um contador no botão "Autocadastro".' },
+      { p: 'O que são as Congregações?', r: 'São unidades da igreja cadastradas para organizar os membros. Membros sem congregação vinculada pertencem à Sede.' },
+      { p: 'Como cadastrar uma congregação?', r: 'No módulo Membros, abra a tela Congregações, informe o nome (a observação é opcional) e clique em "+ Adicionar congregação".' },
+      { p: 'Como renomear ou excluir uma congregação?', r: 'Na lista de congregações, use "Renomear" para alterar o nome ou "Excluir" para remover. Ao excluir, os membros da congregação voltam automaticamente para a Sede — nenhum cadastro de membro é apagado.' },
       { p: 'Por que não vejo os botões de cadastro e edição?', r: 'Pode ser por dois motivos: (1) seu perfil é de somente leitura (Tesouraria ou Conselho Fiscal, que consultam mas não editam), ou (2) o período de teste da igreja encerrou e as funções de escrita estão bloqueadas até a regularização do plano. A consulta continua liberada nos dois casos.' },
       { p: 'O Conselho Fiscal pode cadastrar ou editar membros?', r: 'Não. O Conselho Fiscal tem acesso somente leitura ao módulo Membros: pode consultar a listagem, usar os filtros e abrir a ficha completa (botão "Consultar"), mas não vê os botões de cadastrar, editar, inativar, excluir, importar ou exportar.' },
     ],
@@ -58,7 +62,7 @@ const SECOES = [
     modulo: 'Perfis de Acesso',
     icone: '🔐',
     itens: [
-      { p: 'Quais perfis existem?', r: 'Administrador (governança total), Secretaria (gestão de membros e agenda), Tesouraria (operação de finanças) e Conselho Fiscal (consulta de todos os módulos em somente leitura, para fiscalização). O acesso é controlado por perfil em cada módulo.' },
+      { p: 'Quais perfis existem?', r: 'Administrador (governança total), Secretaria (gestão de membros e agenda), Tesouraria (operação de finanças), Conselho Fiscal (consulta de todos os módulos em somente leitura, para fiscalização) e Multimídia (equipe de mídia da igreja, responsável por avisar os fiéis). O acesso é controlado por perfil em cada módulo.' },
       { p: 'Como funciona o perfil Conselho Fiscal?', r: 'É o perfil de fiscalização: enxerga todos os módulos (Membros, Finanças e Agenda), mas apenas para consulta. Não cadastra, edita, inativa, exclui, importa, lança, consolida ou confere alterações. Ideal para a fiscalização estatutária das contas da igreja.' },
       { p: 'Como criar um usuário?', r: 'Em "Perfis de Acesso" (exclusivo do Administrador), informe o e-mail e o perfil. O usuário recebe um e-mail de confirmação e, depois de confirmar, define a própria senha pelo link "Esqueci minha senha" na tela de login. Ninguém vê a senha de outro usuário.' },
       { p: 'Como inativar ou excluir um usuário?', r: 'Na lista de usuários, use "Inativar" (temporário, preserva o cadastro) ou "Excluir" (definitivo). Você não pode inativar, excluir ou alterar o próprio perfil.' },
@@ -70,131 +74,6 @@ const SECOES = [
     modulo: 'Configurações da Igreja',
     icone: '⚙️',
     itens: [
-      { p: 'O que é a página Configurações da Igreja?', r: 'Reúne os dados cadastrais e os canais de contato da igreja: nome, CNPJ, contato, grupos de WhatsApp e redes sociais. O acesso é exclusivo do perfil Administrador, pelo botão "Configurações da Igreja" no cabeçalho da Área da Igreja.' },
+      { p: 'O que é a página Configurações da Igreja?', r: 'Reúne os dados cadastrais e os canais de contato da igreja: nome, CNPJ, contato, redes sociais, dados públicos (cidade, UF, endereço, bairro), horários de cultos, mensagem de acolhimento e chave Pix. O acesso é exclusivo do perfil Administrador, pelo botão "Configurações da Igreja" no cabeçalho da Área da Igreja.' },
       { p: 'Onde aparecem o nome e o CNPJ da igreja?', r: 'Assim que você salva, o nome passa a aparecer na saudação da Área da Igreja e o CNPJ logo abaixo, formatado (00.000.000/0000-00), para conferência rápida sem reabrir a tela de edição.' },
-      { p: 'Como cadastrar os grupos de WhatsApp?', r: 'São dois campos separados: um para o grupo de pedidos de oração e outro para o de perguntas e orientações. Cole o link de convite de cada grupo no campo correspondente. São canais distintos, por isso não se usa um campo único.' },
-      { p: 'Como adicionar uma rede social?', r: 'Escolha a rede na lista (Instagram, Facebook, YouTube, TikTok, X ou Outra), cole o link e clique em "Adicionar". Cada rede aparece com uma etiqueta colorida e um botão "Remover" ao lado. Clique em "Remover" para tirar uma rede da lista.' },
-      { p: 'Como sair da página de Configurações?', r: 'Use o botão "Voltar" no topo da página ou aguarde: após salvar com sucesso, a página retorna sozinha à Área da Igreja.' },
-      { p: 'Por que a mensagem de sucesso só aparece às vezes?', r: 'A mensagem verde só é exibida quando o banco confirma a gravação. Se a alteração for recusada por permissão, a tela mostra o erro em vermelho e nenhum dado é salvo — assim você nunca fica com a impressão de que salvou sem ter salvo.' },
-      { p: 'Como alterar senha?', r: "Se você esqueceu sua senha, na área de acesso informe o e-mail e clique em 'Esqueci a senha'. Se você lembra a senha e deseja alterá-la, vá em Configurações da Igreja e procure a opção Alteração de Senha." },
-      { p: 'Como excluir o cadastro da igreja?', r: 'No final da página de Configurações (o último botão, abaixo de tudo), clique em "Excluir Cadastro da Igreja". O sistema exibe um primeiro aviso sobre a exclusão permanente; ao continuar, uma segunda confirmação pede a sua senha de acesso. Com a senha correta, todos os dados da igreja (membros, finanças, agenda, pedidos e perfis) são excluídos definitivamente e a igreja deixa de aparecer no Diretório Público. Ação irreversível: se a igreja voltar a usar o Berit, será necessário informar tudo novamente, sem resgate de dados antigos. Esse direito está previsto na LGPD (art. 18, inciso VI).' },
-    ],
-  },
-  {
-    modulo: 'Agenda',
-    icone: '📅',
-    itens: [
-      { p: 'Quem pode criar e gerenciar eventos?', r: 'Apenas Administrador e Secretaria. O Conselho Fiscal pode visualizar a agenda (somente leitura); os demais perfis logados também podem visualizar.' },
-      { p: 'Qual a diferença entre evento permanente e específico?', r: 'Permanente (ou recorrente) repete toda semana — ex.: Culto de Celebração aos domingos. Específico tem data única — ex.: Conferência de Missões em 20/10. No cadastro, escolha o tipo e os campos se adaptam.' },
-      { p: 'Eventos com data passada somem?', r: 'Sim. Eventos específicos com data passada saem automaticamente da agenda (pública e administrativa). Eventos permanentes nunca expiram.' },
-      { p: 'Como editar ou excluir um evento?', r: 'Clique no evento no calendário ou na lista para abrir o modal de detalhes. Se o seu perfil gerencia a agenda (Administrador ou Secretaria), aparecem os botões Editar e Excluir. O Conselho Fiscal apenas visualiza.' },
-      { p: 'Por que não vejo o botão "+ Novo evento"?', r: 'Se seu perfil é somente leitura, a opção não existe por padrão. Se seu perfil é Administrador ou Secretaria e mesmo assim o botão sumiu, o período de teste da igreja encerrou e a criação e edição de eventos estão bloqueadas até a regularização do plano. A visualização do calendário continua liberada.' },
-    ],
-  },
-  {
-    modulo: 'Página Pública e Diretório',
-    icone: '🌐',
-    itens: [
-      { p: 'Como o visitante encontra a igreja e envia pedidos?', r: 'Pela página pública (link /igreja/slug) ou pelo Diretório, o visitante acessa os dados da igreja e pode enviar pedidos de acolhimento: Oração ou Orientação espiritual. O pedido chega no painel "Pedidos de acolhimento" da Área da Igreja, onde Administrador e Secretaria podem iniciar o atendimento e compartilhar no grupo de WhatsApp da igreja (o texto é copiado pronto e o WhatsApp abre para escolher o grupo).' },
-      { p: 'Como funcionam os grupos de WhatsApp da página pública?', r: 'A igreja cadastra, em Configurações, o número (formato 55 + DDD + número) ou o link do grupo para pedidos de oração e outro para perguntas/orientações. Na página pública, o visitante escolhe o canal e o pedido é encaminhado de forma organizada para a igreja.' },
-      { p: 'Como funciona a verificação no Google Maps?', r: 'Em Configurações, o botão "Verificar no Maps" abre o Google Maps com a busca "Nome da igreja + endereço + cidade + UF" — a mesma fórmula usada na página pública. É uma forma de conferir se o endereço cadastrado aponta para o lugar certo antes de publicar.' },
-      { p: 'Como funciona o botão "Dizimar/Ofertar"?', r: 'Se a igreja cadastrar uma chave Pix em Configurações, a página pública exibe o botão "Dizimar/Ofertar". Ao clicar, a chave é copiada para o visitante colar no aplicativo do banco e fazer a doação.' },
-      { p: 'O que é o selo de verificado no Diretório?', r: 'É o selo exibido na página pública quando a igreja confirma os dados públicos (nome, cidade, UF, endereço e bairro) pelo botão "Confirmar dados públicos" em Configurações. Ele aumenta a confiança de quem visita o perfil.' },
-    ],
-  },
-]
-function Item({ p, r }) {
-  const [aberto, setAberto] = useState(false)
-  return (
-    <div style={{ border: '1px solid #E4DED2', borderRadius: 10, marginBottom: 8, overflow: 'hidden' }}>
-      <button
-        onClick={() => setAberto(!aberto)}
-        style={{
-          width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '12px 16px', background: aberto ? '#E8F0FA' : '#FFFFFF', border: 'none',
-          fontSize: 14, fontWeight: 600, color: '#1F3A5F', cursor: 'pointer', textAlign: 'left',
-          fontFamily: 'inherit',
-        }}
-      >
-        <span>{p}</span>
-        <span style={{ fontSize: 16, color: '#8A8A8A' }}>{aberto ? '−' : '+'}</span>
-      </button>
-      {aberto && (
-        <div style={{ padding: '12px 16px', fontSize: 13, color: '#5A5A5A', lineHeight: 1.6, background: '#FAF6EF' }}>
-          {r}
-        </div>
-      )}
-    </div>
-  )
-}
-export default function AjudaPage() {
-  const [busca, setBusca] = useState('')
-  const filtradas = SECOES.map((s) => ({
-    ...s,
-    itens: s.itens.filter(
-      (i) =>
-        !busca.trim() ||
-        i.p.toLowerCase().includes(busca.trim().toLowerCase()) ||
-        i.r.toLowerCase().includes(busca.trim().toLowerCase())
-    ),
-  })).filter((s) => s.itens.length > 0)
-  const estilo = {
-    main: { minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" },
-    header: { background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-    linkLogo: { fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF', textDecoration: 'none' },
-    botaoVoltar: { background: 'transparent', border: '1px solid rgba(255,255,255,0.4)', color: '#FFFFFF', padding: '8px 16px', borderRadius: 8, fontSize: 13, textDecoration: 'none' },
-    card: { background: '#FFFFFF', borderRadius: 12, padding: '1.5rem', border: '1px solid #E4DED2' },
-  }
-  return (
-    <main style={estilo.main}>
-      <header style={estilo.header}>
-        <a href="/area" style={estilo.linkLogo}>Berit</a>
-        <a href="/area" style={estilo.botaoVoltar}>Voltar</a>
-      </header>
-      <div style={{ maxWidth: 860, margin: '0 auto', padding: '2rem 1.5rem' }}>
-        <h1 style={{ fontSize: 24, color: '#1F3A5F', margin: '0 0 4px' }}>Central de Ajuda</h1>
-        <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 1.5rem' }}>
-          Tire suas dúvidas sobre cada módulo da plataforma. Clique em uma pergunta para ver a resposta.
-        </p>
-        <input
-          type="text"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar na ajuda (ex.: consolidar, inativar, evento, teste, excluir...)"
-          style={{ width: '100%', padding: '12px 14px', border: '1px solid #E4DED2', borderRadius: 10, fontSize: 14, boxSizing: 'border-box', marginBottom: '1.5rem', fontFamily: 'inherit' }}
-        />
-        {filtradas.length === 0 ? (
-          <div style={{ ...estilo.card, textAlign: 'center', fontSize: 14, color: '#8A8A8A' }}>
-            Nenhuma pergunta encontrada para "{busca}". Tente outro termo.
-          </div>
-        ) : (
-          filtradas.map((s) => (
-            <div key={s.modulo} style={{ ...estilo.card, marginBottom: '1.5rem' }}>
-              <div style={{ fontSize: 17, fontWeight: 700, color: '#1F3A5F', marginBottom: 4 }}>
-                {s.icone} {s.modulo}
-              </div>
-              <div style={{ fontSize: 12, color: '#8A8A8A', marginBottom: 12 }}>
-                {s.itens.length} pergunta(s)
-              </div>
-              {s.itens.map((i) => (
-                <Item key={i.p} p={i.p} r={i.r} />
-              ))}
-            </div>
-          ))
-        )}
-        <div style={{ ...estilo.card, textAlign: 'center' }}>
-          <div style={{ fontSize: 15, fontWeight: 600, color: '#1F3A5F', marginBottom: 6 }}>Ainda com dúvidas?</div>
-          <p style={{ fontSize: 13, color: '#5A5A5A', margin: '0 0 12px' }}>
-            Fale conosco pelo e-mail de suporte e responderemos o mais breve possível.
-          </p>
-          <a
-            href="mailto:beritinovacoes@gmail.com?subject=D%C3%BAvida%20-%20Central%20de%20Ajuda%20Berit"
-            style={{ padding: '10px 18px', background: '#1F3A5F', color: '#FFFFFF', borderRadius: 8, fontSize: 14, fontWeight: 600, textDecoration: 'none', display: 'inline-block' }}
-          >
-            ✉️ Fale conosco
-          </a>
-        </div>
-      </div>
-    </main>
-  )
-}
+      { p: 'Por que minha igreja já aparece marcada no Diretório P
