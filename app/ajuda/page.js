@@ -80,9 +80,10 @@ const SECOES = [
     modulo: 'Multimídia',
     icone: '🎬',
     itens: [
-      { p: 'O que é o módulo Multimídia?', r: 'É o espaço da equipe de mídia da igreja para publicar avisos aos fiéis diretamente pelo Berit.' },
+      { p: 'O que é o módulo Multimídia?', r: 'É o espaço da equipe de mídia da igreja para publicar avisos aos fiéis e organizar a logística dos cultos diretamente pelo Berit.' },
       { p: 'Quem usa o Multimídia?', r: 'O perfil Multimídia e o Administrador. É o canal oficial de comunicação com a comunidade pela plataforma.' },
-      { p: 'Como funciona o envio de avisos?', r: 'O perfil Multimídia acessa o módulo na Área da Igreja e publica os avisos, que chegam aos fiéis pelo canal do Berit.' },
+      { p: 'Como funciona o envio antecipado de material?', r: 'A equipe de mídia envia um link aos participantes do culto. Os participantes acessam o link e enviam, com antecedência, os materiais que serão utilizados durante o culto (vídeos, louvores, playbacks e outros). Assim, a equipe recebe tudo organizado antes da programação.' },
+      { p: 'Como funciona o envio de avisos aos fiéis?', r: 'O perfil Multimídia acessa o módulo na Área da Igreja e publica os avisos, que chegam aos fiéis pelo canal do Berit.' },
     ],
   },
 ]
