@@ -91,6 +91,20 @@ export async function POST(request) {
         }
       } catch (e) {
         falhas++
+        const mensagemErro = String(e?.message || e)
+        const codigoErro = Number(e?.statusCode || e?.status || 0)
+        // Inscrição expirada ou inválida (404/410): remover para não acumular falhas
+        const expirada =
+          codigoErro === 404 ||
+          codigoErro === 410 ||
+          /expired|gone|not found|410|404/i.test(mensagemErro)
+        if (expirada) {
+          try {
+            await admin.from('push_inscricoes').delete().eq('id', item.id)
+          } catch (erroLimpeza) {
+            console.error('Não foi possível limpar a inscrição expirada:', erroLimpeza?.message || erroLimpeza)
+          }
+        }
         try {
           await admin.from('notificacoes_enviadas').insert({
             evento_id: evento ? evento.id : null,
@@ -98,7 +112,7 @@ export async function POST(request) {
             tipo: 'push',
             destinatario: item.device_id || String(item.id),
             status: 'erro',
-            erro: String(e?.message || e).slice(0, 500),
+            erro: mensagemErro.slice(0, 500),
             enviado_em: new Date().toISOString(),
           })
         } catch (erroLog) {
