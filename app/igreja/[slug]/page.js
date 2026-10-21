@@ -3,9 +3,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { supabase } from '../../../lib/supabase'
 import BotaoFavoritarIgreja from '../../../components/BotaoFavoritarIgreja'
-
 const DIAS_ORDEM = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
-
 const CORES_REDE = {
   Instagram: { cor: '#7B4FA6', bg: '#F3EAFB' },
   Facebook: { cor: '#1F3A5F', bg: '#E8F0FA' },
@@ -14,7 +12,6 @@ const CORES_REDE = {
   'X (Twitter)': { cor: '#5A5A5A', bg: '#F0EAE0' },
   Outra: { cor: '#4C8C6E', bg: '#EAF4EE' },
 }
-
 const estilo = {
   main: { minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" },
   header: { background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem' },
@@ -23,39 +20,41 @@ const estilo = {
   card: { background: '#FFFFFF', borderRadius: 12, border: '1px solid #E4DED2', padding: '1.5rem', marginBottom: '1rem' },
   tituloSecao: { fontSize: 16, fontWeight: 700, color: '#1F3A5F', margin: '0 0 12px' },
 }
-
 function formatarCNPJ(cnpj) {
   const d = String(cnpj || '').replace(/\D/g, '')
   if (d.length !== 14) return cnpj || ''
   return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
 }
-
 function formatarDataBR(iso) {
   if (!iso) return ''
   const partes = String(iso).slice(0, 10).split('-')
   if (partes.length !== 3) return ''
   return `${partes[2]}/${partes[1]}/${partes[0]}`
 }
-
 function formatarHora(iso) {
   if (!iso) return ''
   const h = String(iso).slice(11, 16)
   return h.length === 5 ? h.replace(':', 'h') : ''
 }
-
 function ordenarCultos(lista) {
   return [...(lista || [])].sort((a, b) => DIAS_ORDEM.indexOf(a.dia) - DIAS_ORDEM.indexOf(b.dia))
 }
-
 function saudacaoHorario() {
   const h = new Date().getHours()
   if (h < 12) return 'Bom dia'
   if (h < 18) return 'Boa tarde'
   return 'Boa noite'
 }
-
+// Combina cidade e UF aparando espaços, para evitar "Cidade , UF" quando o
+// valor gravado no banco tem espaços ao final (ex.: "Santo Antônio de Jesus ")
+function localidade(cidade, uf) {
+  const c = String(cidade || '').trim()
+  const u = String(uf || '').trim()
+  if (c && u) return `${c}, ${u}`
+  return c || u
+}
 // Normaliza o número para o formato internacional do wa.me (55 + DDD + número).
-// Também extrai o número de links wa.me caso o valor gravado seja um link.
+// Também extrae o número de links wa.me caso o valor gravado seja um link.
 function normalizarWhats(valor) {
   const texto = String(valor || '')
   const m = texto.match(/(?:wa\.me\/|phone=)(\d+)/)
@@ -64,13 +63,11 @@ function normalizarWhats(valor) {
   if ((d.length === 12 || d.length === 13) && d.startsWith('55')) return d
   return ''
 }
-
 // Detecta link de convite de grupo (chat.whatsapp.com) no campo configurado
 function extrairLinkGrupo(valor) {
   const m = String(valor || '').match(/chat\.whatsapp\.com\/(?:invite\/)?([A-Za-z0-9_-]+)/)
   return m ? `https://chat.whatsapp.com/${m[1]}` : ''
 }
-
 function SeloVerificado() {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.18)', color: '#FFFFFF', padding: '4px 12px', borderRadius: 999, fontSize: 13, fontWeight: 700 }}>
@@ -81,7 +78,6 @@ function SeloVerificado() {
     </span>
   )
 }
-
 function IconeWhatsApp({ tamanho = 18 }) {
   return (
     <svg width={tamanho} height={tamanho} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -89,22 +85,17 @@ function IconeWhatsApp({ tamanho = 18 }) {
     </svg>
   )
 }
-
 function ReclamarIgreja() {
   const [logado, setLogado] = useState(null)
-
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setLogado(!!data.user))
   }, [])
-
   if (logado === null) return null
   if (logado) return null
-
   const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)
   const linkAdquirir = isAndroid
     ? 'https://play.google.com/store/apps/details?id=com.berit.app'
     : '/cadastro'
-
   return (
     <div style={{ background: '#E8F0FA', border: '1px solid #C9D9EC', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
       <p style={{ margin: 0, fontSize: 13, color: '#1F3A5F', lineHeight: 1.6 }}>
@@ -120,7 +111,6 @@ function ReclamarIgreja() {
     </div>
   )
 }
-
 // ===== Canal de acolhimento — conversa guiada com envio híbrido =====
 function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
   const [etapa, setEtapa] = useState('nome')
@@ -135,13 +125,11 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
   const [enviandoBerit, setEnviandoBerit] = useState(false)
   const [erroBerit, setErroBerit] = useState('')
   const [copiado, setCopiado] = useState('')
-
   useEffect(() => {
     setHistorico([
       { de: 'igreja', texto: `${saudacaoHorario()}! Seja bem-vindo(a) ao canal de acolhimento da ${igreja.nome}. Como é o seu nome?` },
     ])
   }, [])
-
   function avancar(novaEtapa, falaUsuario, falaIgreja) {
     setHistorico((h) => [
       ...h,
@@ -150,20 +138,17 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
     ])
     setEtapa(novaEtapa)
   }
-
   function confirmarNome() {
     if (!nome.trim()) return
     avancar('tipo', nome.trim(), `Olá ${nome.trim()}, que bom que você está aqui! Em que podemos ajudar?`)
   }
-
   function escolherTipo(t) {
     setTipo(t)
     const pergunta = t === 'oracao'
       ? 'O nosso grupo de oração está pronto para orar por você. Me fale um pouco sobre o que deseja que a nossa igreja apresente a Deus em seu favor (motivos de oração).'
-      : 'Ficamos felizes em poder ajudar. Me conte qual é a sua dúvida espiritual ou teológica.'
+      : 'Ficamos felices em poder ajudar. Me conte qual é a sua dúvida espiritual ou teológica.'
     avancar('texto', t === 'oracao' ? 'Oração' : 'Orientação espiritual ou dúvidas teológicas', pergunta)
   }
-
   function confirmarTexto() {
     if (!texto.trim()) return
     avancar(
@@ -172,7 +157,6 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
       'Tudo bem, já estou preparando o seu pedido, mas antes preciso que você me responda três coisas:\n1. De qual cidade você está falando?\n2. Você autoriza que eu compartilhe seu pedido no nosso grupo?\n3. Você deseja que alguém da nossa igreja retorne o seu contato para conversar com você?'
     )
   }
-
   function montarMensagem() {
     const titulo = tipo === 'oracao' ? '*Pedido de oração*' : '*Orientação espiritual / dúvida teológica*'
     return [
@@ -186,7 +170,6 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
       `— Enviado pela página da ${igreja.nome} no Berit`,
     ].join('\n')
   }
-
   const campoWhats = tipo === 'oracao' ? igreja.whatsapp_oracoes : igreja.whatsapp_orientacoes
   const numeroDestino = normalizarWhats(campoWhats)
   const linkGrupo = extrairLinkGrupo(campoWhats)
@@ -198,13 +181,11 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
     window.open(url, '_blank', 'noopener,noreferrer')
     aoFechar()
   }
-
   async function enviarGrupo() {
     if (!linkGrupo || !podeEnviar) return
     try { await navigator.clipboard.writeText(montarMensagem()) } catch {}
     avancar('grupo', null, 'Copiei a sua mensagem para a área de transferência. Siga os passos abaixo para enviá-la ao grupo.')
   }
-
   async function enviarBerit() {
     if (!podeEnviar) return
     setEnviandoBerit(true)
@@ -226,7 +207,6 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
     }
     avancar('enviado', null, 'Pronto! Seu pedido foi registrado com segurança e a liderança da igreja vai recebê-lo pelo painel Berit.')
   }
-
   async function copiarTexto(texto, rotulo) {
     try {
       await navigator.clipboard.writeText(texto)
@@ -236,20 +216,17 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
       setCopiado('')
     }
   }
-
   function recomecar() {
     setNome(''); setTipo(''); setTexto(''); setCidade(''); setAutoriza(null); setRetorno(null); setContato('')
     setErroBerit('')
     setHistorico([{ de: 'igreja', texto: `${saudacaoHorario()}! Seja bem-vindo(a) ao canal de acolhimento da ${igreja.nome}. Como é o seu nome?` }])
     setEtapa('nome')
   }
-
   const bolhaIgreja = { alignSelf: 'flex-start', background: '#F5F0E6', color: '#2E2E2E', padding: '10px 14px', borderRadius: '12px 12px 12px 4px', fontSize: 13, lineHeight: 1.6, maxWidth: '85%', whiteSpace: 'pre-line' }
   const bolhaUsuario = { alignSelf: 'flex-end', background: '#1F3A5F', color: '#FFFFFF', padding: '10px 14px', borderRadius: '12px 12px 4px 12px', fontSize: 13, lineHeight: 1.6, maxWidth: '85%', whiteSpace: 'pre-line' }
   const campo = { width: '100%', padding: '10px 12px', border: '1px solid #E4DED2', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', fontFamily: 'inherit' }
   const botaoPrimario = { padding: '10px 16px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }
   const botaoOpcao = (ativo) => ({ padding: '10px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: ativo ? '2px solid #1F3A5F' : '1px solid #E4DED2', background: ativo ? '#E8F0FA' : '#FFFFFF', color: '#1F3A5F' })
-
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20, padding: '1rem' }}>
       <div style={{ background: '#FFFFFF', borderRadius: 12, maxWidth: 460, width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
@@ -428,7 +405,6 @@ function ChatAcolhimento({ igreja, tipoInicial, aoFechar }) {
     </div>
   )
 }
-
 export default function PaginaPublicaIgreja() {
   const { slug } = useParams()
   const [carregando, setCarregando] = useState(true)
@@ -438,7 +414,6 @@ export default function PaginaPublicaIgreja() {
   const [chatAberto, setChatAberto] = useState(false)
   const [chatTipo, setChatTipo] = useState('')
   const [pixCopiado, setPixCopiado] = useState(false)
-
   useEffect(() => {
     async function carregar() {
       if (!slug) return
@@ -449,7 +424,6 @@ export default function PaginaPublicaIgreja() {
         return
       }
       setIgreja(data.dados)
-
       const ev = await supabase.rpc('obter_eventos_publicos', { p_slug: String(slug) })
       if (ev.data && ev.data.ok) {
         setEventos(ev.data.eventos || [])
@@ -458,7 +432,6 @@ export default function PaginaPublicaIgreja() {
     }
     carregar()
   }, [slug])
-
   async function copiarPix() {
     if (!igreja?.chave_pix) return
     try {
@@ -467,7 +440,6 @@ export default function PaginaPublicaIgreja() {
       setTimeout(() => setPixCopiado(false), 3000)
     } catch {}
   }
-
   if (carregando) {
     return (
       <main style={estilo.main}>
@@ -480,7 +452,6 @@ export default function PaginaPublicaIgreja() {
       </main>
     )
   }
-
   if (erro || !igreja) {
     return (
       <main style={estilo.main}>
@@ -497,7 +468,6 @@ export default function PaginaPublicaIgreja() {
       </main>
     )
   }
-
   const cultos = ordenarCultos(igreja.horarios_cultos)
   const redes = Array.isArray(igreja.redes_sociais_lista) ? igreja.redes_sociais_lista : []
   const cnpjFormatado = formatarCNPJ(igreja.cnpj)
@@ -512,7 +482,6 @@ export default function PaginaPublicaIgreja() {
     temWhatsOracoes ||
     temWhatsOrientacoes ||
     cultos.length > 0
-
   return (
     <main style={estilo.main}>
       <header style={estilo.header}>
@@ -523,7 +492,6 @@ export default function PaginaPublicaIgreja() {
           </div>
         </div>
       </header>
-
       <div style={estilo.hero}>
         <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, flexWrap: 'wrap' }}>
           {igreja.foto_url ? (
@@ -549,7 +517,7 @@ export default function PaginaPublicaIgreja() {
             </h1>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
               <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14 }}>
-                {igreja.cidade || ''}{igreja.cidade && igreja.uf ? `, ${igreja.uf}` : igreja.uf || ''}
+                {localidade(igreja.cidade, igreja.uf)}
               </span>
               {igreja.publico_verificado && <SeloVerificado />}
               <BotaoFavoritarIgreja igrejaId={igreja.id} temAdmin={igreja.tem_administracao} />
@@ -557,7 +525,6 @@ export default function PaginaPublicaIgreja() {
           </div>
         </div>
       </div>
-
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '1.5rem' }}>
         {igreja.aguarda_confirmacao && (
           <div style={{ background: '#FDF3E3', border: '1px solid #F0D9A8', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
@@ -572,7 +539,6 @@ export default function PaginaPublicaIgreja() {
             </a>
           </div>
         )}
-
         {igreja.origem === 'indicacao' && !igreja.aguarda_confirmacao && igreja.publico_verificado && !temDadosInstitucionais && (
           <div style={{ background: '#EAF4EE', border: '1px solid #C9E3D4', borderRadius: 10, padding: '12px 14px', marginBottom: '1rem' }}>
             <p style={{ margin: 0, fontSize: 13, color: '#4C8C6E', lineHeight: 1.6 }}>
@@ -580,22 +546,18 @@ export default function PaginaPublicaIgreja() {
             </p>
           </div>
         )}
-
         <ReclamarIgreja slug={igreja.slug} />
-
         {igreja.lead_publico && (
           <div style={{ ...estilo.card, background: '#FDF3E3', borderColor: '#F0D9A8' }}>
             <p style={{ margin: 0, fontSize: 15, color: '#7A5A1E', lineHeight: 1.6 }}>{igreja.lead_publico}</p>
           </div>
         )}
-
         {igreja.sobre && (
           <div style={estilo.card}>
             <h2 style={estilo.tituloSecao}>Sobre nós</h2>
             <p style={{ margin: 0, fontSize: 14, color: '#5A5A5A', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{igreja.sobre}</p>
           </div>
         )}
-
         {cultos.length > 0 && (
           <div style={estilo.card}>
             <h2 style={estilo.tituloSecao}>Horários de cultos</h2>
@@ -611,7 +573,6 @@ export default function PaginaPublicaIgreja() {
             </div>
           </div>
         )}
-
         {eventos.length > 0 && (
           <div style={estilo.card}>
             <h2 style={estilo.tituloSecao}>Próximos eventos</h2>
@@ -633,7 +594,6 @@ export default function PaginaPublicaIgreja() {
             </div>
           </div>
         )}
-
         {(igreja.endereco_publico || igreja.contato || igreja.email || cnpjFormatado) && (
           <div style={estilo.card}>
             <h2 style={estilo.tituloSecao}>Local e contato</h2>
@@ -647,7 +607,7 @@ export default function PaginaPublicaIgreja() {
                     style={{ color: '#1F3A5F', textDecoration: 'underline' }}
                   >
                     📍 {igreja.endereco_publico}{igreja.bairro ? `, ${igreja.bairro}` : ''}
-                    {igreja.cidade && `, ${igreja.cidade}${igreja.uf ? ` - ${igreja.uf}` : ''}`}
+                    {igreja.cidade && `, ${(igreja.cidade || '').trim()}${igreja.uf ? ` - ${(igreja.uf || '').trim()}` : ''}`}
                   </a>
                   <div style={{ fontSize: 12, color: '#8A8A8A', marginTop: 4 }}>Clique para abrir no Google Maps e traçar a rota.</div>
                 </div>
@@ -663,7 +623,6 @@ export default function PaginaPublicaIgreja() {
             )}
           </div>
         )}
-
         {igreja.chave_pix && (
           <div style={estilo.card}>
             <h2 style={estilo.tituloSecao}>Dizimar / Ofertar</h2>
@@ -684,7 +643,6 @@ export default function PaginaPublicaIgreja() {
             </div>
           </div>
         )}
-
         <div style={estilo.card}>
           <h2 style={estilo.tituloSecao}>Canais de acolhimento</h2>
           <p style={{ margin: '0 0 12px', fontSize: 13, color: '#8A8A8A', lineHeight: 1.5 }}>
@@ -705,7 +663,6 @@ export default function PaginaPublicaIgreja() {
             </button>
           </div>
         </div>
-
         {redes.length > 0 && (
           <div style={estilo.card}>
             <h2 style={estilo.tituloSecao}>Redes sociais</h2>
@@ -728,11 +685,9 @@ export default function PaginaPublicaIgreja() {
           </div>
         )}
       </div>
-
       <footer style={{ borderTop: '1px solid #E4DED2', padding: '1.5rem', textAlign: 'center', fontSize: 12, color: '#8A8A8A' }}>
         Berit, Gestão Eclesiástica
       </footer>
-
       {chatAberto && (
         <ChatAcolhimento igreja={igreja} tipoInicial={chatTipo} aoFechar={() => setChatAberto(false)} />
       )}
