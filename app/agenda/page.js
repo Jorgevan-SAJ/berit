@@ -245,42 +245,46 @@ export default function AgendaPage() {
           <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '2rem' }}>Carregando agenda...</div>
         ) : (
           <div style={{ background: '#FFFFFF', borderRadius: 12, border: '1px solid #E4DED2', overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', background: '#F5F0E6', color: '#1F3A5F', fontWeight: 700, fontSize: 12, textAlign: 'center' }}>
-              {DIAS_SEMANA.map((d) => (
-                <div key={d} style={{ padding: '10px 4px' }}>{d}</div>
-              ))}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', minHeight: 420 }}>
-              {celulas.map((dia, i) => {
-                if (dia === null) return <div key={`vazio-${i}`} style={{ borderTop: '1px solid #F0EAE0', borderRight: '1px solid #F0EAE0', minHeight: 90, background: '#FAFAF7' }} />
-                const eventosDia = eventosPorDia[dia] || []
-                const ehHoje = `${ano}-${String(mesNum).padStart(2, '0')}-${String(dia).padStart(2, '0')}` === hojeISO
-                return (
-                  <div
-                    key={dia}
-                    onClick={() => eventosDia.length > 0 && setSelecionado({ dia, eventos: eventosDia })}
-                    style={{
-                      borderTop: '1px solid #F0EAE0', borderRight: '1px solid #F0EAE0', minHeight: 90, padding: 6,
-                      cursor: eventosDia.length > 0 ? 'pointer' : 'default', background: ehHoje ? '#FDF9EF' : '#FFFFFF',
-                    }}
-                  >
-                    <div style={{ fontSize: 12, fontWeight: ehHoje ? 800 : 600, color: ehHoje ? '#B26A00' : '#5A5A5A', marginBottom: 4 }}>
-                      {dia}
-                    </div>
-                    {eventosDia.slice(0, 3).map((e, idx) => {
-                      const c = corTipo(e.tipo)
-                      return (
-                        <div key={idx} style={{ background: c.bg, color: c.cor, borderRadius: 6, padding: '2px 6px', fontSize: 10, fontWeight: 600, marginBottom: 3, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                          {formatarHora(e.hora_inicio) ? `${formatarHora(e.hora_inicio)} ` : ''}{e.titulo}
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <div style={{ minWidth: 700 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', background: '#F5F0E6', color: '#1F3A5F', fontWeight: 700, fontSize: 12, textAlign: 'center' }}>
+                  {DIAS_SEMANA.map((d) => (
+                    <div key={d} style={{ padding: '10px 4px' }}>{d}</div>
+                  ))}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', minHeight: 420 }}>
+                  {celulas.map((dia, i) => {
+                    if (dia === null) return <div key={`vazio-${i}`} style={{ borderTop: '1px solid #F0EAE0', borderRight: '1px solid #F0EAE0', minHeight: 90, background: '#FAFAF7' }} />
+                    const eventosDia = eventosPorDia[dia] || []
+                    const ehHoje = `${ano}-${String(mesNum).padStart(2, '0')}-${String(dia).padStart(2, '0')}` === hojeISO
+                    return (
+                      <div
+                        key={dia}
+                        onClick={() => eventosDia.length > 0 && setSelecionado({ dia, eventos: eventosDia })}
+                        style={{
+                          borderTop: '1px solid #F0EAE0', borderRight: '1px solid #F0EAE0', minHeight: 90, padding: 6,
+                          cursor: eventosDia.length > 0 ? 'pointer' : 'default', background: ehHoje ? '#FDF9EF' : '#FFFFFF',
+                        }}
+                      >
+                        <div style={{ fontSize: 12, fontWeight: ehHoje ? 800 : 600, color: ehHoje ? '#B26A00' : '#5A5A5A', marginBottom: 4 }}>
+                          {dia}
                         </div>
-                      )
-                    })}
-                    {eventosDia.length > 3 && (
-                      <div style={{ fontSize: 10, color: '#8A8A8A', fontWeight: 600 }}>+{eventosDia.length - 3} mais</div>
-                    )}
-                  </div>
-                )
-              })}
+                        {eventosDia.slice(0, 3).map((e, idx) => {
+                          const c = corTipo(e.tipo)
+                          return (
+                            <div key={idx} style={{ background: c.bg, color: c.cor, borderRadius: 6, padding: '2px 6px', fontSize: 10, fontWeight: 600, marginBottom: 3, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                              {formatarHora(e.hora_inicio) ? `${formatarHora(e.hora_inicio)} ` : ''}{e.titulo}
+                            </div>
+                          )
+                        })}
+                        {eventosDia.length > 3 && (
+                          <div style={{ fontSize: 10, color: '#8A8A8A', fontWeight: 600 }}>+{eventosDia.length - 3} mais</div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         )}
