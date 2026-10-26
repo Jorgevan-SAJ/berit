@@ -1,15 +1,12 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
-
 const LIMITE_ARQUIVO = 50 * 1024 * 1024 // 50 MB por arquivo
-
 function formatarTamanho(bytes) {
   if (!bytes) return ''
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
-
 export default function EnviarMaterialPage() {
   const [carregando, setCarregando] = useState(true)
   const [evento, setEvento] = useState(null)
@@ -20,7 +17,6 @@ export default function EnviarMaterialPage() {
   const [arquivos, setArquivos] = useState([])
   const [enviando, setEnviando] = useState(false)
   const [concluido, setConcluido] = useState(false)
-
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const id = params.get('evento')
@@ -44,7 +40,6 @@ export default function EnviarMaterialPage() {
         setCarregando(false)
       })
   }, [])
-
   // Correção: cada seleção ACRESCENTA os arquivos à lista (não substitui os anteriores)
   function escolherArquivos(e) {
     const novos = Array.from(e.target.files || [])
@@ -62,11 +57,9 @@ export default function EnviarMaterialPage() {
       return [...atual, ...adicionados]
     })
   }
-
   function removerArquivo(i) {
     setArquivos((atual) => atual.filter((_, idx) => idx !== i))
   }
-
   async function enviar(e) {
     e.preventDefault()
     setErro('')
@@ -81,31 +74,59 @@ export default function EnviarMaterialPage() {
     setEnviando(true)
     try {
       for (const arquivo of arquivos) {
-        const nomeSeguro = arquivo.name.replace(/[^\w.\- ]/g, '_')
-        const caminho = `${evento.igreja_id}/${evento.id}/${Date.now()}-${nomeSeguro}`
+        // 1) O servidor valida o evento e autoriza o envio deste arquivo
+        let autorizacao = null
+        try {
+          const resposta = await fetch('/api/material/upload-url', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              evento_id: evento.id,
+              arquivo_nome: arquivo.name,
+              arquivo_tamanho: arquivo.size,
+            }),
+          })
+          autorizacao = await resposta.json()
+        } catch {
+          autorizacao = null
+        }
+        if (!autorizacao || !autorizacao.ok || !autorizacao.token) {
+          setEnviando(false)
+          setErro(autorizacao?.mensagem || `Não foi possível autorizar o envio de "${arquivo.name}". Tente novamente.`)
+          return
+        }
+        // 2) O navegador envia direto ao armazenamento com a autorização recebida
         const { error: erroUpload } = await supabase.storage
           .from('materiais-eventos')
-          .upload(caminho, arquivo)
+          .uploadToSignedUrl(autorizacao.caminho, autorizacao.token, arquivo)
         if (erroUpload) {
           setEnviando(false)
           setErro(`Não foi possível enviar o arquivo "${arquivo.name}" (${erroUpload.message}). Tente novamente.`)
           return
         }
-        const { error: erroRegistro } = await supabase
-          .from('eventos_materiais_enviados')
-          .insert({
-            evento_id: evento.id,
-            igreja_id: evento.igreja_id,
-            remetente: nome.trim(),
-            contato: contato.trim() || null,
-            descricao: descricao.trim() || null,
-            arquivo_path: caminho,
-            arquivo_nome: arquivo.name,
-            arquivo_tamanho: arquivo.size,
+        // 3) O servidor confirma que o arquivo chegou e registra o envio
+        let registro = null
+        try {
+          const resposta = await fetch('/api/material/registrar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              evento_id: evento.id,
+              caminho: autorizacao.caminho,
+              remetente: nome.trim(),
+              contato: contato.trim(),
+              descricao: descricao.trim(),
+              arquivo_nome: arquivo.name,
+              arquivo_tamanho: arquivo.size,
+            }),
           })
-        if (erroRegistro) {
+          registro = await resposta.json()
+        } catch {
+          registro = null
+        }
+        if (!registro || !registro.ok) {
           setEnviando(false)
-          setErro(`O arquivo "${arquivo.name}" foi enviado, mas houve um problema ao registrar (${erroRegistro.message}). Tente novamente.`)
+          setErro(`O arquivo "${arquivo.name}" foi enviado, mas houve um problema ao registrar (${registro?.mensagem || 'erro desconhecido'}). Tente novamente.`)
           return
         }
       }
@@ -116,7 +137,6 @@ export default function EnviarMaterialPage() {
       setErro('Não foi possível conectar ao servidor. Tente novamente.')
     }
   }
-
   const estilo = {
     main: { minHeight: '100vh', background: '#FAF6EF', fontFamily: "'Segoe UI', Roboto, Arial, sans-serif" },
     header: { background: '#1F3A5F', color: '#FFFFFF', padding: '1rem 1.5rem', textAlign: 'center' },
@@ -126,7 +146,6 @@ export default function EnviarMaterialPage() {
     rotulo: { fontSize: 13, color: '#2E2E2E', display: 'block', marginBottom: 6 },
     botao: { width: '100%', padding: '14px', background: '#1F3A5F', color: '#FFFFFF', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: 'pointer' },
   }
-
   return (
     <main style={estilo.main}>
       <header style={estilo.header}>
@@ -137,7 +156,6 @@ export default function EnviarMaterialPage() {
         <p style={{ fontSize: 14, color: '#8A8A8A', margin: '0 0 1.5rem' }}>
           Envie antecipadamente fotos, vídeos, playbacks e apresentações da sua participação. Sem precisar de cadastro.
         </p>
-
         {carregando ? (
           <div style={{ fontSize: 14, color: '#8A8A8A', textAlign: 'center', padding: '2rem' }}>Carregando...</div>
         ) : erro && !evento ? (
@@ -161,7 +179,6 @@ export default function EnviarMaterialPage() {
               <div style={{ fontSize: 16, fontWeight: 700, color: '#1F3A5F' }}>{evento.titulo}</div>
               <div style={{ fontSize: 13, color: '#5A5A5A', marginTop: 4 }}>📅 {evento.quando}</div>
             </div>
-
             <form onSubmit={enviar} style={estilo.card}>
               {erro && (
                 <div style={{ background: '#FDECEC', color: '#B71C1C', padding: '10px 12px', borderRadius: 8, fontSize: 13, marginBottom: 16, wordBreak: 'break-word' }}>{erro}</div>
