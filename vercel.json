@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/material/limpar",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}
