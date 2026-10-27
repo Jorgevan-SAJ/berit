@@ -1,7 +1,7 @@
 {
   "crons": [
     {
-      "path": "/api/material/limpar",
+      "path": "/api/limpar-materiais",
       "schedule": "0 9 * * *"
     }
   ]
