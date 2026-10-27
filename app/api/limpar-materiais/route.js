@@ -18,13 +18,14 @@ function ontemSaoPaulo() {
   return base.toISOString().slice(0, 10)
 }
 
+const SEM_CACHE = { headers: { 'Cache-Control': 'no-store' } }
+
 export async function GET(request) {
-  // Proteção opcional: se CRON_SECRET existir na Vercel, exige o cabeçalho do cron
   const segredo = process.env.CRON_SECRET
   if (segredo) {
     const autorizacao = request?.headers?.get('authorization') || ''
     if (autorizacao !== `Bearer ${segredo}`) {
-      return Response.json({ ok: false, mensagem: 'Não autorizado.' }, { status: 401 })
+      return Response.json({ ok: false, mensagem: 'Não autorizado.' }, { status: 401, ...SEM_CACHE })
     }
   }
 
@@ -35,10 +36,10 @@ export async function GET(request) {
       .limit(1000)
 
     if (error) {
-      return Response.json({ ok: false, mensagem: 'Erro ao consultar envios: ' + error.message }, { status: 500 })
+      return Response.json({ ok: false, mensagem: 'Erro ao consultar envios: ' + error.message }, { status: 500, ...SEM_CACHE })
     }
     if (!envios || envios.length === 0) {
-      return Response.json({ ok: true, removidos: 0, mensagem: 'Nenhum material para verificar.' })
+      return Response.json({ ok: true, removidos: 0, mensagem: 'Nenhum material para verificar.' }, SEM_CACHE)
     }
 
     const idsEventos = [...new Set(envios.map((v) => v.evento_id))]
@@ -50,7 +51,6 @@ export async function GET(request) {
     const mapaEventos = {}
     ;(eventos || []).forEach((e) => { mapaEventos[e.id] = e })
 
-    // Material de evento ocorrido até ontem é removido; o do dia do culto fica preservado
     const limiteISO = ontemSaoPaulo()
 
     const expirados = envios.filter((v) => {
@@ -61,7 +61,7 @@ export async function GET(request) {
     })
 
     if (expirados.length === 0) {
-      return Response.json({ ok: true, removidos: 0, mensagem: 'Nenhum material expirado para remover.' })
+      return Response.json({ ok: true, removidos: 0, mensagem: 'Nenhum material expirado para remover.' }, SEM_CACHE)
     }
 
     const caminhos = expirados.map((v) => v.arquivo_path)
@@ -79,8 +79,8 @@ export async function GET(request) {
       aviso: erroStorage ? 'Alguns arquivos podem não ter sido removidos do armazenamento: ' + erroStorage.message : null,
       avisoRegistros: erroRegistros ? erroRegistros.message : null,
       mensagem: `Limpeza concluída: ${expirados.length} material(is) removido(s).`,
-    })
+    }, SEM_CACHE)
   } catch (e) {
-    return Response.json({ ok: false, mensagem: 'Erro inesperado: ' + (e?.message || String(e)) }, { status: 500 })
+    return Response.json({ ok: false, mensagem: 'Erro inesperado: ' + (e?.message || String(e)) }, { status: 500, ...SEM_CACHE })
   }
 }
