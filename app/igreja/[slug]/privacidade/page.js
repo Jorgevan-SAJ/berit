@@ -1,36 +1,47 @@
 // app/igreja/[slug]/privacidade/page.js
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
 import { cache } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
-import PoliticaPrivacidadeTexto from '@/components/PoliticaPrivacidadeTexto'
+import PoliticaPrivacidadeTexto from '../../../../components/PoliticaPrivacidadeTexto'
 import {
   VERSAO,
   ATUALIZADO_EM,
   EMAIL_PRIVACIDADE,
-} from '@/lib/politicaPrivacidade'
+} from '../../../../lib/politicaPrivacidade'
 
-export const revalidate = 3600
+export const dynamic = 'force-dynamic'
 
 const buscarIgreja = cache(async (slug) => {
+  const chaveServico = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const chavePublica = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    chaveServico || chavePublica,
     { auth: { persistSession: false } }
   )
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('igrejas')
     .select('*')
     .eq('slug', slug)
     .maybeSingle()
+
+  if (error) {
+    console.error('[privacidade] erro ao buscar igreja:', error.message)
+    return null
+  }
 
   return data || null
 })
 
 function localizacao(igreja) {
   return [igreja.bairro, igreja.cidade, igreja.uf].filter(Boolean).join(', ')
+}
+
+function contatoIgreja(igreja) {
+  return igreja.contato || igreja.telefone || igreja.email || null
 }
 
 export async function generateMetadata({ params }) {
@@ -48,7 +59,38 @@ export async function generateMetadata({ params }) {
 export default async function PoliticaDaIgreja({ params }) {
   const { slug } = await params
   const igreja = await buscarIgreja(slug)
-  if (!igreja) notFound()
+
+  if (!igreja) {
+    return (
+      <main className="min-h-screen bg-slate-50">
+        <div className="mx-auto max-w-xl px-5 py-24">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+            Berit
+          </p>
+          <h1 className="mt-4 text-2xl font-bold text-slate-900">
+            Igreja não encontrada
+          </h1>
+          <p className="mt-3 text-[15px] leading-7 text-slate-700">
+            Não localizamos nenhuma igreja cadastrada com o endereço{' '}
+            <span className="rounded bg-slate-200 px-1.5 py-0.5 font-mono text-sm text-slate-800">
+              {slug}
+            </span>
+            .
+          </p>
+          <p className="mt-3 text-[15px] leading-7 text-slate-700">
+            Confira se o endereço está completo na barra do navegador. Se o problema
+            continuar, acesse a política geral do Berit pelo botão abaixo.
+          </p>
+          <Link
+            href="/privacidade"
+            className="mt-6 inline-block rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+          >
+            Ver a política de privacidade do Berit
+          </Link>
+        </div>
+      </main>
+    )
+  }
 
   return (
     <main className="min-h-screen bg-slate-50">
@@ -84,10 +126,10 @@ export default async function PoliticaDaIgreja({ params }) {
           )}
 
           <dl className="mt-4 space-y-2 text-[15px] text-slate-700">
-            {igreja.contato && (
+            {contatoIgreja(igreja) && (
               <div className="flex flex-wrap gap-x-2">
                 <dt className="font-medium text-slate-900">Contato da igreja:</dt>
-                <dd>{igreja.contato}</dd>
+                <dd>{contatoIgreja(igreja)}</dd>
               </div>
             )}
 
