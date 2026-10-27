@@ -5,9 +5,29 @@ const chaveServico = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 const admin = createClient(url, chaveServico)
 
-// Limpeza automática: remove materiais enviados cujo evento já passou
-// (exclusão no dia seguinte à data do evento). Eventos permanentes não expiram.
-export async function GET() {
+const BUCKET = 'materiais-eventos'
+
+function hojeSaoPaulo() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+}
+
+function ontemSaoPaulo() {
+  const [a, m, d] = hojeSaoPaulo().split('-').map(Number)
+  const base = new Date(Date.UTC(a, m - 1, d))
+  base.setUTCDate(base.getUTCDate() - 1)
+  return base.toISOString().slice(0, 10)
+}
+
+export async function GET(request) {
+  // Proteção opcional: se CRON_SECRET existir na Vercel, exige o cabeçalho do cron
+  const segredo = process.env.CRON_SECRET
+  if (segredo) {
+    const autorizacao = request?.headers?.get('authorization') || ''
+    if (autorizacao !== `Bearer ${segredo}`) {
+      return Response.json({ ok: false, mensagem: 'Não autorizado.' }, { status: 401 })
+    }
+  }
+
   try {
     const { data: envios, error } = await admin
       .from('eventos_materiais_enviados')
@@ -30,26 +50,23 @@ export async function GET() {
     const mapaEventos = {}
     ;(eventos || []).forEach((e) => { mapaEventos[e.id] = e })
 
-    const ontem = new Date()
-    ontem.setDate(ontem.getDate() - 1)
-    const limiteISO = `${ontem.getFullYear()}-${String(ontem.getMonth() + 1).padStart(2, '0')}-${String(ontem.getDate()).padStart(2, '0')}`
+    // Material de evento ocorrido até ontem é removido; o do dia do culto fica preservado
+    const limiteISO = ontemSaoPaulo()
 
     const expirados = envios.filter((v) => {
       const e = mapaEventos[v.evento_id]
       if (!e) return false
       if (e.tipo_evento === 'permanente' || !e.data_inicio) return false
-      return e.data_inicio <= limiteISO
+      return String(e.data_inicio).slice(0, 10) <= limiteISO
     })
 
     if (expirados.length === 0) {
       return Response.json({ ok: true, removidos: 0, mensagem: 'Nenhum material expirado para remover.' })
     }
 
-    // Remove os arquivos fisicamente do armazenamento
     const caminhos = expirados.map((v) => v.arquivo_path)
-    const { error: erroStorage } = await admin.storage.from('materiais-eventos').remove(caminhos)
+    const { error: erroStorage } = await admin.storage.from(BUCKET).remove(caminhos)
 
-    // Remove os registros da tabela
     const ids = expirados.map((v) => v.id)
     const { error: erroRegistros } = await admin
       .from('eventos_materiais_enviados')
